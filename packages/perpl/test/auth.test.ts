@@ -2,8 +2,8 @@ import { sign } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { ed25519Key, signInFrame } from '../src/auth.ts';
 
-// RFC 8032 section 7.1, test 1.
-const SECRET = '9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60';
+// RFC 8032 section 7.1, test 1: a public test vector, not a credential.
+const SECRET = '9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60'; // gitleaks:allow
 const EMPTY_SIG =
   'e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b';
 
