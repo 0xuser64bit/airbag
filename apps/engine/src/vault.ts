@@ -96,6 +96,9 @@ export function rewrap(sealed: Sealed, aad: string, master: MasterKeys): Sealed 
  */
 export function masterKeysFromEnv(env: NodeJS.ProcessEnv): MasterKeys | undefined {
   const current = Number(env.MASTER_KEY_VERSION ?? 1);
+  if (!Number.isInteger(current) || current < 1) {
+    throw new Error('MASTER_KEY_VERSION must be a whole number from 1');
+  }
   const keys = new Map<number, Buffer>();
   const parse = (name: string, raw: string) => {
     const key = Buffer.from(raw, 'base64');

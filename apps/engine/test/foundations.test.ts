@@ -82,6 +82,9 @@ describe('vault', () => {
     expect(keys?.current).toBe(2);
     expect([...(keys?.keys.keys() ?? [])].sort()).toEqual([1, 2]);
     expect(() => masterKeysFromEnv({ MASTER_KEY: 'c2hvcnQ=' })).toThrow(/32 bytes/);
+    expect(() => masterKeysFromEnv({ MASTER_KEY: KEY_A, MASTER_KEY_VERSION: 'two' })).toThrow(
+      /whole number/,
+    );
   });
 });
 
