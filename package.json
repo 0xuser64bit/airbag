@@ -16,8 +16,8 @@
     "check": "pnpm lint && pnpm typecheck && pnpm test",
     "build": "pnpm --filter @airbag/web build",
     "e2e": "playwright test",
-    "contracts:test": "docker run --rm -v \"$PWD/contracts:/app\" -w /app --entrypoint forge ghcr.io/foundry-rs/foundry@sha256:043752653d5be351c71709091b3db97c4421c907eb40ea294195e7f532aadf46 test -vv",
-    "contracts:build": "docker run --rm -v \"$PWD/contracts:/app\" -w /app --entrypoint forge ghcr.io/foundry-rs/foundry@sha256:043752653d5be351c71709091b3db97c4421c907eb40ea294195e7f532aadf46 build",
+    "contracts:test": "docker run --rm -v \"$PWD/contracts:/app\" -w /app --user root --entrypoint forge ghcr.io/foundry-rs/foundry@sha256:043752653d5be351c71709091b3db97c4421c907eb40ea294195e7f532aadf46 test -vv",
+    "contracts:build": "docker run --rm -v \"$PWD/contracts:/app\" -w /app --user root --entrypoint forge ghcr.io/foundry-rs/foundry@sha256:043752653d5be351c71709091b3db97c4421c907eb40ea294195e7f532aadf46 build",
     "dev:engine": "ENGINE_MODE=${ENGINE_MODE:-simulation} node --env-file-if-exists=.env --watch apps/engine/src/main.ts",
     "dev:web": "pnpm --filter @airbag/web dev"
   },

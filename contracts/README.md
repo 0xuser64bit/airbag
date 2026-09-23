@@ -20,7 +20,7 @@ pnpm contracts:test
 The owner deploys once per network, with a separate, low-value hot wallet as the writer:
 
 ```bash
-docker run --rm -v "$PWD/contracts:/app" -w /app --entrypoint forge ghcr.io/foundry-rs/foundry:stable \
+docker run --rm -v "$PWD/contracts:/app" -w /app --user root --entrypoint forge ghcr.io/foundry-rs/foundry:stable \
   create src/AirbagLog.sol:AirbagLog --broadcast \
   --rpc-url https://testnet-rpc.monad.xyz \
   --private-key "$DEPLOYER_KEY" \
