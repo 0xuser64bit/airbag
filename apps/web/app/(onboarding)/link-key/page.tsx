@@ -62,8 +62,10 @@ export default function LinkKeyPage() {
     setIpLocked(true);
   };
 
-  // An existing link's forwarding state isn't known here; the dashboard shows it live.
-  const done: (Omit<Linked, 'forwarding'> & { forwarding?: boolean }) | undefined =
+  // An existing link's forwarding and scope checks aren't known here; the dashboard shows it live.
+  const done:
+    | (Omit<Linked, 'forwarding' | 'tradeScope'> & { forwarding?: boolean; tradeScope?: boolean })
+    | undefined =
     linked ??
     (existing && !replacing
       ? { accountId: existing.accountId, keyHint: existing.keyHint, simulated: sim }
@@ -228,9 +230,10 @@ export default function LinkKeyPage() {
             <div className="notice notice-airbag" role="status">
               <Check size={18} color="#F2C12E" />
               <span>
-                Key verified{' '}
+                {linked ? 'Key verified' : 'Key linked'}{' '}
                 <span className="muted">
-                  · Trade scope · account <span className="num">#{done.accountId}</span> · key …
+                  {done.tradeScope && '· Trade scope '}· account{' '}
+                  <span className="num">#{done.accountId}</span> · key …
                   <span className="num">{done.keyHint}</span>
                 </span>
                 <br />
@@ -241,6 +244,14 @@ export default function LinkKeyPage() {
                 </span>
               </span>
             </div>
+            {done.tradeScope === false && (
+              <div className="notice" role="status">
+                <span>
+                  Perpl didn’t answer the scope check in time, so Airbag couldn’t confirm this is a
+                  Trade key. If it’s a Read key, the first deploy will fail and you’ll get an alert.
+                </span>
+              </div>
+            )}
             {done.forwarding === false && (
               <div className="notice notice-liq" role="alert">
                 <span>

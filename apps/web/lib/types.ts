@@ -61,6 +61,8 @@ export interface Linked {
   accountId: number;
   keyHint: string;
   forwarding: boolean;
+  /** The scope probe got past Perpl's gateway. */
+  tradeScope: boolean;
   simulated: boolean;
 }
 

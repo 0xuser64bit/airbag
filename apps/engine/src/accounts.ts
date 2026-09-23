@@ -33,6 +33,8 @@ export interface KeyCheck {
   accountId: number;
   forwarding: boolean;
   frozen: boolean;
+  /** The probe got past Perpl's gateway. False if Perpl never answered it. */
+  tradeScope: boolean;
 }
 
 type Client = Pick<
@@ -100,7 +102,9 @@ export async function checkKey(
       'This is a Read key. Airbag needs the Trade scope to trim. Create a Trade key on Perpl and paste that one.',
     );
   }
-  return { accountId: account.id, forwarding: account.fw, frozen: account.fr };
+  // A Read key is refused at the gateway; anything that reached the chain proves Trade scope.
+  const tradeScope = outcome !== undefined && !['lost', 'rejected'].includes(outcome.result);
+  return { accountId: account.id, forwarding: account.fw, frozen: account.fr, tradeScope };
 }
 
 export interface AccountsDeps {
@@ -124,6 +128,7 @@ export interface Linked {
   accountId: number;
   keyHint: string;
   forwarding: boolean;
+  tradeScope: boolean;
   simulated: boolean;
 }
 
@@ -195,7 +200,7 @@ export class Accounts {
         linkedAt: now,
       });
       this.replace(wallet, this.deps.sim.paper(wallet, accountId), undefined);
-      return { accountId, keyHint, forwarding: true, simulated: true };
+      return { accountId, keyHint, forwarding: true, tradeScope: true, simulated: true };
     }
     const client = this.open(wallet, apiKey, key);
     let check: KeyCheck;
@@ -221,8 +226,15 @@ export class Accounts {
       wallet,
       account: check.accountId,
       forwarding: check.forwarding,
+      tradeScope: check.tradeScope,
     });
-    return { accountId: check.accountId, keyHint, forwarding: check.forwarding, simulated: false };
+    return {
+      accountId: check.accountId,
+      keyHint,
+      forwarding: check.forwarding,
+      tradeScope: check.tradeScope,
+      simulated: false,
+    };
   }
 
   private replace(wallet: string, exchange: Parameters<Engine['add']>[1], client?: TradingClient) {

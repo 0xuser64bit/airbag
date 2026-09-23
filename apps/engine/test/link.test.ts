@@ -44,9 +44,15 @@ describe('checkKey', () => {
       accountId: 4127,
       forwarding: true,
       frozen: false,
+      tradeScope: true,
     });
     // The probe cancels an order id that isn't one of the account's open orders.
     expect(sent).toEqual([expect.objectContaining({ mt: 22, t: 5, oid: 2, acc: 4127, mkt: 16 })]);
+  });
+
+  it('says so when Perpl never answered the scope probe', async () => {
+    const { c } = client({ probe: { result: 'lost', rq: 10 } });
+    await expect(checkKey(c, WALLET, 16)).resolves.toMatchObject({ tradeScope: false });
   });
 
   it('refuses a Read key', async () => {
