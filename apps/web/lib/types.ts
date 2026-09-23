@@ -186,6 +186,7 @@ export interface DeployData {
   keptMark?: number;
   latency?: { detectToSendMs: number; sendToFillMs: number; fillToReaddMs: number; blocks: number };
   attempts: number;
+  onchain?: { deployId: number; tx: string; saveTx?: string };
   timeline: TimelineEntry[];
 }
 

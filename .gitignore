@@ -24,3 +24,8 @@ next-env.d.ts
 # Playwright
 test-results/
 playwright-report/
+
+# Foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/

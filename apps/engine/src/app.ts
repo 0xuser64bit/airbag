@@ -21,6 +21,7 @@ import { Engine } from './engine.ts';
 import type { Markets } from './guard.ts';
 import { createLogger, type Logger } from './log.ts';
 import { notifier, type OnchainLog, Push } from './notify.ts';
+import { airbagLog } from './onchain.ts';
 import { SIM_CONTEXT, SimChain } from './sim.ts';
 
 export interface App {
@@ -87,12 +88,17 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
     onState: (up, reason) => log[up ? 'info' : 'warn']('feed.state', { up, reason }),
   });
   const push = new Push(store, log, cfg.vapid);
+  const onchain =
+    opts.onchain ??
+    (cfg.airbagLog
+      ? airbagLog({ ...cfg.airbagLog, chainId: cfg.network.chainId }, byId, store, log)
+      : undefined);
   engine = new Engine({
     store,
     log,
     markets,
     feed,
-    notify: notifier(push, log, opts.onchain),
+    notify: notifier(push, log, onchain),
     slippageBps: cfg.slippageBps,
     maxAttempts: cfg.maxAttempts,
     demoMove: cfg.demoMove,
@@ -173,6 +179,7 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
         covered: [...covered],
         stale: cfg.staleBlocks,
         push: push.enabled,
+        onchainLog: cfg.airbagLog?.address ?? null,
       });
     },
     async stop() {

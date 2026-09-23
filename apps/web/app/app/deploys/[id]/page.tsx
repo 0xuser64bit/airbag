@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { use, useEffect } from 'react';
 import { deployTitle } from '@/components/dashboard.tsx';
 import { Back, External } from '@/components/icons.tsx';
-import { OutcomeBadge, Timeline } from '@/components/ui.tsx';
+import { OutcomeBadge, Timeline, TxLink } from '@/components/ui.tsx';
 import { useApi } from '@/lib/api.ts';
 import type { DeployDetail } from '@/lib/types.ts';
 
@@ -99,6 +99,14 @@ export default function DeployPage({ params }: { params: Promise<{ id: string }>
           <div>
             <dt>Spare margin added</dt>
             <dd className="num">{fmt.usd(d.data.spareAdded)}</dd>
+          </div>
+        )}
+        {d.data.onchain && (
+          <div>
+            <dt>Airbag log</dt>
+            <dd>
+              <TxLink tx={d.data.onchain.tx} explorerUrl={d.explorerUrl} simulated={d.simulated} />
+            </dd>
           </div>
         )}
         {d.data.latency && (
