@@ -1,0 +1,312 @@
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 24px;
+  align-items: start;
+}
+.main,
+.aside {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.hero {
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+.heroTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+.heroLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.bigRow {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-top: 10px;
+}
+.bigNum {
+  font-size: clamp(64px, 7vw, 96px);
+}
+.bigPct {
+  font-size: 0.5em;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  column-gap: 44px;
+  row-gap: 18px;
+}
+
+.positions {
+  padding: 8px 0 4px;
+}
+.positionsHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 32px 10px;
+  flex-wrap: wrap;
+}
+.tableWrap {
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.table th,
+.table td {
+  padding: 18px 16px;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.table tbody tr:last-child th,
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.table thead th {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-stretch: 87.5%;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 400;
+  color: var(--text-2);
+}
+.table th:first-child {
+  text-align: left;
+  padding-left: 32px;
+  font-weight: 400;
+}
+.table th:last-child,
+.table td:last-child {
+  padding-right: 32px;
+}
+.table td:global(.num) {
+  font-size: 13px;
+}
+
+.cards {
+  display: none;
+}
+.miniCard {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.miniHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.miniLabels {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+}
+
+.deploy {
+  border-color: var(--airbag);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.deployBody {
+  padding: 24px 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.deployHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.beforeAfter {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.beforeAfter > div {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.beforeAfter > div:first-child {
+  padding-left: 0;
+}
+.beforeAfter > div + div {
+  border-left: 1px solid var(--line);
+}
+
+.side {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sideHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.summary > div {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  gap: 12px;
+  font-size: 14px;
+}
+.summary dt {
+  color: var(--text-2);
+}
+.twoLine {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.twoLine > :last-child {
+  font-size: 12px;
+}
+.cf {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid;
+  border-radius: var(--r-small);
+  font-size: 14px;
+}
+.cfValue {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.recent {
+  display: flex;
+  flex-direction: column;
+}
+.recent li + li {
+  border-top: 1px solid var(--line);
+}
+.recentLink {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 0;
+  text-decoration: none;
+  color: var(--bone);
+}
+.recentLink:hover {
+  color: var(--bone);
+}
+.recentLink:hover .recentHead > span:first-child {
+  text-decoration: underline;
+}
+.recentHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.tiles {
+  display: none;
+}
+
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Phone (design/MobileHome.dc.html). */
+@media (max-width: 760px) {
+  .main,
+  .aside {
+    gap: 12px;
+  }
+  .hero {
+    padding: 20px;
+    gap: 16px;
+  }
+  .heroTop {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .stats {
+    display: none;
+  }
+  .bigNum {
+    font-size: 72px;
+  }
+  .positions {
+    display: none;
+  }
+  .cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .tiles > div {
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-medium);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .deployBody {
+    padding: 20px;
+  }
+  .beforeAfter {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .beforeAfter > div:nth-child(3) {
+    padding-left: 0;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .beforeAfter > div:nth-child(4) {
+    border-top: 1px solid var(--line);
+  }
+  .side {
+    padding: 18px 20px;
+  }
+}

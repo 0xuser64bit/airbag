@@ -1,0 +1,148 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 40px;
+  align-items: start;
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  min-width: 0;
+}
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.groupLabel {
+  font-size: 15px;
+  font-weight: 600;
+}
+.presets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.preset {
+  min-height: 80px;
+  padding: 12px 14px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 6px;
+}
+.stepperRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.stepper {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-small);
+  flex-shrink: 0;
+}
+.stepper button {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--bone);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.stepper button:disabled {
+  color: var(--text-3);
+  cursor: not-allowed;
+}
+.stepper output {
+  min-width: 64px;
+  text-align: center;
+  font-size: 16px;
+}
+.caps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.switchRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.preview {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: sticky;
+  top: 24px;
+  margin-top: 108px;
+}
+.dl {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+.dl dt {
+  color: var(--text-2);
+}
+.dl dd {
+  text-align: right;
+  font-size: 13px;
+}
+.capped {
+  padding: 12px 14px;
+  border: 1px solid var(--airbag-edge);
+  border-radius: var(--r-small);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--airbag);
+}
+
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .preview {
+    position: static;
+    margin-top: 0;
+    order: -1;
+  }
+}
+@media (max-width: 520px) {
+  .presets {
+    grid-template-columns: 1fr;
+  }
+  .preset {
+    min-height: 0;
+  }
+  .stepperRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+fieldset.group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+fieldset.group > legend {
+  padding: 0;
+  margin-bottom: 10px;
+}
