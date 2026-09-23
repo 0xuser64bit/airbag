@@ -45,7 +45,7 @@ The shell uses nvm with default `v24.21.0`. Plain `node`, `npm`, `npx` and `curl
 ## Perpl gotchas (details and sources in docs/RESEARCH.md)
 
 - **A reduce-only close doesn't move the liquidation price.** Perpl releases deposit pro-rata on a decrease. A deploy is a close, then `t:6` re-adding the released equity (ADR 0002).
-- The engine may send only order types **3, 4, 6** and **5** (cancel of its own orders). Types, runtime assert and test enforce it.
+- The engine may send only order types **3, 4, 6** and **5** (only the link-time scope probe, aimed at an order id the account doesn't have). Types, runtime assert and test enforce it.
 - Orders need order forwarding on (`Account.fw`). Otherwise `mt:3` still says `code: 0` and the order fails on `mt:24` with `sr: 34`.
 - `mt:3 code 0` means "accepted for forwarding", not filled. Reconcile from `mt:21/24/25/27`.
 - Set a unique non-zero `sn` on every `mt:22` (it comes back as `cid`). Seed `rq` from `Account.lfr`.

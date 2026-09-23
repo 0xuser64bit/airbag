@@ -175,7 +175,7 @@ Add property tests (e.g. fast-check): trims never increase size, never flip side
 - **Always-on process** (not serverless). One shared market-data connection plus one trading connection per linked account.
 - Tick on every block (driven by `heartbeat@<chain>`, which arrives every block; `market-state` only arrives when something changed). Optionally cross-check block numbers with `monadNewHeads`.
 - **Stale-data guard:** never act when our market data trails the chain head by more than N blocks (configurable, default 3). Measure it with the heartbeat head and, optionally, Monad `newHeads`. **Not** with each mark's own `at.b`: an unchanged mark is legitimately up to ~169 blocks old. Show "stale" in the UI and alert.
-- **Hard allowlist of order types: 3, 4, 6, and 5 (cancel of its own orders) only.** Enforce at type level plus a runtime assert right before send, plus a test that fails if any other type can be emitted. Airbag must never open, increase or flip a position.
+- **Hard allowlist of order types: 3, 4, 6, and 5 only.** Closes are IOC, so there is never a resting Airbag order to cancel; the one cancel is the link-time scope probe, aimed at an order id the account doesn't have. Enforce at type level plus a runtime assert right before send, plus a test that fails if any other type can be emitted. Airbag must never open, increase or flip a position.
 - Per-position lock (one deploy in flight per position). Strictly increasing `rq`. Reconcile outcomes from `mt:24/25/27`, not from `mt:3`.
 - Respect rate limits with a token bucket per connection. Pings count against the budget.
 - **Static egress IP is required** (the key's IP allow-list). Choose hosting that guarantees it, and show the IPs in onboarding from config.

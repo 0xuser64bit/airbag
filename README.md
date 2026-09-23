@@ -25,7 +25,7 @@ Perpl shrinks a position's deposit pro-rata when it's reduced, so a close alone 
 | Path | What |
 |---|---|
 | `packages/risk` | The risk math, pure and dependency-free: liquidation price, the Airbag line, deploy planning, the save value. Every golden vector from the brief, plus property tests. |
-| `packages/perpl` | Perpl client: trading and market-data sockets, Ed25519 sign-in, onchain reads, safe unit conversion, and the order-type allowlist (only closes, margin adds and its own cancels). |
+| `packages/perpl` | Perpl client: trading and market-data sockets, Ed25519 sign-in, onchain reads, safe unit conversion, and the order-type allowlist (only closes, margin adds and a harmless scope-probe cancel). |
 | `apps/engine` | The always-on engine: one guard per account, per-block checks, deploys, re-arming, saves; the HTTP API (SIWE, key linking, settings, live stream); SQLite; Web Push; the AirbagLog writer; simulation mode. |
 | `apps/web` | The site and app (Next.js): landing page with the crash-test replay, onboarding, dashboard, deploy receipts, public save reports with a share image; installable for push alerts. |
 | `contracts/` | `AirbagLog`, a public append-only log of deploys and saves (Foundry). |

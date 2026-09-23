@@ -1,5 +1,7 @@
 // The order-type allowlist (docs/BRIEF.md section 5, ADR 0003). Airbag may only close or
-// reduce (3, 4), add the user's own collateral (6), or cancel an order it placed itself (5).
+// reduce (3, 4), add the user's own collateral (6), or cancel (5). Closes are IOC, so Airbag
+// never has a resting order to cancel: its only cancel is the link-time scope probe, aimed at
+// an order id the account doesn't have.
 // It must never open (1, 2), change (7), increase or flip a position.
 //
 // Three layers: these builders are the only way to make an order frame and can only produce
@@ -89,18 +91,6 @@ export function increaseCollateral(
     throw new RangeError(`amountCns must be positive, got ${args.amountCns}`);
   const { amountCns, ...envelope } = args;
   return { mt: 22, ...envelope, t: 6, a: amountCns.toString(), s: 0, fl: 0, lv: 0 };
-}
-
-/** Cancel (5), only for an order id this engine placed. */
-export function cancelOwnOrder(
-  args: Envelope & { orderId: number },
-  placedByAirbag: ReadonlySet<number>,
-): CancelFrame {
-  if (!placedByAirbag.has(args.orderId)) {
-    throw new Error(`order ${args.orderId} was not placed by Airbag; refusing to cancel it`);
-  }
-  const { orderId, ...envelope } = args;
-  return { mt: 22, ...envelope, t: 5, oid: orderId, s: 0, fl: 0, lv: 0 };
 }
 
 /**

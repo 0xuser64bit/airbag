@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   ALLOWED_ORDER_TYPES,
   assertAllowed,
-  cancelOwnOrder,
   closeOrder,
   increaseCollateral,
   scopeProbe,
@@ -21,7 +20,7 @@ describe('order-type allowlist (brief section 5)', () => {
       closeOrder({ ...base, side: 'long', lots: 100, limitPrice: 960_000, leverage: 1000 }),
       closeOrder({ ...base, side: 'short', lots: 100, limitPrice: 960_000, leverage: 1000 }),
       increaseCollateral({ ...base, amountCns: 1_000_000n }),
-      cancelOwnOrder({ ...base, orderId: 7 }, new Set([7])),
+      scopeProbe(base, new Set([1])),
     ];
     expect(frames.map((f) => f.t)).toEqual([3, 4, 6, 5]);
     for (const f of frames) expect(() => assertAllowed(f)).not.toThrow();
@@ -48,12 +47,6 @@ describe('order-type allowlist (brief section 5)', () => {
     const socket = { send: vi.fn() };
     sendOrder(socket, increaseCollateral({ ...base, amountCns: 5n }));
     expect(JSON.parse(socket.send.mock.calls[0]?.[0])).toMatchObject({ mt: 22, t: 6, a: '5' });
-  });
-
-  it('cancels only orders the engine placed', () => {
-    expect(() => cancelOwnOrder({ ...base, orderId: 8 }, new Set([7]))).toThrow(
-      /not placed by Airbag/,
-    );
   });
 
   it('close orders are IOC limit orders', () => {
