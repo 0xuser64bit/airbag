@@ -130,6 +130,16 @@ export function createApi(deps: ApiDeps): Server {
     if (!w) throw new HttpError(401, 'unauthorized', 'Sign in again.');
     return w;
   };
+  /** Swapping the key under a running deploy would strand it between the close and the re-add. */
+  const notDeploying = (w: string) => {
+    if (engine.guards.get(w)?.status() === 'deploying') {
+      throw new HttpError(
+        409,
+        'deploying',
+        'Airbag is in the middle of a deploy. Try again in a minute.',
+      );
+    }
+  };
   const simOnly = () => {
     if (!deps.sim) throw new HttpError(404, 'not_found', 'Simulation is off on this server.');
     return deps.sim;
@@ -228,6 +238,7 @@ export function createApi(deps: ApiDeps): Server {
     if (body.ipLocked !== true) {
       throw bad("Confirm you added Airbag's addresses to the key's IP allow-list.");
     }
+    notDeploying(w);
     try {
       return await accounts.link(w, apiKey, apiSecret);
     } catch (err) {
@@ -237,7 +248,9 @@ export function createApi(deps: ApiDeps): Server {
   });
 
   route('DELETE', '/v1/key', { auth: true }, async (ctx) => {
-    await accounts.unlink(wallet(ctx));
+    const w = wallet(ctx);
+    notDeploying(w);
+    await accounts.unlink(w);
     return { ok: true };
   });
 

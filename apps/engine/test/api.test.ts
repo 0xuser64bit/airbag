@@ -217,6 +217,14 @@ describe('onboarding to a deploy, over HTTP', () => {
     expect((await call('POST', '/v1/sim/wick', { token, body: { symbol: 'BTC' } })).status).toBe(
       200,
     );
+    // Mid-deploy, the key can't be removed or swapped.
+    let status = '';
+    for (let i = 0; i < 30 && status !== 'deploying'; i++) {
+      await blocks(1);
+      status = (await call('GET', '/v1/state', { token })).body.status;
+    }
+    expect(status).toBe('deploying');
+    expect((await call('DELETE', '/v1/key', { token })).status).toBe(409);
     await blocks(45);
     const deploys = await call('GET', '/v1/deploys', { token });
     expect(deploys.body).toHaveLength(1);
