@@ -198,44 +198,17 @@ export function Timeline({
   compact?: boolean;
 }) {
   return (
-    <ol
-      className="timeline"
-      style={{ display: 'flex', flexDirection: 'column', gap: compact ? 12 : 10 }}
-    >
+    <ol className={`timeline ${compact ? 'timeline-compact' : ''}`}>
       {entries.map((e) => (
-        <li
-          key={`${e.at}-${e.text}`}
-          style={{
-            display: 'grid',
-            gridTemplateColumns: compact ? '76px minmax(0, 1fr)' : '120px 96px minmax(0, 1fr) auto',
-            gap: compact ? 12 : 16,
-            alignItems: 'baseline',
-          }}
-        >
-          {!compact && (
-            <span className="num muted" style={{ fontSize: 12 }}>
-              {fmt.block(e.block)}
-            </span>
-          )}
-          <span
-            className="num"
-            style={{
-              fontSize: compact ? 11 : 12,
-              color: e.tone === 'airbag' && compact ? 'var(--airbag)' : 'var(--text-2)',
-            }}
-          >
+        <li key={`${e.at}-${e.text}`}>
+          <span className="num tl-block">{fmt.block(e.block)}</span>
+          <span className={`num tl-time ${e.tone === 'airbag' ? 'tl-airbag' : ''}`}>
             {fmt.clock(e.at)}
           </span>
-          <span
-            style={{
-              fontSize: compact ? 13 : 14,
-              lineHeight: 1.45,
-              color: e.tone === 'liquidation' ? 'var(--liq)' : undefined,
-            }}
-          >
-            {e.text}
+          <span className={`tl-text ${e.tone === 'liquidation' ? 'liq' : ''}`}>{e.text}</span>
+          <span className="tl-tx">
+            <TxLink tx={e.tx} explorerUrl={explorerUrl} simulated={simulated} />
           </span>
-          {!compact && <TxLink tx={e.tx} explorerUrl={explorerUrl} simulated={simulated} />}
         </li>
       ))}
     </ol>

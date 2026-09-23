@@ -212,8 +212,8 @@ export default function Landing() {
                       <span className="num">$97,000</span>
                       <span className={s.rowNote}>Half the cushion is gone</span>
                     </th>
-                    <td>Open, {ex.atLine} equity</td>
-                    <td>
+                    <td data-label="Without Airbag">Open, {ex.atLine} equity</td>
+                    <td data-label="With Airbag">
                       Trims {ex.trim} BTC, fee $0. Liquidation moves to {ex.newLiq}.
                     </td>
                   </tr>
@@ -222,19 +222,21 @@ export default function Landing() {
                       <span className="num">{ex.liq}</span>
                       <span className={s.rowNote}>The old liquidation price</span>
                     </th>
-                    <td className="liq">Liquidated. {ex.returned} returned.</td>
-                    <td>Still open, {ex.at94} equity</td>
+                    <td className="liq" data-label="Without Airbag">
+                      Liquidated. {ex.returned} returned.
+                    </td>
+                    <td data-label="With Airbag">Still open, {ex.at94} equity</td>
                   </tr>
                   <tr>
                     <th scope="row">
                       <span className="num">$100,000</span>
                       <span className={s.rowNote}>The wick is over</span>
                     </th>
-                    <td>
+                    <td data-label="Without Airbag">
                       <span className={`big liq ${s.cellBig}`}>{ex.returned}</span>
                       <span className={s.rowNote}>No position</span>
                     </td>
-                    <td>
+                    <td data-label="With Airbag">
                       <span className={`big airbag ${s.cellBig}`}>{ex.back}</span>
                       <span className={s.rowNote}>Still holding {ex.keep} BTC</span>
                     </td>
