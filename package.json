@@ -11,16 +11,20 @@
   "scripts": {
     "lint": "biome check .",
     "format": "biome check --write .",
-    "typecheck": "tsc -p . && tsc -p apps/web",
+    "typecheck": "tsc -p . && tsc -p apps/web && tsc -p e2e",
     "test": "vitest run",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
-    "build": "pnpm --filter @airbag/web build"
+    "build": "pnpm --filter @airbag/web build",
+    "e2e": "playwright test"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@biomejs/biome": "^2.5.14",
+    "@playwright/test": "1.63.0",
     "@types/node": "^24.13.6",
     "fast-check": "^4.10.2",
     "typescript": "^7.0.2",
+    "viem": "2.56.8",
     "vitest": "^5.0.1"
   }
 }

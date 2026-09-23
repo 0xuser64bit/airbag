@@ -15,5 +15,12 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["packages/*/src", "packages/*/test", "apps/engine/src", "apps/engine/test", "spike"]
+  "include": [
+    "packages/*/src",
+    "packages/*/test",
+    "apps/engine/src",
+    "apps/engine/test",
+    "playwright.config.ts",
+    "spike"
+  ]
 }
