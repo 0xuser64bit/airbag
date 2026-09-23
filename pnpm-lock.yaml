@@ -24,6 +24,14 @@ importers:
         specifier: ^5.0.1
         version: 5.0.1(@types/node@24.13.6)(vite@8.3.0(@types/node@24.13.6))
 
+  packages/perpl:
+    dependencies:
+      '@airbag/risk':
+        specifier: workspace:*
+        version: link:../risk
+
+  packages/risk: {}
+
 packages:
 
   '@biomejs/biome@2.5.14':

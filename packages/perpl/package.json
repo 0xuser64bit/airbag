@@ -1,0 +1,14 @@
+{
+  "name": "@airbag/perpl",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Typed Perpl client: context, frames, Ed25519 signing, order allowlist, unit conversion",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@airbag/risk": "workspace:*"
+  }
+}
