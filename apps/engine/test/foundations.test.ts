@@ -205,7 +205,9 @@ describe('store', () => {
 
     s.addPush(WALLET, { endpoint: 'https://push.example/1', keys: { p256dh: 'p', auth: 'a' } });
     expect(s.pushSubscriptions(WALLET)).toHaveLength(1);
-    s.removePush('https://push.example/1');
+    s.removePush('https://push.example/1', '0x0000000000000000000000000000000000000001');
+    expect(s.pushSubscriptions(WALLET)).toHaveLength(1);
+    s.removePush('https://push.example/1', WALLET);
     expect(s.pushSubscriptions(WALLET)).toHaveLength(0);
 
     s.putReference(WALLET, 16, { positionId: 7, reference: 97_000, lots: 51_095 });

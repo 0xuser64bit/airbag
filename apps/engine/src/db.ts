@@ -370,8 +370,14 @@ export function openStore(path: string) {
          ON CONFLICT (endpoint) DO UPDATE SET wallet = excluded.wallet, keys = excluded.keys`,
       ).run(sub.endpoint, wallet, JSON.stringify(sub.keys), now);
     },
-    removePush: (endpoint: string) =>
-      q('DELETE FROM push_subscriptions WHERE endpoint = ?').run(endpoint),
+    /** Without a wallet: a push service said the endpoint is gone. */
+    removePush: (endpoint: string, wallet?: string) =>
+      wallet === undefined
+        ? q('DELETE FROM push_subscriptions WHERE endpoint = ?').run(endpoint)
+        : q('DELETE FROM push_subscriptions WHERE endpoint = ? AND wallet = ?').run(
+            endpoint,
+            wallet,
+          ),
     pushSubscriptions: (wallet: string): PushSubscription[] =>
       (
         q('SELECT endpoint, keys FROM push_subscriptions WHERE wallet = ?').all(wallet) as Row[]

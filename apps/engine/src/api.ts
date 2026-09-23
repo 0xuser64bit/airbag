@@ -314,9 +314,9 @@ export function createApi(deps: ApiDeps): Server {
   });
 
   route('DELETE', '/v1/push', { auth: true }, async (ctx) => {
-    wallet(ctx);
+    const w = wallet(ctx);
     const body = await readJson(ctx.req);
-    store.removePush(str(body.endpoint, 'endpoint', 2_048));
+    store.removePush(str(body.endpoint, 'endpoint', 2_048), w);
     return { ok: true };
   });
 
@@ -664,9 +664,7 @@ export function createApi(deps: ApiDeps): Server {
         if (!limiter.take(`${ip}:${r.method}:${r.pattern.source}`, r.limit)) {
           throw new HttpError(429, 'rate_limited', 'Too many requests. Slow down a little.');
         }
-        const params = Object.fromEntries(
-          r.keys.map((k, i) => [k, decodeURIComponent(m[i + 1] ?? '')]),
-        );
+        const params = Object.fromEntries(r.keys.map((k, i) => [k, decode(m[i + 1] ?? '')]));
         if (r.auth && !token) throw new HttpError(401, 'unauthorized', 'Sign in first.');
         const out = await r.handler({ req, res, params, ip, ...(token ? { token } : {}) });
         if (out !== STREAMING) send(req, res, 200, out);
@@ -696,6 +694,14 @@ export function createApi(deps: ApiDeps): Server {
 }
 
 const STREAMING = Symbol('streaming');
+
+const decode = (s: string) => {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    throw bad('Malformed URL.');
+  }
+};
 
 /** Merges a partial settings update onto the current settings, validating every field. */
 export function parseSettings(
