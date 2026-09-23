@@ -9,8 +9,14 @@ pnpm install
 pnpm check        # lint + typecheck + test (what CI runs)
 pnpm lint         # biome check
 pnpm format       # biome check --write
-pnpm typecheck    # tsc (noEmit), one root tsconfig
-pnpm test         # vitest run
+pnpm typecheck    # tsc (noEmit): root (packages, engine), apps/web, e2e
+pnpm test         # vitest run (excludes indexer/ and e2e/)
+pnpm dev:engine   # engine on :8787, simulation mode unless ENGINE_MODE=live
+pnpm dev:web      # web app on :3000
+pnpm e2e          # Playwright + axe; starts the engine (simulation) and web unless running
+pnpm contracts:test                    # Foundry via its Docker image (pinned by digest)
+pnpm --filter @airbag/indexer codegen  # then: pnpm --filter @airbag/indexer test
+node apps/engine/src/cli.ts check-keys # master-key versions of stored keys
 gitleaks git . --redact   # secret scan, same as CI
 ```
 
@@ -31,6 +37,10 @@ The shell uses nvm with default `v24.21.0`. Plain `node`, `npm`, `npx` and `curl
 - Commits: small, conventional prefixes (`feat(risk):`, `docs(adr):`, `ci:`). No co-author trailer (owner decision, 23 Sep). The history is judged.
 - If the brief is wrong, fix `docs/BRIEF.md` in the same commit and add a row to the corrections table in `docs/STATUS.md`.
 - Update `docs/STATUS.md` every session.
+- The engine is the only process with state or secrets (ADR 0010); the web app talks to it over HTTP only.
+- Anything that should work without a funded key gets exercised in simulation mode (ADR 0012): unit tests on `PaperExchange`, e2e against `ENGINE_MODE=simulation`. Label anything simulated in the UI.
+- Next.js 16 ships its own docs in `apps/web/node_modules/next/dist/docs/`; read them before using an API, conventions changed.
+- Node won't strip types from `.ts` under `node_modules`: images must keep workspace packages in `packages/` (see `apps/engine/Dockerfile`).
 
 ## Perpl gotchas (details and sources in docs/RESEARCH.md)
 

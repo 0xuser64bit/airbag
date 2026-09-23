@@ -1,5 +1,8 @@
 # 0007. Web: Next.js App Router, Tailwind tokens, wagmi/viem, SIWE, PWA push
 
+> **Amended by [0011](0011-bearer-sessions.md) (bearer sessions, not a cookie) and [0013](0013-web-css-and-viem.md) (CSS tokens and viem, not Tailwind and wagmi)** on 23 Sep 2026.
+
+
 Date: 23 Sep 2026
 
 ## Decision

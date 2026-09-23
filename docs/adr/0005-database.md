@@ -1,5 +1,8 @@
 # 0005. Postgres with Drizzle ORM and SQL migrations
 
+> **Superseded by [0010](0010-engine-owns-state-in-sqlite.md)** on 23 Sep 2026.
+
+
 Date: 23 Sep 2026
 
 ## Context

@@ -1,5 +1,8 @@
 # 0004. Hosting: engine on Fly.io with static egress, web on Vercel, Postgres on Neon
 
+> **Amended by [0010](0010-engine-owns-state-in-sqlite.md):** no Neon; the engine keeps its state on a Fly volume.
+
+
 Date: 23 Sep 2026
 
 ## Context

@@ -200,7 +200,7 @@ The design is in `/design` (see `design/README.md` for how to read it). Build th
 |---|---|---|
 | `/` | `Main.dc.html` | Landing. Hero has a **live crash-test replay** (SVG chart plus two lanes, one frame per 300 ms, loops, Replay button, respects `prefers-reduced-motion`). Sections: why it works, "same wick twice" table, how it works, safety model, what it can't promise, FAQ, final CTA, footer. |
 | `/connect` | `Connect.dc.html` | Wallet connect (read-only address). Look up the Perpl account and show positions with distance to liquidation, "No airbag". |
-| `/link-key` | `LinkKey.dc.html` | Paste flow now, programmatic enrollment when whitelisted. IP ranges from config. Verify key: scope, IP lock, account id. |
+| `/link-key` | `LinkKey.dc.html` | Paste flow now, programmatic enrollment when whitelisted. IP ranges from config. Verify key: scope (probed), account id, and that the key belongs to the signed-in wallet. The IP lock can't be read through any Perpl API, so the user confirms it and the UI says it wasn't verified. |
 | `/setup` | `Settings.dc.html` | Sensitivity presets, trim target stepper (6–20%), max trim (25/50/75/100%), spare-margin switch, alerts. **Live preview computed by the risk package** on the user's riskiest position. |
 | `/app` | `Dashboard.dc.html` | Status pill, block ticker, hero "closest to liquidation" plus runway, positions table, 60-block check tape, settings summary, key health, recent deploys. |
 | `/app` (deploy state) | `Deployed.dc.html` | Deploy card with hazard stripe, before→after, block-by-block timeline with tx link, "if it keeps falling" counterfactual. |
