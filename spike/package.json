@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@airbag/perpl": "workspace:*",
-    "@airbag/risk": "workspace:*",
-    "viem": "^2.56.8"
+    "@airbag/risk": "workspace:*"
   }
 }

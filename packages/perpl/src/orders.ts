@@ -15,7 +15,7 @@ export type AllowedOrderType = (typeof ALLOWED_ORDER_TYPES)[number];
 export const IOC = 4;
 
 /** Fields every mt:22 frame carries. `sn` is echoed as `cid` on mt:3; `rq` is the idempotency key. */
-interface Envelope {
+export interface Envelope {
   /** Unique, non-zero per frame. */
   sn: number;
   /** Strictly increasing per account, seeded from Account.lfr. */
@@ -101,6 +101,21 @@ export function cancelOwnOrder(
   }
   const { orderId, ...envelope } = args;
   return { mt: 22, ...envelope, t: 5, oid: orderId, s: 0, fl: 0, lv: 0 };
+}
+
+/**
+ * A harmless cancel sent once at link time to learn a key's scope: a Read key is refused with
+ * code 403 on mt:3, a Trade key gets code 0 and then a failed mt:24. No API reports scope
+ * otherwise. The order id is never one of the account's open orders, so the cancel can't
+ * remove anything: the exchange only cancels orders the account owns.
+ */
+export function scopeProbe(
+  envelope: Envelope,
+  accountOpenOrderIds: ReadonlySet<number>,
+): CancelFrame {
+  let oid = 1;
+  while (accountOpenOrderIds.has(oid)) oid++;
+  return { mt: 22, ...envelope, t: 5, oid, s: 0, fl: 0, lv: 0 };
 }
 
 /** Runtime guard. Throws on anything that isn't an mt:22 frame with t in {3, 4, 5, 6}. */

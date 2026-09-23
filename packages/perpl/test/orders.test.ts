@@ -5,6 +5,7 @@ import {
   cancelOwnOrder,
   closeOrder,
   increaseCollateral,
+  scopeProbe,
   sendOrder,
 } from '../src/orders.ts';
 
@@ -68,5 +69,16 @@ describe('order-type allowlist (brief section 5)', () => {
       closeOrder({ ...base, side: 'long', lots: 1.5, limitPrice: 5, leverage: 1 }),
     ).toThrow();
     expect(() => increaseCollateral({ ...base, amountCns: 0n })).toThrow();
+  });
+});
+
+describe('scope probe', () => {
+  it('is an allowed cancel that never targets one of the account’s open orders', () => {
+    const open = new Set([1, 2, 4]);
+    const frame = scopeProbe(base, open);
+    expect(frame).toMatchObject({ mt: 22, t: 5, oid: 3 });
+    expect(open.has(frame.oid)).toBe(false);
+    expect(() => assertAllowed(frame)).not.toThrow();
+    expect(scopeProbe(base, new Set()).oid).toBe(1);
   });
 });

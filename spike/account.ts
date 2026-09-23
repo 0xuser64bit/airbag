@@ -14,18 +14,19 @@ import {
   networkFromEnv,
   openSocket,
   type PerplPosition,
+  perplChain,
   scaled,
   signInFrame,
   toRiskPosition,
 } from '@airbag/perpl';
 import { distanceToLiquidation, liquidationPrice, type Position } from '@airbag/risk';
-import { chain } from './chain.ts';
+
 import { requireEnv } from './env.ts';
 
 const cfg = networkFromEnv();
 const ctx = await fetchContext(cfg.apiUrl);
 const cd = collateralDecimals(ctx);
-const onchain = chain(cfg.rpcUrl, ctx.instances[0]?.address as `0x${string}`);
+const onchain = perplChain(cfg.rpcUrl, ctx.instances[0]?.address ?? '');
 const key = ed25519Key(requireEnv('PERPL_API_SECRET'));
 
 const ws = await openSocket(`${cfg.wsUrl}/ws/v1/trading`, () =>
@@ -61,22 +62,17 @@ for (const p of positions.d.filter((x) => x.st === 1)) {
   if (!market) continue;
   const fundingSum = await onchain.fundingSumAt(market.perpetual_id, beat.h);
   const fromWs = toRiskPosition(p, market, cd, fundingSum);
-  const [info, markPns] = await onchain.position(market.perpetual_id, account.id);
+  const info = await onchain.position(market.perpetual_id, account.id);
   const pd = market.config.price_decimals;
   const fromChain: Position = {
     side: fromWs.side,
-    size: scaled(Number(info.lotLNS), market.config.size_decimals),
-    entry: effectiveEntryPrice(
-      fromWs.side,
-      Number(info.pricePNS),
-      Number(info.priceResiduePNSQ16),
-      pd,
-    ),
-    deposit: usd(info.depositCNS),
-    funding: usd(info.premiumPnlCNS),
+    size: scaled(Number(info.lots), market.config.size_decimals),
+    entry: effectiveEntryPrice(fromWs.side, Number(info.pricePns), Number(info.residueQ16), pd),
+    deposit: usd(info.depositCns),
+    funding: usd(info.premiumPnlCns),
     maintenance: maintenanceFraction(market),
   };
-  const mark = scaled(Number(markPns), pd);
+  const mark = scaled(Number(info.markPns), pd);
   rows.push({
     market: market.symbol || market.name,
     side: fromWs.side,

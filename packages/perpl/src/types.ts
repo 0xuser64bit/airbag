@@ -1,9 +1,13 @@
-// Subset of Perpl's API types that Airbag reads.
+// Subset of Perpl's API types that Airbag reads. Field comments follow the docs.
 // https://github.com/PerplFoundation/api-docs/blob/main/types.md
 
 export interface BlockTimestamp {
   b?: number;
   t?: number;
+}
+
+export interface TxTimestamp extends BlockTimestamp {
+  txid?: string;
 }
 
 export interface MarketConfig {
@@ -19,7 +23,9 @@ export interface MarketConfig {
 
 export interface MarketState {
   at: BlockTimestamp;
+  /** Oracle price, scaled. */
   orl: number;
+  /** Mark price, scaled. Liquidation is triggered on it. */
   mrk: number;
   lst: number;
   bid: number;
@@ -27,9 +33,12 @@ export interface MarketState {
 }
 
 export interface FundingEvent {
+  /** The block the rate applies at; can run ahead of the head for the newest event. */
   at: BlockTimestamp;
+  /** Funding event block: identifies the interval. */
   feb: number;
   rate: number;
+  /** Cumulative funding sum, price-scaled, divided by `div`. */
   sum: number;
   div: number;
 }
@@ -38,10 +47,12 @@ export interface Market {
   id: number;
   /** The exchange contract's perpId for this market. */
   perpetual_id: number;
+  /** Empty on some mainnet markets; fall back to `name`. */
   symbol: string;
   name: string;
   order_ttl_blocks: number;
   funding_interval_blocks: number;
+  funding_interval_sec: number;
   order_max_market_slippage_bps: number;
   config: MarketConfig;
   state: MarketState;
@@ -69,9 +80,17 @@ export interface Account {
   lb: string;
 }
 
+/** WalletSnapshot (mt:19). Its `sn` seeds heartbeat sequence tracking. */
+export interface Wallet {
+  addr: string;
+  as?: Account[];
+}
+
+export const PositionStatus = { Open: 1, Closed: 2, Liquidated: 3 } as const;
+
 /** Perpl position as sent on the trading WS (mt:26/27). Scaled integers. */
 export interface PerplPosition {
-  at: BlockTimestamp;
+  at: TxTimestamp;
   mkt: number;
   acc: number;
   pid: number;
@@ -89,26 +108,43 @@ export interface PerplPosition {
   lv: number;
 }
 
+export const OrderStatus = {
+  Open: 2,
+  PartiallyFilled: 3,
+  Filled: 4,
+  Canceled: 5,
+  Expired: 6,
+  Failed: 7,
+  Executed: 10,
+} as const;
+
 export interface Order {
-  at: BlockTimestamp & { txid?: string };
+  at: TxTimestamp;
   rq: number;
   mkt: number;
   acc: number;
   oid: number;
-  /** 2 Open, 3 PartiallyFilled, 4 Filled, 5 Canceled, 6 Expired, 7 Failed. */
+  /** See OrderStatus. */
   st: number;
+  /** OrderStatusReason, e.g. 34 = order forwarding not allowed. */
   sr: number;
+  /** OrderFailureReason on post/settlement failures. */
   fr?: number;
   t: number;
+  /** Fill price, weighted average, scaled. */
   fp: number;
+  /** Filled size, lots. */
   fs: number;
+  /** Original size, lots. */
   os: number;
+  /** Fee paid, CNS. */
   f: string;
+  /** Remove from open orders. */
   r?: boolean;
 }
 
 export interface Fill {
-  at: BlockTimestamp & { txid?: string };
+  at: TxTimestamp;
   mkt: number;
   acc: number;
   oid: number;
@@ -118,14 +154,23 @@ export interface Fill {
   f: string;
 }
 
+/** mt:3: gateway admission for one mt:22 frame. `code: 0` means accepted, not filled. */
+export interface StatusResponse {
+  mt: 3;
+  cid?: number;
+  status: { code: number; error?: string };
+}
+
 /** Every message has a type; the rest depends on it. */
 export type Message = { mt: number; sn?: number; cid?: number } & Record<string, unknown>;
 
 export const MT = {
   Ping: 1,
+  Pong: 2,
   Status: 3,
   Subscribe: 5,
   Subscribed: 6,
+  MarketConfig: 8,
   MarketState: 9,
   Funding: 10,
   WalletSnapshot: 19,

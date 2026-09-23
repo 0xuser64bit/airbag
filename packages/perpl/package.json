@@ -9,6 +9,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@airbag/risk": "workspace:*"
+    "@airbag/risk": "workspace:*",
+    "viem": "2.56.8"
   }
 }

@@ -6,6 +6,14 @@ const Q16 = 65536;
 
 export const scaled = (value: number, decimals: number): number => value / 10 ** decimals;
 
+/** A CNS amount (string or bigint) in collateral units. Exact below 2^53 CNS ($9 billion). */
+export const fromCns = (cns: string | bigint, decimals: number): number =>
+  scaled(Number(cns), decimals);
+
+/** Collateral units to CNS, rounded down: never move more than was asked for. */
+export const toCnsFloor = (amount: number, decimals: number): bigint =>
+  amount > 0 ? BigInt(Math.floor(amount * 10 ** decimals + 1e-6)) : 0n;
+
 /**
  * Perpl stores entry prices rounded (ceil for longs, floor for shorts) plus a Q16 residue.
  * Mirrors dex-sdk `Position::effective_entry_price`.

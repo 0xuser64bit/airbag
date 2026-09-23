@@ -27,6 +27,7 @@ import {
   type Order,
   openSocket,
   type PerplPosition,
+  perplChain,
   scaled,
   sendOrder,
   signInFrame,
@@ -34,7 +35,7 @@ import {
   worstClosePrice,
 } from '@airbag/perpl';
 import { liquidationPrice } from '@airbag/risk';
-import { chain } from './chain.ts';
+
 import { requireEnv } from './env.ts';
 
 const { positionals, values } = parseArgs({
@@ -56,7 +57,7 @@ if (cfg.network !== 'testnet') throw new Error('the spike only runs on testnet')
 const ctx = await fetchContext(cfg.apiUrl);
 const market = marketBySymbol(ctx, values.market);
 const cd = collateralDecimals(ctx);
-const onchain = chain(cfg.rpcUrl, ctx.instances[0]?.address as `0x${string}`);
+const onchain = perplChain(cfg.rpcUrl, ctx.instances[0]?.address ?? '');
 const usd = (cns: bigint) => scaled(Number(cns), cd);
 
 // Live state from the trading socket. Every message is kept with its receive time for the timeline.
