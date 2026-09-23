@@ -36,6 +36,8 @@ export interface FundingEvent {
 
 export interface Market {
   id: number;
+  /** The exchange contract's perpId for this market. */
+  perpetual_id: number;
   symbol: string;
   name: string;
   order_ttl_blocks: number;
