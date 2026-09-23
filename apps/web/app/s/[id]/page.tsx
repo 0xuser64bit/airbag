@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = `Saved ${fmt.usd(save.kept)} on a ${save.symbol} ${save.side}`;
   return {
     title,
-    description: `${save.symbol} hit the old liquidation price after Airbag trimmed, fee-free. Kept ${fmt.usd(save.kept)} versus a liquidation.`,
+    description: `${save.symbol} hit the old liquidation price after Airbag ${save.kind === 'trim' ? 'trimmed, fee-free' : 'added spare margin'}. Kept ${fmt.usd(save.kept)} versus a liquidation.`,
     openGraph: { title, type: 'article' },
     twitter: { card: 'summary_large_image', title },
   };

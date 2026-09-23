@@ -39,7 +39,7 @@ export function deployMessage(d: Deploy): PushMessage {
 export function saveMessage(d: Deploy): PushMessage {
   return {
     title: `Saved: ${d.symbol} hit your old liquidation price`,
-    body: `${d.symbol} reached ${fmt.usd(d.data.before.liquidation)}. Your ${d.side} is still open because Airbag trimmed it first.`,
+    body: `${d.symbol} reached ${fmt.usd(d.data.before.liquidation)}. Your ${d.side} is still open because Airbag ${d.kind === 'margin' ? 'added margin' : 'trimmed it'} first.`,
     url: `/s/${d.id}`,
     tag: `${d.id}-save`,
   };
