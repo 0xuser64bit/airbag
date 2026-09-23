@@ -21,6 +21,7 @@
     "apps/engine/src",
     "apps/engine/test",
     "playwright.config.ts",
-    "spike"
+    "spike",
+    "vitest.config.ts"
   ]
 }

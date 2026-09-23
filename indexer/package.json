@@ -1,0 +1,21 @@
+{
+  "name": "@airbag/indexer",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Envio HyperIndex: Airbag's onchain deploy log and Perpl liquidations on Monad",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "codegen": "envio codegen",
+    "dev": "envio dev",
+    "start": "envio start",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "envio": "3.12.1"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "vitest": "5.0.1"
+  }
+}

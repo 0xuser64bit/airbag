@@ -1,0 +1,63 @@
+"""
+A deploy Airbag recorded in AirbagLog. Units are Perpl's: lots and price-scaled integers.
+"""
+type Deploy {
+  id: ID!
+  deployId: BigInt!
+  accountId: BigInt! @index
+  market: BigInt!
+  perplTxHash: String!
+  sizeBefore: BigInt!
+  sizeAfter: BigInt!
+  liqBefore: BigInt!
+  liqAfter: BigInt!
+  "trim or margin"
+  reason: String!
+  block: BigInt!
+  timestamp: BigInt!
+  txHash: String!
+  "The mark reached the pre-deploy liquidation price while the position was open."
+  saved: Boolean!
+  oldLiqHitBlock: BigInt
+}
+
+"""
+A position Perpl liquidated (PositionLiquidated). Deposit lost is the position's deposit.
+"""
+type Liquidation {
+  id: ID!
+  perpId: BigInt! @index
+  accountId: BigInt!
+  "long or short"
+  side: String!
+  markPrice: BigInt!
+  liqPrice: BigInt!
+  lots: BigInt!
+  positionLots: BigInt!
+  deposit: BigInt!
+  onOrderBook: Boolean!
+  block: BigInt!
+  timestamp: BigInt! @index
+}
+
+"""
+Liquidations per market per UTC day: the landing page's "last 30 days" figure sums these.
+"""
+type DailyLiquidations {
+  id: ID!
+  perpId: BigInt!
+  "Days since the Unix epoch, UTC."
+  day: Int! @index
+  count: Int!
+  lots: BigInt!
+  deposits: BigInt!
+}
+
+"""
+Totals for Airbag's log, one row per chain.
+"""
+type AirbagTotals {
+  id: ID!
+  deploys: Int!
+  saves: Int!
+}

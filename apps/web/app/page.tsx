@@ -15,6 +15,7 @@ import { CrashTest } from '@/components/CrashTest.tsx';
 import { Check, Mark } from '@/components/icons.tsx';
 import { Brand } from '@/components/ui.tsx';
 import { SOURCE_URL } from '@/lib/config.ts';
+import { liquidationsLast30Days } from '@/lib/stats.ts';
 import s from './page.module.css';
 
 const btc: Position = {
@@ -94,7 +95,10 @@ const FAQ = [
   ['Which markets does it cover?', 'BTC and ETH at launch, then the rest of Perpl’s markets.'],
 ] as const;
 
-export default function Landing() {
+export const revalidate = 3_600;
+
+export default async function Landing() {
+  const liquidated = await liquidationsLast30Days();
   return (
     <div className={s.page}>
       <nav aria-label="Main" className={s.nav}>
@@ -163,6 +167,17 @@ export default function Landing() {
             <h2 className={`display ${s.h2}`}>
               A liquidation costs a fifth of what’s left. Closing it yourself costs nothing.
             </h2>
+            {liquidated !== null && (
+              <p className="muted" style={{ fontSize: 17 }}>
+                <span className="num" style={{ color: 'var(--liq)' }}>
+                  {liquidated.toLocaleString('en-US')}
+                </span>{' '}
+                Perpl position{liquidated === 1 ? ' was' : 's were'} liquidated in the last 30 days.{' '}
+                <span className="faint" style={{ fontSize: 13 }}>
+                  Counted onchain by Airbag’s Envio indexer.
+                </span>
+              </p>
+            )}
           </div>
           <div className={s.two}>
             <div className={`card ${s.compare}`} style={{ borderColor: 'var(--liq-edge)' }}>

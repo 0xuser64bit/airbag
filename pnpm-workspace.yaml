@@ -1,4 +1,7 @@
 packages:
   - "apps/*"
+  - "indexer"
   - "packages/*"
   - "spike"
+allowBuilds:
+  esbuild: false

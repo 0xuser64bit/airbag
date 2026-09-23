@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+# Airbag's onchain deploy log (ADR 0009) and Perpl's liquidations, on Monad through HyperSync.
+# Testnet by default; for mainnet set ENVIO_CHAIN_ID=143 and ENVIO_PERPL_EXCHANGE to
+# 0x34B6552d57a35a1D042CcAe1951BD1C370112a6F. The Perpl event comes from the ABI that
+# PerplFoundation/dex-sdk ships (MIT).
+name: airbag
+description: Airbag deploys and saves, and Perpl liquidations, on Monad
+contracts:
+  - name: AirbagLog
+    events:
+      - event: "DeployRecorded(uint256 indexed deployId, uint256 indexed accountId, uint256 indexed market, bytes32 perplTxHash, uint256 sizeBefore, uint256 sizeAfter, uint256 liqBefore, uint256 liqAfter, uint8 reason)"
+        field_selection:
+          transaction_fields:
+            - hash
+      - event: "SaveRecorded(uint256 indexed deployId, uint256 oldLiqHitBlock)"
+  - name: PerplExchange
+    events:
+      - event: "PositionLiquidated(uint256 perpId, uint256 posAccountId, uint8 positionType, uint256 markPricePNS, uint256 liqPricePNS, uint256 liqLotLNS, uint256 posLotLNS, int256 deltaPnlCNS, int256 fundingCNS, int256 posAmountCNS, uint256 posDepositCNS, int256 accAmountCNS, uint256 accBalanceCNS, bool onOrderBook)"
+chains:
+  - id: ${ENVIO_CHAIN_ID:-10143}
+    start_block: 0
+    contracts:
+      - name: AirbagLog
+        address: "${ENVIO_AIRBAG_LOG_ADDRESS:-0x0000000000000000000000000000000000000000}"
+      - name: PerplExchange
+        address: "${ENVIO_PERPL_EXCHANGE:-0x1964C32f0bE608E7D29302AFF5E61268E72080cc}"

@@ -29,3 +29,8 @@ playwright-report/
 contracts/out/
 contracts/cache/
 contracts/broadcast/
+
+# Envio
+indexer/.envio/
+indexer/generated/
+indexer/envio-env.d.ts
