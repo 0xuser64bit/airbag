@@ -2,6 +2,8 @@
 // Formulas: docs/BRIEF.md section 4, which follows Perpl's liquidation docs
 // (https://docs.perpl.xyz/exchange/liquidation) and dex-sdk's position.rs.
 
+export * as fmt from './format.ts';
+
 export type Side = 'long' | 'short';
 
 /** An isolated-margin Perpl position, converted from scaled integers at the edge (ADR 0008). */

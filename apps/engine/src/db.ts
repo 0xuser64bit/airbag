@@ -134,6 +134,7 @@ export interface DeployData {
     distance: number;
     leverage: number;
   };
+  positionId: number;
   target: number;
   maxTrim: number;
   spare: number;
@@ -164,6 +165,8 @@ export interface DeployData {
   kept?: number;
   latency?: { detectToSendMs: number; sendToFillMs: number; fillToReaddMs: number; blocks: number };
   attempts: number;
+  /** State when the latest close was sent, for finishing it after a restart. CNS as strings. */
+  attempt?: { lots: number; deposit: string; balance: string };
   error?: string;
   timeline: TimelineEntry[];
 }

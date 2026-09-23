@@ -1,0 +1,876 @@
+// One guard per linked account. Every block it values each covered position at the mark,
+// decides whether the Airbag line is crossed, and runs a deploy (brief §4, ADR 0002):
+//   spare margin, when that alone reaches the target; otherwise
+//   a reduce-only IOC close, then IncreasePositionCollateral of the released equity,
+//   retrying the remainder of a partial fill next block, up to maxAttempts; then re-arm with
+//   the fill price as the new reference. After a deploy it watches for the old liquidation
+//   price: reached while the position is open, the deploy is a save; closed first, a
+//   precaution.
+//
+// Invariants: one deploy in flight per position (the lock), nothing sent while data is stale,
+// the key is unhealthy, forwarding is off or Airbag is paused; outcomes come from positions and
+// balances, never from mt:3; every order goes through the allowlist.
+
+import { randomBytes } from 'node:crypto';
+import {
+  closeOrder,
+  fromCns,
+  increaseCollateral,
+  lotsToClose,
+  type Market,
+  type MarketFeed,
+  type PerplPosition,
+  scaled,
+  symbolOf,
+  toCnsFloor,
+  toRiskPosition,
+  worstClosePrice,
+} from '@airbag/perpl';
+import {
+  airbagLine,
+  counterfactualReturn,
+  crossed,
+  cushionUsed,
+  direction,
+  distanceToLiquidation,
+  equity,
+  fmt,
+  type Line,
+  leverage,
+  liquidationPrice,
+  type Plan,
+  type Position,
+  planDeploy,
+  SENSITIVITY,
+  saveValue,
+  triggered,
+} from '@airbag/risk';
+import type { Deploy, Settings, Store, TimelineEntry } from './db.ts';
+import type { Exchange } from './exchange.ts';
+import type { Logger } from './log.ts';
+
+export interface Markets {
+  byId: ReadonlyMap<number, Market>;
+  /** Market ids Airbag protects. */
+  covered: ReadonlySet<number>;
+  collateralDecimals: number;
+  /** The trader's share at liquidation, from getLiquidationInfo (0.8). */
+  userShare: number;
+}
+
+export type Feed = Pick<MarketFeed, 'head' | 'mark' | 'configs' | 'fundingAt' | 'staleness'>;
+
+export interface Notifier {
+  deployed(d: Deploy): void;
+  saved(d: Deploy): void;
+  alert(wallet: string, text: string): void;
+}
+
+export interface GuardDeps {
+  store: Store;
+  markets: Markets;
+  feed: Feed;
+  notify: Notifier;
+  log: Logger;
+  slippageBps: number;
+  maxAttempts: number;
+  demoMove: number;
+  /** Polls for position and balance updates; tests pass a fast one. */
+  pollMs?: number;
+  settleMs?: number;
+}
+
+export type PositionStatus =
+  | 'armed'
+  | 'deploying'
+  | 're-armed'
+  | 'paused'
+  | 'blocked'
+  | 'not-covered';
+
+export interface PositionView {
+  marketId: number;
+  positionId: number;
+  symbol: string;
+  side: 'long' | 'short';
+  size: number;
+  sizeDecimals: number;
+  entry: number;
+  mark: number;
+  equity: number;
+  leverage: number;
+  liquidation: number;
+  distance: number;
+  covered: boolean;
+  status: PositionStatus;
+  /** Present for covered positions. */
+  line?: number;
+  reference?: number;
+  cushionUsed?: number;
+  /** What happens at the line, planned with today's spare margin. */
+  atLine?: {
+    kind: Plan['kind'];
+    fraction?: number;
+    amount?: number;
+    liquidation: number | null;
+    capped?: boolean;
+  };
+}
+
+export type GuardStatus =
+  | 'paused'
+  | 'key-rejected'
+  | 'too-many-connections'
+  | 'forwarding-off'
+  | 'frozen'
+  | 'connecting'
+  | 'stale'
+  | 'deploying'
+  | 're-armed'
+  | 'armed';
+
+interface Episode {
+  deploy: Deploy;
+  attempts: number;
+  /** Lots when the episode started: the cap is a share of this. */
+  startLots: number;
+  /** Retry on or after this block. */
+  retryAt: number;
+}
+
+const RECENT_MS = 10 * 60_000;
+const newId = () => randomBytes(9).toString('base64url');
+
+export class AccountGuard {
+  readonly wallet: string;
+  exchange: Exchange;
+  settings: Settings;
+  views: PositionView[] = [];
+  private readonly deps: GuardDeps;
+  private readonly episodes = new Map<number, Episode>();
+  private readonly busy = new Set<number>();
+  private readonly cooldownUntil = new Map<number, number>();
+  private readonly lastDeployAt = new Map<number, number>();
+  private readonly pending = new Map<string, Deploy>();
+  private readonly refs = new Map<
+    number,
+    { positionId: number; reference: number; lots: number }
+  >();
+  private resumed = false;
+
+  constructor(wallet: string, exchange: Exchange, settings: Settings, deps: GuardDeps) {
+    this.wallet = wallet;
+    this.exchange = exchange;
+    this.settings = settings;
+    this.deps = deps;
+    for (const d of deps.store.pendingDeploys()) if (d.wallet === wallet) this.pending.set(d.id, d);
+  }
+
+  get cd(): number {
+    return this.deps.markets.collateralDecimals;
+  }
+
+  /** Free balance, collateral units. */
+  spare(): number {
+    const a = this.exchange.account;
+    return a ? fromCns(BigInt(a.b) - BigInt(a.lb), this.cd) : 0;
+  }
+
+  status(): GuardStatus {
+    const ex = this.exchange;
+    if (ex.state === 'rejected') return 'key-rejected';
+    if (ex.state === 'limited') return 'too-many-connections';
+    if (ex.state !== 'live') return 'connecting';
+    if (ex.account && !ex.account.fw) return 'forwarding-off';
+    if (ex.account?.fr) return 'frozen';
+    if (!this.settings.armed) return 'paused';
+    if (this.deps.feed.staleness().stale) return 'stale';
+    if (this.episodes.size > 0 || this.busy.size > 0) return 'deploying';
+    const now = Date.now();
+    for (const at of this.lastDeployAt.values()) if (now - at < RECENT_MS) return 're-armed';
+    return 'armed';
+  }
+
+  private market(id: number): Market | undefined {
+    const m = this.deps.markets.byId.get(id);
+    const config = this.deps.feed.configs.get(id);
+    return m && config ? { ...m, config } : m;
+  }
+
+  private risk(p: PerplPosition, m: Market, head: number): Position {
+    const funding = this.deps.feed.fundingAt(p.mkt, head);
+    // No known funding event means no premium yet: the sum equals the position's entry sum.
+    return toRiskPosition(p, m, this.cd, funding?.sum ?? p.efs);
+  }
+
+  private markOf(m: Market): number | undefined {
+    const raw = this.deps.feed.mark(m.id);
+    return raw === undefined ? undefined : scaled(raw, m.config.price_decimals);
+  }
+
+  /** The reference price: entry when first armed or after the user added to the position. */
+  private reference(p: PerplPosition, risk: Position): number {
+    const saved = this.refs.get(p.mkt) ?? this.deps.store.reference(this.wallet, p.mkt);
+    const deploying = this.episodes.has(p.mkt) || this.busy.has(p.mkt);
+    if (saved && saved.positionId === p.pid && (p.s <= saved.lots || deploying)) {
+      if (p.s !== saved.lots && !deploying) this.putRef(p.mkt, { ...saved, lots: p.s });
+      else this.refs.set(p.mkt, saved);
+      return saved.reference;
+    }
+    this.putRef(p.mkt, { positionId: p.pid, reference: risk.entry, lots: p.s });
+    return risk.entry;
+  }
+
+  private putRef(mkt: number, ref: { positionId: number; reference: number; lots: number }) {
+    this.refs.set(mkt, ref);
+    this.deps.store.putReference(this.wallet, mkt, ref);
+  }
+
+  private line(risk: Position, reference: number): Line {
+    if (this.settings.demo) {
+      // Demo mode: deploy after a small adverse move from the reference.
+      const price = reference * (1 - direction(risk.side) * this.deps.demoMove);
+      const line = airbagLine(risk, reference, 0.5);
+      return { ...line, triggerEquity: equity(risk, price), price };
+    }
+    return airbagLine(risk, reference, SENSITIVITY[this.settings.sensitivity]);
+  }
+
+  private policy() {
+    return {
+      target: this.settings.targetPct / 100,
+      maxTrim: this.settings.maxTrimPct / 100,
+      useSpare: this.settings.useSpare,
+    };
+  }
+
+  /** The per-block check. Synchronous; deploys run in the background under the lock. */
+  onBlock(head: number): void {
+    if (!this.resumed && this.exchange.state === 'live') {
+      this.resumed = true;
+      void this.resume(head);
+    }
+    const status = this.status();
+    const act = status === 'armed' || status === 're-armed' || status === 'deploying';
+    const spare = this.spare();
+    const views: PositionView[] = [];
+    for (const p of this.exchange.positions.values()) {
+      const m = this.market(p.mkt);
+      if (!m) continue;
+      const mark = this.markOf(m);
+      if (mark === undefined) continue;
+      const risk = this.risk(p, m, head);
+      const liq = liquidationPrice(risk);
+      const covered = this.deps.markets.covered.has(p.mkt);
+      const view: PositionView = {
+        marketId: p.mkt,
+        positionId: p.pid,
+        symbol: symbolOf(m),
+        side: risk.side,
+        size: risk.size,
+        sizeDecimals: m.config.size_decimals,
+        entry: risk.entry,
+        mark,
+        equity: equity(risk, mark),
+        leverage: leverage(risk, mark),
+        liquidation: liq,
+        distance: distanceToLiquidation(risk, mark),
+        covered,
+        status: covered ? 'paused' : 'not-covered',
+      };
+      views.push(view);
+      if (!covered) continue;
+
+      const reference = this.reference(p, risk);
+      const line = this.line(risk, reference);
+      const atLine = planDeploy(risk, line.price, spare, this.policy());
+      view.line = line.price;
+      view.reference = reference;
+      view.cushionUsed = cushionUsed(risk, mark, line);
+      view.atLine =
+        atLine.kind === 'trim'
+          ? {
+              kind: 'trim',
+              fraction: atLine.fraction,
+              liquidation: atLine.liquidation,
+              capped: atLine.capped,
+            }
+          : atLine.kind === 'margin'
+            ? { kind: 'margin', amount: atLine.amount, liquidation: atLine.liquidation }
+            : { kind: 'none', liquidation: atLine.liquidation };
+
+      const episode = this.episodes.get(p.mkt);
+      const recent = Date.now() - (this.lastDeployAt.get(p.mkt) ?? 0) < RECENT_MS;
+      view.status = !this.settings.armed
+        ? 'paused'
+        : !act
+          ? 'blocked'
+          : episode || this.busy.has(p.mkt)
+            ? 'deploying'
+            : recent
+              ? 're-armed'
+              : 'armed';
+
+      if (!act || this.busy.has(p.mkt)) continue;
+      if (episode) {
+        if (head >= episode.retryAt) void this.attempt(p.mkt, head, mark);
+      } else if (head >= (this.cooldownUntil.get(p.mkt) ?? 0) && triggered(risk, mark, line)) {
+        this.start(p, m, risk, mark, line, reference, head, spare);
+      }
+    }
+    this.views = views;
+    this.watchSaves(head);
+  }
+
+  private start(
+    p: PerplPosition,
+    m: Market,
+    risk: Position,
+    mark: number,
+    line: Line,
+    reference: number,
+    head: number,
+    spare: number,
+  ) {
+    const now = Date.now();
+    const policy = this.policy();
+    const plan = planDeploy(risk, mark, spare, policy);
+    const symbol = symbolOf(m);
+    const cushion = this.settings.demo
+      ? `Demo mode: it moved ${fmt.pct(this.deps.demoMove, 1)} against you.`
+      : {
+          early: 'A third of your cushion is gone.',
+          balanced: 'Half your cushion is gone.',
+          late: 'Three quarters of your cushion is gone.',
+        }[this.settings.sensitivity];
+    const deploy: Deploy = {
+      id: newId(),
+      wallet: this.wallet,
+      accountId: this.exchange.account?.id ?? 0,
+      marketId: p.mkt,
+      symbol,
+      side: risk.side,
+      kind: plan.kind === 'margin' ? 'margin' : 'trim',
+      phase: 'closing',
+      outcome: 'pending',
+      createdAt: now,
+      savedAt: null,
+      closedAt: null,
+      data: {
+        trigger: { block: head, at: now, mark, line: line.price, reference },
+        before: {
+          size: risk.size,
+          lots: p.s,
+          entry: risk.entry,
+          deposit: risk.deposit,
+          funding: risk.funding,
+          maintenance: risk.maintenance,
+          liquidation: liquidationPrice(risk),
+          distance: distanceToLiquidation(risk, mark),
+          leverage: leverage(risk, mark),
+        },
+        positionId: p.pid,
+        target: policy.target,
+        maxTrim: policy.maxTrim,
+        spare,
+        plannedLiquidation: plan.liquidation,
+        capped: plan.kind === 'trim' && plan.capped,
+        counterfactual: counterfactualReturn(risk, this.deps.markets.userShare),
+        spareAdded: 0,
+        attempts: 0,
+        timeline: [{ block: head, at: now, text: `Mark hit ${fmt.usd(mark)}. ${cushion}` }],
+      },
+    };
+    if (plan.kind === 'margin') {
+      this.entry(
+        deploy,
+        head,
+        `Spare margin (${fmt.usd(spare)}) reaches ${fmt.pct(policy.target, 0)} on its own. Adding ${fmt.usd(plan.amount)}.`,
+      );
+    } else if (plan.kind === 'trim' && policy.useSpare && spare > 0) {
+      this.entry(
+        deploy,
+        head,
+        `Spare margin (${fmt.usd(spare)}) can't reach ${fmt.pct(policy.target, 0)}. Trimming instead.`,
+      );
+    }
+    this.deps.store.insertDeploy(deploy);
+    this.deps.log.info('deploy.start', {
+      id: deploy.id,
+      wallet: this.wallet,
+      market: symbol,
+      head,
+      mark,
+      plan: plan.kind,
+    });
+    this.episodes.set(p.mkt, { deploy, attempts: 0, startLots: p.s, retryAt: head });
+    void this.attempt(p.mkt, head, mark);
+  }
+
+  private entry(d: Deploy, block: number, text: string, extra: Partial<TimelineEntry> = {}) {
+    d.data.timeline.push({ block, at: Date.now(), text, ...extra });
+  }
+
+  private save(d: Deploy) {
+    this.deps.store.updateDeploy(d);
+  }
+
+  /** One attempt of an episode: spare margin, or close then re-add. Holds the market's lock. */
+  private async attempt(mkt: number, head: number, mark: number): Promise<void> {
+    const episode = this.episodes.get(mkt);
+    if (!episode || this.busy.has(mkt)) return;
+    this.busy.add(mkt);
+    const d = episode.deploy;
+    try {
+      episode.attempts += 1;
+      d.data.attempts = episode.attempts;
+      const p = this.exchange.positions.get(mkt);
+      const m = this.market(mkt);
+      if (!p || !m) {
+        this.entry(d, head, 'The position closed before Airbag acted.');
+        return this.finish(mkt, d, head, 'failed');
+      }
+      const risk = this.risk(p, m, head);
+      const spare = this.spare();
+      const policy = this.policy();
+      // The cap is a share of the position when the episode began.
+      const budget = Math.max(
+        0,
+        (episode.startLots * policy.maxTrim - (episode.startLots - p.s)) / p.s,
+      );
+      const plan = planDeploy(risk, mark, episode.attempts === 1 ? spare : 0, {
+        ...policy,
+        maxTrim: Math.min(1, budget),
+        useSpare: policy.useSpare && episode.attempts === 1,
+      });
+      if (plan.kind === 'none' || (plan.kind === 'trim' && plan.fraction <= 0)) {
+        return this.finish(mkt, d, head, 'done', mark);
+      }
+      if (plan.kind === 'margin') return await this.addSpare(mkt, d, m, plan.amount, head, mark);
+      await this.trim(mkt, episode, m, p, risk, plan.fraction, plan.capped, head, mark);
+    } catch (err) {
+      this.deps.log.error('deploy.error', { id: d.id, err });
+      this.entry(d, head, 'Airbag hit an error and stopped this deploy. You have been alerted.');
+      this.finish(mkt, d, head, 'failed');
+    } finally {
+      this.busy.delete(mkt);
+    }
+  }
+
+  private async addSpare(
+    mkt: number,
+    d: Deploy,
+    m: Market,
+    amount: number,
+    head: number,
+    mark: number,
+  ) {
+    const cns = toCnsFloor(Math.min(amount, this.spare()), this.cd);
+    const acc = this.exchange.account?.id ?? 0;
+    const before = BigInt(this.exchange.positions.get(mkt)?.c ?? '0');
+    const outcome = await this.exchange.submit((ids) =>
+      increaseCollateral({ ...ids, mkt, acc, lb: 0, amountCns: cns }),
+    );
+    await this.until(() => BigInt(this.exchange.positions.get(mkt)?.c ?? '0') > before);
+    const added = fromCns(BigInt(this.exchange.positions.get(mkt)?.c ?? '0') - before, this.cd);
+    if (added <= 0) {
+      this.entry(
+        d,
+        this.exchange.head,
+        `Adding spare margin failed (${outcome.result}${outcome.order ? `, reason ${outcome.order.sr}` : ''}).`,
+      );
+      return this.finish(mkt, d, this.exchange.head, 'failed');
+    }
+    d.data.spareAdded += added;
+    d.data.margin = { amount: added, reason: 'spare', ...txOf(outcome) };
+    const after = this.after(mkt, m, mark);
+    this.entry(
+      d,
+      this.exchange.head,
+      `Added ${fmt.usd(added)} of spare margin. Liquidation now ${fmt.usd(after?.liquidation)}.`,
+      { tone: 'airbag', ...txOf(outcome) },
+    );
+    this.finish(mkt, d, this.exchange.head, 'done', mark);
+  }
+
+  private async trim(
+    mkt: number,
+    episode: Episode,
+    m: Market,
+    p: PerplPosition,
+    risk: Position,
+    fraction: number,
+    capped: boolean,
+    head: number,
+    mark: number,
+  ) {
+    const d = episode.deploy;
+    const sd = m.config.size_decimals;
+    const pd = m.config.price_decimals;
+    // Round the trim up to whole lots (never less than the math needs), but never past the cap.
+    const lots = capped ? Math.max(1, Math.floor(p.s * fraction)) : lotsToClose(p.s, fraction);
+    const markScaled = this.deps.feed.mark(mkt) ?? Math.round(mark * 10 ** pd);
+    const limit = worstClosePrice(risk.side, markScaled, this.deps.slippageBps);
+    const account = this.exchange.account;
+    if (!account) throw new Error('no account');
+    const lotsBefore = p.s;
+    const depositBefore = BigInt(p.c);
+    const balanceBefore = BigInt(account.b);
+    d.phase = 'closing';
+    d.data.attempt = {
+      lots: lotsBefore,
+      deposit: depositBefore.toString(),
+      balance: balanceBefore.toString(),
+    };
+    const sentAt = Date.now();
+    this.entry(
+      d,
+      head,
+      `Sent a reduce-only close for ${fmt.size(scaled(lots, sd), sd)} ${d.symbol}, worst price ${fmt.usd(scaled(limit, pd))}.`,
+    );
+    this.save(d);
+
+    const outcome = await this.exchange.submit((ids) =>
+      closeOrder({
+        ...ids,
+        mkt,
+        acc: account.id,
+        lb: this.exchange.head + (m.order_ttl_blocks || 20),
+        side: risk.side,
+        lots,
+        limitPrice: limit,
+        leverage: p.lv,
+      }),
+    );
+    if (outcome.result === 'lost') await this.until(() => this.exchange.state === 'live', 20_000);
+    const mayHaveFilled = ['filled', 'partial', 'lost'].includes(outcome.result);
+    if (mayHaveFilled)
+      await this.until(() => (this.exchange.positions.get(mkt)?.s ?? 0) < lotsBefore);
+    const lotsAfter = this.exchange.positions.get(mkt)?.s ?? 0;
+    const filled = lotsBefore - lotsAfter;
+    const filledAt = Date.now();
+
+    if (filled <= 0) {
+      const why =
+        outcome.result === 'rejected'
+          ? `Perpl refused it: ${outcome.error ?? outcome.code}`
+          : outcome.result === 'failed'
+            ? `it failed (reason ${outcome.order?.sr ?? '?'})`
+            : `no fill within ${fmt.pct(this.deps.slippageBps / 10_000, 1)} of the mark`;
+      return this.retryOrStop(mkt, episode, `The close didn't fill: ${why}.`);
+    }
+
+    const fill = outcome.order?.fp ? scaled(outcome.order.fp, pd) : mark;
+    const share = filled / lotsBefore;
+    const realized = direction(risk.side) * share * risk.size * (fill - risk.entry);
+    d.data.close = {
+      lots: (d.data.close?.lots ?? 0) + lots,
+      limitPrice: scaled(limit, pd),
+      filledLots: (d.data.close?.filledLots ?? 0) + filled,
+      fillPrice: fill,
+      realizedPnl: (d.data.close?.realizedPnl ?? 0) + realized,
+      ...txOf(outcome),
+    };
+    const partial = filled < lots;
+    this.entry(
+      d,
+      this.exchange.head,
+      `${partial ? `Filled ${fmt.size(scaled(filled, sd), sd)} of ${fmt.size(scaled(lots, sd), sd)} ${d.symbol}` : 'Filled'} at ${fmt.usd(fill)}. Realized ${fmt.usd(realized)}. Fee $0.`,
+      { tone: 'airbag', ...txOf(outcome) },
+    );
+
+    if (lotsAfter === 0) {
+      this.entry(
+        d,
+        this.exchange.head,
+        'The whole position is closed. The released margin stays in your balance.',
+      );
+      return this.finish(mkt, d, this.exchange.head, 'done', fill);
+    }
+
+    // Re-add what the close released (ADR 0002), from the balance change, capped by the model.
+    d.phase = 'readding';
+    this.save(d);
+    await this.until(() => BigInt(this.exchange.account?.b ?? '0') !== balanceBefore);
+    const observed = BigInt(this.exchange.account?.b ?? '0') - balanceBefore;
+    const expected = toCnsFloor(share * equity(risk, fill), this.cd);
+    const free = BigInt(this.exchange.account?.b ?? '0') - BigInt(this.exchange.account?.lb ?? '0');
+    let readd = observed > 0n ? observed : expected;
+    if (readd > (expected * 105n) / 100n) readd = (expected * 105n) / 100n;
+    if (readd > free) readd = free;
+    const depositAfterClose = BigInt(this.exchange.positions.get(mkt)?.c ?? '0');
+    let readdAt = filledAt;
+    if (readd > 0n) {
+      const re = await this.exchange.submit((ids) =>
+        increaseCollateral({ ...ids, mkt, acc: account.id, lb: 0, amountCns: readd }),
+      );
+      await this.until(
+        () => BigInt(this.exchange.positions.get(mkt)?.c ?? '0') > depositAfterClose,
+      );
+      readdAt = Date.now();
+      const added = fromCns(
+        BigInt(this.exchange.positions.get(mkt)?.c ?? '0') - depositAfterClose,
+        this.cd,
+      );
+      if (added > 0) {
+        d.data.margin = {
+          amount: (d.data.margin?.amount ?? 0) + added,
+          reason: 'readd',
+          ...txOf(re),
+        };
+        const after = this.after(mkt, m, fill);
+        this.entry(
+          d,
+          this.exchange.head,
+          `Put back ${fmt.usd(added)} of released margin. Liquidation now ${fmt.usd(after?.liquidation)}.`,
+          { tone: 'airbag', ...txOf(re) },
+        );
+      } else {
+        this.entry(
+          d,
+          this.exchange.head,
+          `Putting back the released margin failed (${re.result}). Liquidation hasn't moved. Retrying.`,
+        );
+        this.deps.notify.alert(
+          this.wallet,
+          `Airbag trimmed your ${d.symbol} ${d.side} but couldn't add the released margin back yet. It's retrying.`,
+        );
+        return this.retryOrStop(mkt, episode, 'Will retry the re-add next block.');
+      }
+    }
+    d.data.latency = {
+      detectToSendMs: sentAt - d.data.trigger.at,
+      sendToFillMs: filledAt - sentAt,
+      fillToReaddMs: readdAt - filledAt,
+      blocks: this.exchange.head - d.data.trigger.block,
+    };
+
+    const after = this.after(mkt, m, fill);
+    if (partial && (after?.distance ?? 1) < d.data.target - 1e-6) {
+      return this.retryOrStop(
+        mkt,
+        episode,
+        'Only part of the trim filled. Trimming the rest next block.',
+        fill,
+      );
+    }
+    this.finish(mkt, d, this.exchange.head, 'done', fill);
+  }
+
+  /** The position after a deploy, measured at `price`. */
+  private after(mkt: number, m: Market, price: number) {
+    const p = this.exchange.positions.get(mkt);
+    if (!p) return undefined;
+    const risk = this.risk(p, m, this.exchange.head);
+    return {
+      risk,
+      liquidation: liquidationPrice(risk),
+      distance: distanceToLiquidation(risk, price),
+      leverage: leverage(risk, price),
+    };
+  }
+
+  private retryOrStop(mkt: number, episode: Episode, text: string, fill?: number) {
+    const d = episode.deploy;
+    if (episode.attempts < this.deps.maxAttempts && this.exchange.positions.has(mkt)) {
+      this.entry(d, this.exchange.head, text);
+      episode.retryAt = this.exchange.head + 1;
+      d.phase = 'done';
+      this.save(d);
+      return;
+    }
+    this.entry(
+      d,
+      this.exchange.head,
+      `${text.replace(/ ?(Trying again|Trimming the rest|Will retry)[^.]*\./, '')} Stopped after ${episode.attempts} attempts.`.trim(),
+    );
+    const anyFill = (d.data.close?.filledLots ?? 0) > 0 || d.data.spareAdded > 0;
+    this.deps.notify.alert(
+      this.wallet,
+      `Airbag couldn't finish protecting your ${d.symbol} ${d.side} after ${episode.attempts} attempts. Check it on Perpl.`,
+    );
+    this.finish(mkt, d, this.exchange.head, anyFill ? 'done' : 'failed', fill);
+  }
+
+  private finish(
+    mkt: number,
+    d: Deploy,
+    head: number,
+    phase: 'done' | 'failed',
+    reference?: number,
+  ) {
+    const m = this.market(mkt);
+    const p = this.exchange.positions.get(mkt);
+    d.phase = phase;
+    this.episodes.delete(mkt);
+    if (phase === 'failed') {
+      // Don't hammer a failing path: wait ~30 s before a new episode can start.
+      this.cooldownUntil.set(mkt, head + 100);
+      if (!d.data.close?.filledLots && !d.data.spareAdded) d.outcome = 'precaution';
+    }
+    if (m && p && reference !== undefined) {
+      this.putRef(mkt, { positionId: p.pid, reference, lots: p.s });
+      const after = this.after(mkt, m, reference);
+      if (after) {
+        const line = this.line(after.risk, reference);
+        d.data.after = {
+          size: after.risk.size,
+          liquidation: after.liquidation,
+          distance: after.distance,
+          leverage: after.leverage,
+          line: line.price,
+        };
+        if (phase === 'done') {
+          this.entry(
+            d,
+            head,
+            `Re-armed at ${fmt.usd(line.price)} on ${fmt.size(after.risk.size, m.config.size_decimals)} ${d.symbol}.`,
+          );
+        }
+      }
+    } else if (!p) {
+      d.data.after = { size: 0, liquidation: null, distance: null, leverage: null, line: null };
+    }
+    this.save(d);
+    this.lastDeployAt.set(mkt, Date.now());
+    this.deps.log.info('deploy.finish', {
+      id: d.id,
+      phase,
+      attempts: d.data.attempts,
+      latency: d.data.latency,
+    });
+    if (phase === 'done' && d.outcome === 'pending') {
+      if (p) this.pending.set(d.id, d);
+      else this.classify(d, 'precaution');
+      this.deps.notify.deployed(d);
+    }
+  }
+
+  /** Save or precaution for finished deploys (brief §4). */
+  private watchSaves(head: number) {
+    for (const d of this.pending.values()) {
+      if (d.phase !== 'done') continue;
+      const p = this.exchange.positions.get(d.marketId);
+      const m = this.market(d.marketId);
+      const mark = m && this.markOf(m);
+      if (!p || p.pid !== d.data.positionId) {
+        this.classify(d, 'precaution');
+        continue;
+      }
+      if (!m || mark === undefined) continue;
+      const risk = this.risk(p, m, head);
+      d.data.kept = saveValue(equity(risk, mark), d.data.spareAdded, d.data.counterfactual);
+      if (crossed(d.side, mark, d.data.before.liquidation)) {
+        d.data.save = { block: head, at: Date.now(), mark };
+        this.entry(
+          d,
+          head,
+          `${d.symbol} hit your old liquidation price, ${fmt.usd(d.data.before.liquidation)}.`,
+          { tone: 'airbag' },
+        );
+        this.classify(d, 'save');
+      }
+    }
+  }
+
+  private classify(d: Deploy, outcome: 'save' | 'precaution') {
+    d.outcome = outcome;
+    if (outcome === 'save') d.savedAt = Date.now();
+    else d.closedAt = Date.now();
+    this.pending.delete(d.id);
+    this.save(d);
+    this.deps.log.info('deploy.outcome', { id: d.id, outcome, kept: d.data.kept });
+    if (outcome === 'save') this.deps.notify.saved(d);
+  }
+
+  /**
+   * Finishes deploys a restart interrupted. If the close filled but its released margin never
+   * went back, put it back now, unless the deposit shows it already did.
+   */
+  private async resume(head: number) {
+    for (const d of this.deps.store.unfinishedDeploys()) {
+      if (d.wallet !== this.wallet || this.episodes.has(d.marketId)) continue;
+      const mkt = d.marketId;
+      const m = this.market(mkt);
+      const p = this.exchange.positions.get(mkt);
+      const at = d.data.attempt;
+      this.busy.add(mkt);
+      try {
+        if (!m || !p || !at || p.pid !== d.data.positionId) {
+          this.entry(
+            d,
+            head,
+            'Airbag restarted mid-deploy; the position has changed since, so it stopped here.',
+          );
+          d.phase = (d.data.close?.filledLots ?? 0) > 0 ? 'done' : 'failed';
+          this.save(d);
+          continue;
+        }
+        const filled = at.lots - p.s;
+        if (filled <= 0) {
+          this.entry(d, head, 'Airbag restarted before the close filled. Nothing was trimmed.');
+          d.phase = 'failed';
+          this.save(d);
+          continue;
+        }
+        const before: Position = {
+          ...this.risk(p, m, head),
+          size: scaled(at.lots, m.config.size_decimals),
+          deposit: fromCns(at.deposit, this.cd),
+        };
+        const proRata = (BigInt(at.deposit) * BigInt(p.s)) / BigInt(at.lots);
+        const fill = d.data.close?.fillPrice ?? d.data.trigger.mark;
+        const expected = toCnsFloor((filled / at.lots) * equity(before, fill), this.cd);
+        const already = BigInt(p.c) - proRata;
+        const free =
+          BigInt(this.exchange.account?.b ?? '0') - BigInt(this.exchange.account?.lb ?? '0');
+        let readd = expected - already;
+        if (readd > free) readd = free;
+        if (readd > expected / 10n) {
+          const acc = this.exchange.account?.id ?? 0;
+          const depositNow = BigInt(p.c);
+          const re = await this.exchange.submit((ids) =>
+            increaseCollateral({ ...ids, mkt, acc, lb: 0, amountCns: readd }),
+          );
+          await this.until(() => BigInt(this.exchange.positions.get(mkt)?.c ?? '0') > depositNow);
+          this.entry(
+            d,
+            this.exchange.head,
+            `Airbag restarted mid-deploy and put back ${fmt.usd(fromCns(readd, this.cd))} of released margin.`,
+            { tone: 'airbag', ...txOf(re) },
+          );
+        } else {
+          this.entry(
+            d,
+            head,
+            'Airbag restarted mid-deploy; the released margin was already back in the position.',
+          );
+        }
+        this.busy.delete(mkt);
+        this.finish(mkt, d, this.exchange.head, 'done', fill);
+      } catch (err) {
+        this.deps.log.error('deploy.resume.error', { id: d.id, err });
+      } finally {
+        this.busy.delete(mkt);
+      }
+    }
+  }
+
+  /** Waits until `pred` holds or `ms` passes: positions and balances land a frame or two later. */
+  private async until(pred: () => boolean, ms = this.deps.settleMs ?? 5_000): Promise<boolean> {
+    const step = this.deps.pollMs ?? 50;
+    for (let waited = 0; waited <= ms; waited += step) {
+      if (pred()) return true;
+      await new Promise((r) => setTimeout(r, step));
+    }
+    return pred();
+  }
+
+  /** Current save value for a deploy, live while the position is open. */
+  kept(d: Deploy): number | undefined {
+    return this.pending.get(d.id)?.data.kept ?? d.data.kept;
+  }
+}
+
+const txOf = (o: { order?: { at?: { txid?: string } } }): { tx?: string } =>
+  o.order?.at?.txid ? { tx: o.order.at.txid } : {};

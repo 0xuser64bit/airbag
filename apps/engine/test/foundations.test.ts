@@ -139,6 +139,7 @@ describe('store', () => {
         distance: 0.0309,
         leverage: 13.9,
       },
+      positionId: 7,
       target: 0.1,
       maxTrim: 0.5,
       spare: 420,
