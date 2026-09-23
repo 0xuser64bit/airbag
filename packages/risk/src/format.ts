@@ -47,3 +47,27 @@ export const block = (n: number): string => `#${n.toLocaleString('en-US')}`;
 /** 0x9c4e…a71b. */
 export const short = (hex: string): string =>
   hex.length > 12 ? `${hex.slice(0, 6)}…${hex.slice(-4)}` : hex;
+
+/** 14:02:11.3, in the viewer's time zone. */
+export function clock(ms: number): string {
+  const d = new Date(ms);
+  const two = (n: number) => String(n).padStart(2, '0');
+  return `${two(d.getHours())}:${two(d.getMinutes())}:${two(d.getSeconds())}.${Math.floor(d.getMilliseconds() / 100)}`;
+}
+
+/** 0.3 s · 2.1 s · 40 s · 3 min · 2 h. */
+export function duration(ms: number): string {
+  const s = ms / 1000;
+  if (s < 10) return `${s.toFixed(1)} s`;
+  if (s < 90) return `${Math.round(s)} s`;
+  if (s < 5_400) return `${Math.round(s / 60)} min`;
+  return `${Math.round(s / 3_600)} h`;
+}
+
+/** Sep 23, or Sep 23, 2026 with the year. */
+export const date = (ms: number, withYear = false): string =>
+  new Date(ms).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    ...(withYear ? { year: 'numeric' } : {}),
+  });

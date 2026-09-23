@@ -195,7 +195,7 @@ export function createApi(deps: ApiDeps): Server {
 
   route('GET', '/v1/saves/:id', { limit: 60 }, (ctx) => {
     const d = store.deploy(ctx.params.id ?? '');
-    if (!d || d.outcome !== 'save') throw new HttpError(404, 'not_found', 'No save report here.');
+    if (d?.outcome !== 'save') throw new HttpError(404, 'not_found', 'No save report here.');
     return saveReport(engine.guards.get(d.wallet)?.live(d.id) ?? d);
   });
 

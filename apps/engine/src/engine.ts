@@ -23,6 +23,8 @@ export interface TapeEntry {
   block: number;
   /** Checked on fresh data. False for stale blocks and for blocks we never saw. */
   ok: boolean;
+  /** When the engine checked it (ms); missed blocks carry the next tick's time. */
+  at: number;
 }
 
 const TAPE = 60;
@@ -79,9 +81,9 @@ export class Engine {
     const last = this.tape.at(-1)?.block;
     if (last !== undefined && head - last > 1) {
       for (let b = Math.max(last + 1, head - TAPE); b < head; b++)
-        this.tape.push({ block: b, ok: false });
+        this.tape.push({ block: b, ok: false, at: this.lastTickAt });
     }
-    this.tape.push({ block: head, ok });
+    this.tape.push({ block: head, ok, at: this.lastTickAt });
     if (this.tape.length > TAPE) this.tape.splice(0, this.tape.length - TAPE);
     for (const fn of this.listeners) fn();
   }

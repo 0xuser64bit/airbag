@@ -1,0 +1,446 @@
+/* Airbag design system. Values come from design/*.dc.html (brief §8).
+   Graphite and bone while safe. Yellow is Airbag. Red is only ever liquidation. */
+
+:root {
+  --ground: #11110f;
+  --panel: #181815;
+  --raised: #1f1f1b;
+  --line: #2b2a25;
+  --line-strong: #3a3932;
+  --bone: #ece9e0;
+  --text-2: #a5a298;
+  --text-3: #86837a;
+  --soft-bone: #d6d3ca;
+  --airbag: #f2c12e;
+  --liq: #ff6a55;
+  --airbag-tint: rgba(242, 193, 46, 0.07);
+  --airbag-edge: rgba(242, 193, 46, 0.5);
+  --liq-edge: rgba(255, 106, 85, 0.45);
+
+  --r-control: 8px;
+  --r-small: 10px;
+  --r-medium: 12px;
+  --r-card: 16px;
+
+  --hazard: repeating-linear-gradient(-45deg, var(--airbag) 0 10px, var(--ground) 10px 20px);
+  --hatch: repeating-linear-gradient(135deg, var(--line-strong) 0 1.5px, transparent 1.5px 6px);
+  --hatch-warm: repeating-linear-gradient(
+    135deg,
+    rgba(242, 193, 46, 0.45) 0 1.5px,
+    transparent 1.5px 6px
+  );
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--ground);
+  color: var(--bone);
+  font-family: var(--font-ui), system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+
+a {
+  color: var(--bone);
+}
+a:hover {
+  color: var(--airbag);
+}
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--airbag);
+  outline-offset: 2px;
+}
+
+h1,
+h2,
+h3,
+p,
+dl,
+dd,
+ol,
+ul {
+  margin: 0;
+}
+ol,
+ul {
+  padding: 0;
+  list-style: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must beat inline transitions */
+    animation-duration: 0.01ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must beat inline transitions */
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---- Type ---------------------------------------------------------------------------- */
+
+.display {
+  font-family: var(--font-display), "Helvetica Neue", sans-serif;
+  font-stretch: 125%;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.wordmark {
+  font-family: var(--font-display), "Helvetica Neue", sans-serif;
+  font-stretch: 125%;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+/* Every number is mono and tabular. */
+.num {
+  font-family: var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  font-stretch: 87.5%;
+  font-variant-numeric: tabular-nums;
+}
+
+.big {
+  font-family: var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  font-stretch: 75%;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 0.9;
+}
+
+.eyebrow {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-stretch: 87.5%;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.muted {
+  color: var(--text-2);
+}
+.faint {
+  color: var(--text-3);
+}
+.airbag {
+  color: var(--airbag);
+}
+.liq {
+  color: var(--liq);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---- Controls ------------------------------------------------------------------------ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid transparent;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--bone);
+  font:
+    500 15px var(--font-ui),
+    system-ui,
+    sans-serif;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: var(--airbag);
+  color: var(--ground);
+  font-weight: 600;
+}
+.btn-primary:hover {
+  color: var(--ground);
+  background: #f5cc4f;
+}
+.btn-secondary {
+  border-color: var(--line-strong);
+}
+.btn-secondary:hover {
+  border-color: var(--text-3);
+  color: var(--bone);
+}
+.btn-ghost {
+  color: var(--text-2);
+  padding: 0 14px;
+}
+.btn-ghost:hover {
+  color: var(--bone);
+}
+.btn-lg {
+  min-height: 52px;
+  padding: 0 24px;
+  font-size: 16px;
+}
+.btn-sm {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-control);
+  color: var(--bone);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-stretch: 87.5%;
+  font-size: 13px;
+}
+.input::placeholder {
+  color: var(--text-3);
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field > label {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+/* Segmented choices: real buttons with aria-pressed. */
+.seg {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-small);
+  background: transparent;
+  color: var(--bone);
+  cursor: pointer;
+  font: inherit;
+}
+.seg[aria-pressed="true"] {
+  border-color: var(--airbag);
+  background: var(--airbag-tint);
+  box-shadow: inset 0 0 0 1px var(--airbag);
+}
+
+/* Switch: role="switch" with aria-checked. */
+.switch {
+  flex-shrink: 0;
+  width: 48px;
+  height: 28px;
+  padding: 3px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--raised);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+.switch > span {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--text-2);
+  transition: transform 150ms ease;
+}
+.switch[aria-checked="true"] {
+  background: var(--airbag);
+  border-color: var(--airbag);
+}
+.switch[aria-checked="true"] > span {
+  background: var(--ground);
+  transform: translateX(20px);
+}
+.switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- Status --------------------------------------------------------------------------- */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.pill-sm {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 12px;
+  gap: 6px;
+}
+.pill-xs {
+  height: 22px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+.pill .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--airbag);
+}
+.pill-sm .dot {
+  width: 6px;
+  height: 6px;
+}
+.pill-muted {
+  color: var(--text-2);
+}
+.pill-muted .dot {
+  background: var(--text-3);
+}
+.pill-solid {
+  border-color: var(--airbag);
+  background: var(--airbag);
+  color: var(--ground);
+  font-weight: 600;
+}
+.pill-airbag {
+  border-color: var(--airbag);
+  color: var(--airbag);
+}
+.pill-liq {
+  border-color: var(--liq);
+  color: var(--liq);
+}
+
+/* ---- Surfaces ------------------------------------------------------------------------- */
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+}
+
+.notice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-small);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.notice-airbag {
+  border-color: var(--airbag-edge);
+  background: var(--airbag-tint);
+}
+.notice-liq {
+  border-color: var(--liq-edge);
+}
+
+.hazard {
+  height: 8px;
+  flex-shrink: 0;
+  background: var(--hazard);
+}
+
+.sim-banner {
+  padding: 8px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ground);
+  background: var(--soft-bone);
+}
+.sim-banner strong {
+  font-weight: 600;
+}
+
+/* dl rows: label left, number right. */
+.rows {
+  display: flex;
+  flex-direction: column;
+}
+.rows > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.rows > div:first-child {
+  border-top: 1px solid var(--line);
+}
+.rows dt {
+  color: var(--text-2);
+}
+.rows dd {
+  text-align: right;
+}
+
+.check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.check-list li {
+  display: flex;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.check-list svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "engine-sim",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["apps/engine/src/main.ts"],
+      "port": 8787,
+      "env": {
+        "ENGINE_MODE": "simulation",
+        "DATABASE_PATH": ":memory:",
+        "WEB_ORIGIN": "http://localhost:3000"
+      }
+    },
+    {
+      "name": "web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@airbag/web", "dev"],
+      "port": 3000
+    }
+  ]
+}

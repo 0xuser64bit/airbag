@@ -17,3 +17,6 @@ coverage/
 spike/out/
 
 .DS_Store
+
+# Next.js
+next-env.d.ts

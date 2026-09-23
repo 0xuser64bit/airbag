@@ -1,0 +1,125 @@
+.runway {
+  position: relative;
+}
+.lg {
+  height: 76px;
+}
+.md {
+  height: 68px;
+}
+.sm {
+  height: 18px;
+}
+
+.track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% - 1px);
+  height: 2px;
+  background: var(--line);
+}
+
+.zone {
+  position: absolute;
+  top: calc(50% - 6px);
+  height: 12px;
+  background: var(--hatch);
+}
+.warm {
+  background: var(--hatch-warm);
+}
+
+.tick {
+  position: absolute;
+  top: calc(50% - 12px);
+  width: 2px;
+  height: 24px;
+  margin-left: -1px;
+}
+.sm .tick {
+  top: 1px;
+  height: 16px;
+}
+.liqTick {
+  background: var(--liq);
+}
+.lineTick {
+  background: var(--airbag);
+}
+
+.ghost {
+  position: absolute;
+  top: calc(50% - 16px);
+  height: 32px;
+  border-left: 1px dashed var(--liq);
+}
+.entry {
+  position: absolute;
+  top: calc(50% - 8px);
+  height: 16px;
+  border-left: 1px dashed var(--text-3);
+}
+
+.dot {
+  position: absolute;
+  top: calc(50% - 8px);
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  border-radius: 50%;
+  background: var(--bone);
+  box-shadow: 0 0 0 4px var(--panel);
+  transition: left 250ms ease;
+}
+.sm .dot {
+  top: 3px;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  box-shadow: 0 0 0 3px var(--panel);
+}
+.ringed {
+  box-shadow:
+    0 0 0 3px var(--panel),
+    0 0 0 5px var(--airbag);
+}
+
+.label {
+  position: absolute;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-stretch: 87.5%;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  color: var(--bone);
+}
+.md .label {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.top {
+  top: 0;
+}
+.bottom {
+  bottom: 0;
+}
+.center {
+  transform: translateX(-50%);
+}
+.start {
+  transform: translateX(-6px);
+}
+.end {
+  transform: translateX(calc(-100% + 6px));
+}
+.liqText {
+  color: var(--liq);
+}
+.airbagText {
+  color: var(--airbag);
+}
+.faintText {
+  color: var(--text-3);
+}

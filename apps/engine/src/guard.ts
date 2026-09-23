@@ -106,6 +106,8 @@ export interface PositionView {
   distance: number;
   covered: boolean;
   status: PositionStatus;
+  /** The risk inputs, so the web app can preview settings with the same math. */
+  position: Position;
   /** Present for covered positions. */
   line?: number;
   reference?: number;
@@ -282,6 +284,7 @@ export class AccountGuard {
         distance: distanceToLiquidation(risk, mark),
         covered,
         status: covered ? 'paused' : 'not-covered',
+        position: risk,
       };
       views.push(view);
       if (!covered) continue;
@@ -452,7 +455,7 @@ export class AccountGuard {
       if (plan.kind === 'none' || (plan.kind === 'trim' && plan.fraction <= 0)) {
         return this.finish(mkt, d, head, 'done', mark);
       }
-      if (plan.kind === 'margin') return await this.addSpare(mkt, d, m, plan.amount, head, mark);
+      if (plan.kind === 'margin') return await this.addSpare(mkt, d, m, plan.amount, mark);
       await this.trim(mkt, episode, m, p, risk, plan.fraction, plan.capped, head, mark);
     } catch (err) {
       this.deps.log.error('deploy.error', { id: d.id, err });
@@ -463,14 +466,7 @@ export class AccountGuard {
     }
   }
 
-  private async addSpare(
-    mkt: number,
-    d: Deploy,
-    m: Market,
-    amount: number,
-    head: number,
-    mark: number,
-  ) {
+  private async addSpare(mkt: number, d: Deploy, m: Market, amount: number, mark: number) {
     const cns = toCnsFloor(Math.min(amount, this.spare()), this.cd);
     const acc = this.exchange.account?.id ?? 0;
     const before = BigInt(this.exchange.positions.get(mkt)?.c ?? '0');
