@@ -13,7 +13,7 @@ import s from './AppShell.module.css';
 import { DeploysIcon, ListIcon, Sliders } from './icons.tsx';
 import { Brand, SimBanner, StatusPill } from './ui.tsx';
 
-const LiveContext = createContext<Live>({ connected: false, unauthorized: false });
+const LiveContext = createContext<Live>({ connected: false, failed: false, unauthorized: false });
 export const useLive = () => useContext(LiveContext);
 
 /** Re-renders every 100 ms so "checked 0.3 s ago" counts up between blocks. */
@@ -103,15 +103,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
         {data && !live.connected && (
           <div className={s.offline} role="status">
-            Reconnecting to Airbag’s engine. What you see may be out of date; the engine keeps
-            running either way.
+            Reconnecting to Airbag’s engine. What you see may be out of date.
           </div>
         )}
         <div className={s.body}>
           {data ? (
             children
           ) : (
-            <p className="muted">{session === undefined ? '' : 'Connecting to Airbag’s engine…'}</p>
+            <p className="muted" role="status">
+              {session === undefined
+                ? ''
+                : live.failed
+                  ? 'Can’t reach Airbag’s engine. Retrying every few seconds…'
+                  : 'Connecting to Airbag’s engine…'}
+            </p>
           )}
         </div>
         <nav aria-label="App" className={s.tabs}>

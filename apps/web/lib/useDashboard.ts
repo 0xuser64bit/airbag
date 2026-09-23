@@ -12,11 +12,17 @@ export interface Live {
   data?: Dashboard;
   /** False while reconnecting; the last state stays on screen, marked as such. */
   connected: boolean;
+  /** The last attempt to reach the engine failed. */
+  failed: boolean;
   unauthorized: boolean;
 }
 
 export function useDashboard(enabled = true): Live {
-  const [live, setLive] = useState<Live>({ connected: false, unauthorized: false });
+  const [live, setLive] = useState<Live>({
+    connected: false,
+    failed: false,
+    unauthorized: false,
+  });
   useEffect(() => {
     if (!enabled) return;
     const ctl = new AbortController();
@@ -60,6 +66,7 @@ export function useDashboard(enabled = true): Live {
                 setLive({
                   data: JSON.parse(data) as Dashboard,
                   connected: true,
+                  failed: false,
                   unauthorized: false,
                 });
               end = buffer.indexOf('\n\n');
@@ -68,7 +75,7 @@ export function useDashboard(enabled = true): Live {
         } catch {
           if (ctl.signal.aborted) return;
         }
-        setLive((l) => ({ ...l, connected: false }));
+        setLive((l) => ({ ...l, connected: false, failed: true }));
         const wait = Math.min(15_000, 500 * 2 ** attempt++);
         await new Promise((r) => setTimeout(r, wait));
       }
