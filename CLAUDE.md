@@ -42,4 +42,5 @@ The shell uses nvm with default `v24.21.0`. Plain `node`, `npm`, `npx` and `curl
 - Market ids, decimals, margins and `order_ttl_blocks` differ per network: read `/api/v1/pub/context`. `maintenance_margin` is leverage in hundredths (2500 = 4%).
 - The idle timeout (5 s mainnet, 10 s testnet) applies before sign-in too. Send `mt:29` immediately on open.
 - 4 trading connections per wallet, shared with the user's browser tabs.
+- **Side encodings differ.** The trading WS uses `sd` 1 = long, 2 = short; the contract's `PositionEnum` is 0 = long, 1 = short, and "no position" is `lotLNS == 0`. `packages/perpl/src/chain.ts` is the only place that reads the onchain one.
 - Entry price carries a Q16 residue (`epr`). Premium PnL comes from funding sums (`efs` vs current `sum`, divided by `div · 10^price_decimals`).

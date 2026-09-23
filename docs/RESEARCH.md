@@ -61,6 +61,8 @@ Brief section 4 is updated to say this.
 
 **Heartbeats and block numbers.** The trading WS sends `mt: 100 {sn, h}`, where `h` is the head block. `sn` must be strictly +1, starting from the WalletSnapshot's `sn`; a gap means reconnect. The market-data WS has a `heartbeat@<chain>` stream. `MarketState.at.b` carries the block at which that market's state last changed. It is *not* a freshness signal on its own (see 3a).
 
+**Two side encodings.** The trading WS reports `sd` as 1 = long, 2 = short (0 unspecified). The contract's `PositionEnum`, returned by `getPositionV2`, is 0 = long, 1 = short (dex-sdk `state/position.rs`), and an empty slot is `lotLNS == 0` with type 0. Found on 23 Sep when a live lookup of testnet account 641 dropped its three longs and read its ZEC short as a long.
+
 **Entry price has a residue.** `Position.ep` is rounded (ceil for longs, floor for shorts) and `epr` carries a Q16 residue. Effective long entry = `(ep − 1 + epr/65536) / 10^pd` when `epr > 0`. Needed to match Perpl's liquidation price to the dollar.
 
 **Premium PnL from funding sums.** `premium = −side · (fundingSum_now − efs) · size / (div · 10^pd)`, where `div = 10^funding_sum_scaling_exp`. Funding is realized on every size change. This is derived from the SDK's converters; M0 checks it against the chain's `getPositionV2`.

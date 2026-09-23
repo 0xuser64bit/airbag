@@ -98,8 +98,11 @@ export interface ChainAccount {
 }
 
 export interface ChainPosition {
-  /** 1 long, 2 short, 0 none. */
-  type: number;
+  /**
+   * Null when there are no lots. The contract's PositionEnum is 0 = long, 1 = short, unlike the
+   * trading WS (1 = long, 2 = short); this is the only place that reads the onchain encoding.
+   */
+  side: 'long' | 'short' | null;
   depositCns: bigint;
   pricePns: bigint;
   residueQ16: bigint;
@@ -145,7 +148,7 @@ export function perplChain(rpcUrl: string, exchange: string) {
         args: [BigInt(perpId), BigInt(accountId)],
       });
       return {
-        type: p.positionType,
+        side: p.lotLNS === 0n ? null : p.positionType === 0 ? 'long' : 'short',
         depositCns: p.depositCNS,
         pricePns: p.pricePNS,
         residueQ16: p.priceResiduePNSQ16,
