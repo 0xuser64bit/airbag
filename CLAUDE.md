@@ -16,13 +16,9 @@ gitleaks git . --redact   # secret scan, same as CI
 
 Spike scripts (M0): `node --env-file-if-exists=.env spike/<name>.ts` (Node 24 runs TS directly).
 
-## Local shell gotcha (this machine only)
+## Local shell (this machine only)
 
-The owner's shell loads rote's integration, which replaces `node`, `npm`, `npx` and `curl` with blocking shell functions and puts `~/.rote/bin` first on PATH. The owner approved bypassing it for this repo. Start Bash commands that need them with:
-
-```bash
-unset -f node curl npm npx 2>/dev/null; export PATH="$HOME/.nvm/versions/node/v24.21.0/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-```
+The shell uses nvm with default `v24.21.0`. Plain `node`, `npm`, `npx` and `curl` work, no PATH bypass needed.
 
 ## Conventions
 
