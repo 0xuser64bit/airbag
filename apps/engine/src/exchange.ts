@@ -126,7 +126,8 @@ export class PaperExchange implements Exchange {
     if (frame.t === 6) {
       const amount = BigInt(frame.a);
       const free = BigInt(account.b) - BigInt(account.lb);
-      if (!pos || amount > free) {
+      // fillShare 0 on a t:6 simulates Perpl failing it.
+      if (!pos || amount > free || this.opts.fillShare?.(frame) === 0) {
         return {
           result: 'failed',
           rq: frame.rq,

@@ -21,6 +21,8 @@ interface Options {
   settings?: Partial<Settings>;
   spareCns?: bigint;
   fillShare?: (lots: number, attempt: number) => number;
+  /** The first n margin adds fail. */
+  failAdds?: number;
   markets?: number[];
   short?: boolean;
 }
@@ -62,6 +64,7 @@ function harness(opts: Options = {}) {
   const chain = new SimChain(feed, SIM_CONTEXT.markets);
   store.putSettings(WALLET, { ...DEFAULT_SETTINGS, armed: true, ...opts.settings });
   let attempt = 0;
+  let adds = 0;
   const positions = samplePositions(4127).map((p) => (opts.short ? { ...p, sd: 2 as const } : p));
   const paper = new PaperExchange({
     wallet: WALLET,
@@ -71,10 +74,14 @@ function harness(opts: Options = {}) {
     markets: new Map(SIM_CONTEXT.markets.map((m) => [m.id, m])),
     collateralDecimals: 6,
     markOf: (id) => feed.mark(id),
-    ...(opts.fillShare
+    ...(opts.fillShare || opts.failAdds
       ? {
           fillShare: (f: { s: number; t: number }) =>
-            f.t === 6 ? 1 : (opts.fillShare?.(f.s, ++attempt) ?? 1),
+            f.t === 6
+              ? ++adds <= (opts.failAdds ?? 0)
+                ? 0
+                : 1
+              : (opts.fillShare?.(f.s, ++attempt) ?? 1),
         }
       : {}),
   });
@@ -183,6 +190,18 @@ describe('deploy paths', () => {
     expect(d.data.timeline.some((e) => e.text.startsWith('Only part of the trim filled'))).toBe(
       true,
     );
+  });
+
+  it('retries a failed re-add as a re-add, never as another trim', async () => {
+    const h = harness({ failAdds: 1 });
+    await h.run([98_000, 97_000, 97_000, 97_000, 97_000, 97_000]);
+    await h.blocks(6);
+    const d = only(h.store);
+    expect(h.paper.sent.map((f) => f.t)).toEqual([3, 6, 6]);
+    expect(d.data.close?.filledLots).toBe(48_906);
+    expect(d.data.after?.liquidation).toBeCloseTo(87_300, -2);
+    expect(d.phase).toBe('done');
+    expect(h.alerts).toHaveLength(1);
   });
 
   it('retries a close that gapped past its worst price, at the new mark', async () => {

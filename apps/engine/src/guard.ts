@@ -141,6 +141,8 @@ interface Episode {
   startLots: number;
   /** Retry on or after this block. */
   retryAt: number;
+  /** A close filled but its released margin didn't go back yet: retry that, not another trim. */
+  readd?: { amount: bigint; fill: number };
 }
 
 const RECENT_MS = 10 * 60_000;
@@ -439,6 +441,14 @@ export class AccountGuard {
         this.entry(d, head, 'The position closed before Airbag acted.');
         return this.finish(mkt, d, head, 'failed');
       }
+      if (episode.readd) {
+        const { amount, fill } = episode.readd;
+        if (!(await this.readd(mkt, d, m, amount, fill))) {
+          return this.retryOrStop(mkt, episode, 'Will retry the re-add next block.', fill);
+        }
+        delete episode.readd;
+        return this.finish(mkt, d, this.exchange.head, 'done', fill);
+      }
       const risk = this.risk(p, m, head);
       const spare = this.spare();
       const policy = this.policy();
@@ -600,44 +610,17 @@ export class AccountGuard {
     let readd = observed > 0n ? observed : expected;
     if (readd > (expected * 105n) / 100n) readd = (expected * 105n) / 100n;
     if (readd > free) readd = free;
-    const depositAfterClose = BigInt(this.exchange.positions.get(mkt)?.c ?? '0');
     let readdAt = filledAt;
     if (readd > 0n) {
-      const re = await this.exchange.submit((ids) =>
-        increaseCollateral({ ...ids, mkt, acc: account.id, lb: 0, amountCns: readd }),
-      );
-      await this.until(
-        () => BigInt(this.exchange.positions.get(mkt)?.c ?? '0') > depositAfterClose,
-      );
+      const ok = await this.readd(mkt, d, m, readd, fill);
       readdAt = Date.now();
-      const added = fromCns(
-        BigInt(this.exchange.positions.get(mkt)?.c ?? '0') - depositAfterClose,
-        this.cd,
-      );
-      if (added > 0) {
-        d.data.margin = {
-          amount: (d.data.margin?.amount ?? 0) + added,
-          reason: 'readd',
-          ...txOf(re),
-        };
-        const after = this.after(mkt, m, fill);
-        this.entry(
-          d,
-          this.exchange.head,
-          `Put back ${fmt.usd(added)} of released margin. Liquidation now ${fmt.usd(after?.liquidation)}.`,
-          { tone: 'airbag', ...txOf(re) },
-        );
-      } else {
-        this.entry(
-          d,
-          this.exchange.head,
-          `Putting back the released margin failed (${re.result}). Liquidation hasn't moved. Retrying.`,
-        );
+      if (!ok) {
+        episode.readd = { amount: readd, fill };
         this.deps.notify.alert(
           this.wallet,
           `Airbag trimmed your ${d.symbol} ${d.side} but couldn't add the released margin back yet. It's retrying.`,
         );
-        return this.retryOrStop(mkt, episode, 'Will retry the re-add next block.');
+        return this.retryOrStop(mkt, episode, 'Will retry the re-add next block.', fill);
       }
     }
     d.data.latency = {
@@ -659,6 +642,44 @@ export class AccountGuard {
     this.finish(mkt, d, this.exchange.head, 'done', fill);
   }
 
+  /** IncreasePositionCollateral with margin a close released. False if the deposit didn't grow. */
+  private async readd(mkt: number, d: Deploy, m: Market, amount: bigint, fill: number) {
+    const a = this.exchange.account;
+    const free = BigInt(a?.b ?? '0') - BigInt(a?.lb ?? '0');
+    const cns = amount < free ? amount : free;
+    if (cns <= 0n) {
+      this.entry(d, this.exchange.head, "There's no free balance to put back yet.");
+      return false;
+    }
+    const before = BigInt(this.exchange.positions.get(mkt)?.c ?? '0');
+    const re = await this.exchange.submit((ids) =>
+      increaseCollateral({ ...ids, mkt, acc: a?.id ?? 0, lb: 0, amountCns: cns }),
+    );
+    await this.until(() => BigInt(this.exchange.positions.get(mkt)?.c ?? '0') > before);
+    const added = fromCns(BigInt(this.exchange.positions.get(mkt)?.c ?? '0') - before, this.cd);
+    if (added <= 0) {
+      this.entry(
+        d,
+        this.exchange.head,
+        `Putting back the released margin failed (${re.result}). Liquidation hasn't moved.`,
+      );
+      return false;
+    }
+    d.data.margin = {
+      amount: (d.data.margin?.amount ?? 0) + added,
+      reason: 'readd',
+      ...txOf(re),
+    };
+    const after = this.after(mkt, m, fill);
+    this.entry(
+      d,
+      this.exchange.head,
+      `Put back ${fmt.usd(added)} of released margin. Liquidation now ${fmt.usd(after?.liquidation)}.`,
+      { tone: 'airbag', ...txOf(re) },
+    );
+    return true;
+  }
+
   /** The position after a deploy, measured at `price`. */
   private after(mkt: number, m: Market, price: number) {
     const p = this.exchange.positions.get(mkt);
@@ -677,7 +698,8 @@ export class AccountGuard {
     if (episode.attempts < this.deps.maxAttempts && this.exchange.positions.has(mkt)) {
       this.entry(d, this.exchange.head, text);
       episode.retryAt = this.exchange.head + 1;
-      d.phase = 'done';
+      // 'readding' lets a restart finish the re-add from the persisted pre-close state.
+      d.phase = episode.readd ? 'readding' : 'done';
       this.save(d);
       return;
     }
