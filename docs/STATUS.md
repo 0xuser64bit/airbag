@@ -69,6 +69,7 @@ Ordered by dependency. Each item is one or a few commits, verified with `pnpm ch
 
 ## Done
 
+- 23 Sep: CI green again. `contracts` ran Foundry as uid 1000 against a checkout owned by the runner, so `forge` couldn't create `out/`; it now runs with `--user root` (CI, `pnpm contracts:*`, deploy README). `audit` failed on 5 highs via `envio@3.12.1` (express 4.19.2, ws 8.20.1); pinned via `pnpm-workspace.yaml` overrides to express 4.22.3, body-parser 1.20.8, ws 8.21.3. One low left (esbuild dev-server on Windows, dev-only). Also added the missing `setup-node` step to the `audit` job.
 - 23 Sep: `spike/account.ts` and `spike/deploy.ts` (dry-run by default, testnet only, orders only through the allowlisted `sendOrder`).
 - 23 Sep: `spike/measure.ts` run on both networks. Found the mark cadence and fixed the brief's stale-guard definition.
 - 23 Sep: `packages/perpl` M0 subset: order allowlist (types, runtime assert, tests), Ed25519 sign-in via `node:crypto` (RFC 8032 test), entry residue, safe rounding, context types, socket helper.
