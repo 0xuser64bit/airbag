@@ -124,3 +124,21 @@ export const sleep = (ms: number, signal?: AbortSignal): Promise<void> =>
 export const BACKOFF_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 32_000, 60_000];
 export const backoff = (attempt: number): number =>
   BACKOFF_MS[Math.min(attempt, BACKOFF_MS.length - 1)] ?? 60_000;
+
+/**
+ * Closes the socket if nothing arrives for `ms`: an open socket that stopped delivering would
+ * otherwise never reconnect. Returns a function that stops watching.
+ */
+export function closeWhenSilent(socket: Socket, ms: number): () => void {
+  let last = Date.now();
+  const unlisten = socket.listen(() => {
+    last = Date.now();
+  });
+  const timer = setInterval(() => {
+    if (Date.now() - last > ms) socket.close(4000, 'no frames');
+  }, ms / 2);
+  return () => {
+    clearInterval(timer);
+    unlisten();
+  };
+}

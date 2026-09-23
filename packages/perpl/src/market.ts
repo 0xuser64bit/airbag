@@ -5,7 +5,14 @@
 // The stale guard measures how far our data trails the chain, never the age of a mark: an
 // unchanged mark is legitimately up to ~169 blocks old (docs/RESEARCH.md §3a).
 
-import { backoff, openSocket, sleep, untilClosed, type WebSocketCtor } from './socket.ts';
+import {
+  backoff,
+  closeWhenSilent,
+  openSocket,
+  sleep,
+  untilClosed,
+  type WebSocketCtor,
+} from './socket.ts';
 import type { FundingEvent, Market, MarketConfig, MarketState, Message } from './types.ts';
 import { MT } from './types.ts';
 
@@ -33,6 +40,8 @@ export interface MarketFeedOptions {
 
 /** Expected block interval, with headroom for Monad's p95 arrival jitter (~470 ms). */
 const BLOCK_MS = 400;
+/** Both feeds deliver every block; this long without a frame means the socket is dead. */
+const SILENT_MS = 10_000;
 
 export class MarketFeed {
   /** Perpl's head block, from the heartbeat. */
@@ -158,7 +167,9 @@ export class MarketFeed {
         this.opts.onState?.(true);
         attempt = 0;
         socket.listen((m) => this.apply(m));
+        const unwatch = closeWhenSilent(socket, SILENT_MS);
         const closed = await untilClosed(socket, this.stop.signal);
+        unwatch();
         reason = `${closed.code} ${closed.reason}`.trim();
       } catch {
         // Could not open.
@@ -184,7 +195,9 @@ export class MarketFeed {
           this.monadHead = Number.parseInt(head, 16);
           this.monadHeadAt = Date.now();
         });
+        const unwatch = closeWhenSilent(socket, SILENT_MS);
         await untilClosed(socket, this.stop.signal);
+        unwatch();
       } catch {
         // Could not open; the cross-check is optional.
       }

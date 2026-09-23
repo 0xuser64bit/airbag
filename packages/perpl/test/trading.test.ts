@@ -182,6 +182,38 @@ describe('TradingClient', () => {
     await expect(outcome).resolves.toMatchObject({ result: 'lost' });
   });
 
+  it('gives an lb: 0 order a deadline too (a margin add must not hang the deploy lock)', async () => {
+    const t = setup();
+    client = t.client;
+    client.start();
+    await snapshots(t.server, 500);
+    const outcome = client.submit((ids) =>
+      increaseCollateral({ ...ids, mkt: 16, acc: 42, lb: 0, amountCns: 1_000_000n }),
+    );
+    await flush();
+    t.server.last.push({ mt: 100, sn: 502, h: 1_030 });
+    await flush();
+    t.server.last.push({ mt: 100, sn: 503, h: 1_063 });
+    await expect(outcome).resolves.toMatchObject({ result: 'lost' });
+  });
+
+  it('drops a socket that goes silent and reconnects', async () => {
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'setInterval', 'clearTimeout', 'clearInterval', 'Date'],
+    });
+    const t = setup();
+    client = t.client;
+    client.start();
+    await snapshots(t.server, 500);
+    await vi.advanceTimersByTimeAsync(9_000);
+    expect(t.server.sockets[0]?.readyState).toBe(1);
+    await vi.advanceTimersByTimeAsync(7_000);
+    expect(t.server.sockets[0]?.readyState).toBe(3);
+    await vi.advanceTimersByTimeAsync(2_000);
+    await flush();
+    expect(t.server.sockets).toHaveLength(2);
+  });
+
   it('reconnects with a fresh sign-in on a heartbeat sequence gap', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'clearTimeout', 'clearInterval'] });
     const t = setup();

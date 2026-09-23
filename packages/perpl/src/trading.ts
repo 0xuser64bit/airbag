@@ -14,6 +14,7 @@ import { signInFrame } from './auth.ts';
 import { type AllowedOrderFrame, sendOrder } from './orders.ts';
 import {
   backoff,
+  closeWhenSilent,
   openSocket,
   type Socket,
   sleep,
@@ -86,10 +87,17 @@ export interface OrderOutcome {
 
 interface Pending {
   frame: AllowedOrderFrame;
+  /** Settle as lost after this block. `lb: 0` means Perpl's max window, which we don't know. */
+  deadline: number;
   sawNonFailure: boolean;
   last?: Order;
   resolve: (o: OrderOutcome) => void;
 }
+
+/** An `lb: 0` order's window is `order_ttl_blocks` (20 today); give up well after that. */
+const MAX_WINDOW = 60;
+/** Perpl sends a heartbeat every block. This long without any frame means the socket is dead. */
+const SILENT_MS = 10_000;
 
 const FINAL = new Set<number>([
   OrderStatus.Filled,
@@ -208,7 +216,8 @@ export class TradingClient {
     this.sn += 1;
     const frame = build({ sn: this.sn, rq: this.rq });
     return new Promise<OrderOutcome>((resolve) => {
-      const p: Pending = { frame, sawNonFailure: false, resolve };
+      const deadline = frame.lb > 0 ? frame.lb : this.head + MAX_WINDOW;
+      const p: Pending = { frame, deadline, sawNonFailure: false, resolve };
       this.pending.set(frame.rq, p);
       this.bySn.set(frame.sn, p);
       try {
@@ -261,8 +270,10 @@ export class TradingClient {
             if (socket.isOpen) socket.send(JSON.stringify({ mt: MT.Ping, t: Date.now() }));
           });
         }, 30_000);
+        const unwatch = closeWhenSilent(socket, SILENT_MS);
         closed = await untilClosed(socket, this.stop.signal);
         clearInterval(ping);
+        unwatch();
       } catch {
         // Could not open; closed stays 1006.
       }
@@ -389,15 +400,15 @@ export class TradingClient {
     this.settle(p, { result, rq: o.rq, order: o });
   }
 
-  /** An order whose `lb` has passed with no final status is lost. */
+  /** An order whose window has passed with no final status is lost. */
   private expire() {
     for (const p of [...this.pending.values()]) {
-      if (p.frame.lb > 0 && this.head > p.frame.lb + 2) {
+      if (this.head > p.deadline + 2) {
         this.settle(p, {
           result: p.last && p.last.fs > 0 ? 'partial' : 'lost',
           rq: p.frame.rq,
           ...(p.last ? { order: p.last } : {}),
-          error: `no final status by block ${p.frame.lb}`,
+          error: `no final status by block ${p.deadline}`,
         });
       }
     }
