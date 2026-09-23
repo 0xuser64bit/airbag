@@ -550,7 +550,8 @@ export function createApi(deps: ApiDeps): Server {
       nominalLeverage: d.data.before.nominal ?? null,
       kept,
       counterfactual: d.data.counterfactual,
-      withAirbag: kept + d.data.counterfactual + d.data.spareAdded,
+      // Net of spare margin Airbag added (it was the user's either way), so kept = with − without.
+      withAirbag: kept + d.data.counterfactual,
       measuredAt: d.data.keptMark ?? null,
       closed: d.closedAt !== null,
       trimmed: d.data.close

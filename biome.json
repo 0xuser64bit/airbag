@@ -36,5 +36,21 @@
         "organizeImports": "on"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "apps/web/app/**/opengraph-image.tsx",
+        "apps/web/app/pwa-icon/**",
+        "apps/web/app/icon.svg"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noSvgWithoutTitle": "off"
+          }
+        }
+      }
+    }
+  ]
 }

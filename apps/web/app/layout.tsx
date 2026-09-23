@@ -17,6 +17,7 @@ export const metadata: Metadata = {
   description,
   applicationName: 'Airbag',
   appleWebApp: { capable: true, title: 'Airbag', statusBarStyle: 'black-translucent' },
+  icons: { apple: '/pwa-icon/180' },
   openGraph: { title: 'Airbag: get trimmed, not liquidated', description, siteName: 'Airbag' },
   twitter: { card: 'summary_large_image' },
 };
