@@ -1,0 +1,11 @@
+{
+  "name": "@airbag/risk",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pure risk math for Airbag: equity, liquidation, trigger and trim sizing",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
