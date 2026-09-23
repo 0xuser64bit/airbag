@@ -49,7 +49,7 @@ This project is built with AI coding tools, as the hackathon rules allow. What w
 | Corrections to the brief, research notes, ADRs, architecture doc | Claude Code (Anthropic, Claude Opus 5.5) | Pending |
 | All code, tests and CI in this repository | Claude Code (Anthropic, Claude Opus 5.5) | Pending |
 
-Commits authored with Claude Code carry a `Co-Authored-By: Claude` trailer. This table is updated as the owner reviews each part.
+Commits before 23 Sep session 2 carry a `Co-Authored-By: Claude` trailer; later ones don't, at the owner's request, and the table above is the disclosure of record. It is updated as the owner reviews each part.
 
 ## License
 

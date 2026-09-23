@@ -28,7 +28,7 @@ The shell uses nvm with default `v24.21.0`. Plain `node`, `npm`, `npx` and `curl
 - Tests first for risk math. Golden vectors compare at the design's display precision.
 - Logs are JSON lines. Never log secrets, API keys, signatures or private keys.
 - Run `gitleaks git . --redact` before every push. Public test vectors that look like keys get an inline `// gitleaks:allow` with a comment saying what they are.
-- Commits: small, conventional prefixes (`feat(risk):`, `docs(adr):`, `ci:`), with the Claude co-author trailer. The history is judged.
+- Commits: small, conventional prefixes (`feat(risk):`, `docs(adr):`, `ci:`). No co-author trailer (owner decision, 23 Sep). The history is judged.
 - If the brief is wrong, fix `docs/BRIEF.md` in the same commit and add a row to the corrections table in `docs/STATUS.md`.
 - Update `docs/STATUS.md` every session.
 
