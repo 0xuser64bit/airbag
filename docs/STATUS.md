@@ -2,7 +2,7 @@
 
 Updated every session. Newest first within each section.
 
-**Milestone:** M1–M5 build (session 2, 23 Sep). The M0 gate is still waiting on the owner (checklist below); everything that doesn't need a funded key is being built and tested against a simulated exchange and Perpl's public data.
+**Milestone:** M1–M5 built and re-audited (session 2, 23 Sep). The product runs end to end against a simulated exchange, in CI and in a browser. **It has not traded on Perpl yet:** the M0 gate is waiting on the owner (checklist below). Nothing is deployed.
 
 ## Audit (23 Sep, session 2)
 
@@ -23,9 +23,28 @@ Findings that change the plan (details in the ADRs they produced):
 | 9 | A crash between the close and the re-add leaves the position trimmed with liquidation unchanged. | Deploy phase is persisted; on restart the engine finishes any half-done re-add. |
 | 10 | Arming on a position that's already past its line trims it immediately. | The setup preview warns before arming. |
 
+## Re-audit (23 Sep, session 2, after the build)
+
+A fresh pass over the finished code, money path first. Each row is one commit.
+
+| # | Finding | Fix |
+|---|---|---|
+| 1 | Margin adds are sent with `lb: 0`, which the trading client never expired. A lost final status held the deploy lock for that position forever. | Every pending order gets a deadline (60 blocks for `lb: 0`). |
+| 2 | A socket that stays open but stops delivering never reconnected: the feed stayed stale (safe, but protection stopped until a restart) and orders stayed pending. | All three sockets close after 10 s of silence and reconnect. |
+| 3 | A failed re-add was retried as a new trim of the already-trimmed position, while the released margin sat in the balance. | The episode remembers the pending re-add and retries only that; the deploy stays `readding` so a restart can finish it too. |
+| 4 | `DELETE /v1/push` removed any wallet's subscription by endpoint. A malformed path escape was a 500. | Scoped to the session's wallet; 400. |
+| 5 | SIGTERM with a dashboard open always hit the 10 s force-exit: `server.close()` waits for event streams that never end. | `stop()` ends open connections; the API test leaves a stream open to prove it. |
+| 6 | Save alerts and save-report metadata said "trimmed" for margin-only deploys. | Copy follows the deploy kind. |
+| 7 | The page that takes an API secret had no CSP and could be framed. | CSP (connect only to self and the engine, no framing, no third-party scripts) plus nosniff, referrer and permissions headers. |
+| 8 | An unused own-order cancel builder widened the type-5 surface. Airbag's closes are IOC and never rest. | Removed; brief corrected. |
+| 9 | Unlinking or replacing a key mid-deploy swapped the exchange under the running deploy. | 409 until the deploy finishes. |
+| 10 | A non-numeric `MASTER_KEY_VERSION` loaded a key under `NaN`. | Rejected at boot. |
+| 11 | With the engine unreachable the app said "Connecting" forever, and the reconnect banner claimed "the engine keeps running either way", which the browser can't know. | Says it can't reach the engine; the claim is gone. |
+| 12 | "Key verified · Trade scope" was shown even when Perpl never answered the scope probe. | The engine reports whether the probe proved Trade scope; the page says when it couldn't. |
+
 ## Backlog
 
-Ordered by dependency. Each item is one or a few commits, verified with `pnpm check` plus the item's own check.
+Ordered by dependency. Each item is one or a few commits, verified with `pnpm check` plus the item's own check. All twelve are done; what they couldn't verify is under "Not verified".
 
 | # | Area | Work | Verify |
 |---|---|---|---|
@@ -69,6 +88,7 @@ Ordered by dependency. Each item is one or a few commits, verified with `pnpm ch
 
 ## Done
 
+- 23 Sep, session 2: backlog items 1–12 (commits `60c7f28` … `a7d2cc4`). Engine, web app, e2e, AirbagLog, indexer, engine image, docs (ADRs 0010–0013, architecture, security, deploy runbook, README), then the re-audit above. 135 unit/property/API tests, 4 Playwright journeys with axe on 9 screens, 8 Foundry tests, 3 indexer handler tests. The engine booted live against Perpl testnet public data, and live wallet lookups matched a real testnet account by hand.
 - 23 Sep: CI green again. `contracts` ran Foundry as uid 1000 against a checkout owned by the runner, so `forge` couldn't create `out/`; it now runs with `--user root` (CI, `pnpm contracts:*`, deploy README). `audit` failed on 5 highs via `envio@3.12.1` (express 4.19.2, ws 8.20.1); pinned via `pnpm-workspace.yaml` overrides to express 4.22.3, body-parser 1.20.8, ws 8.21.3. One low left (esbuild dev-server on Windows, dev-only). Also added the missing `setup-node` step to the `audit` job.
 - 23 Sep: `spike/account.ts` and `spike/deploy.ts` (dry-run by default, testnet only, orders only through the allowlisted `sendOrder`).
 - 23 Sep: `spike/measure.ts` run on both networks. Found the mark cadence and fixed the brief's stale-guard definition.
@@ -80,7 +100,9 @@ Ordered by dependency. Each item is one or a few commits, verified with `pnpm ch
 
 ## Blocked (needs the owner)
 
-- The M0 gate checklist above.
+- The M0 gate checklist above. Until it runs, the live trading path (sign-in with a real key, `t:6` amount format, fill and deposit reconciliation, latency) is tested only against a fake socket and the paper exchange.
+- Accounts and secrets for deployment (`docs/DEPLOY.md`): Fly.io (engine + static egress IP), Vercel (web), VAPID keys (push is off without them), a funded deployer and a low-value writer wallet for AirbagLog, `ENVIO_API_TOKEN` for the indexer.
+- AI disclosure table in the README: say which tools, if any, helped with the brief and design, and review the parts marked "Pending".
 - Hackathon dashboard: paste the Monad Metropolis rules and the exact Perpl ("Best use of Perpl's API", "Best Analytics / Risk Tool") and Envio bounty texts into `docs/HACKATHON.md`.
 - Hosting: Fly.io (engine, static egress) and Vercel (web). Neon is no longer needed (ADR 0010). Ask Perpl on Discord to (a) whitelist our Origin for key enrollment, (b) say whether a key-info endpoint (scope and IP list) exists or is planned.
 - Make the repo public before submission (it's private for now, by your choice). The rules want it public "throughout".
@@ -99,6 +121,19 @@ Ordered by dependency. Each item is one or a few commits, verified with `pnpm ch
 | 23 Sep | 3 | Public Monad WS URLs unlisted | Listed: `wss://rpc.monad.xyz`, `wss://testnet-rpc.monad.xyz` | docs.monad.xyz |
 | 23 Sep | 3 | Perpl ABI not public | `dex-sdk` (MIT) ships `Exchange.json` | dex-sdk repo |
 | 23 Sep | 3 | Order frame fields | Added `sn` (ack correlation), `rq` seeding from `lfr`, `lb: 0` | api-docs websocket.md |
+
+## Not verified
+
+- Anything against a funded Perpl account (M0 gate). Push delivery to a real browser (no VAPID keys). The indexer against real chain data (token). Any deployment. An independent review of key handling.
+
+## Known limits (accepted for now)
+
+- One engine process on one machine: if it's down, nothing is protected. Add an external uptime check on `/health` when deployed.
+- The scope probe cancels the smallest order id the account doesn't have. On an account that has never had an order, a first order placed in the same second could get that id and be cancelled. Harmless to positions; rare.
+- If the funding seed from Perpl's REST API fails at boot, premium PnL counts as zero until the next funding event, which can put the liquidation price off by the accrued premium. It's logged as `funding.seed.error`.
+- Pausing mid-deploy leaves the retry pending until re-armed; settings changed mid-deploy apply from the next attempt.
+- The dashboard stream sends the whole state every block to every open tab. Fine for tens of users, not thousands.
+- The session token lives in `localStorage`. CSP limits where a script could send it, but Next's inline scripts need `'unsafe-inline'`.
 
 ## Open questions
 
