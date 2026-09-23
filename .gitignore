@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+.turbo/
+
+# secrets: never commit. Use .env.example as the template.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# spike output (may contain account ids)
+spike/out/
+
+.DS_Store
