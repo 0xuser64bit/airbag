@@ -58,36 +58,38 @@ Re-verify anything marked (verify). Always fetch live config at runtime instead 
 | Chain ID | 143 | 10143 |
 | RPC | `https://rpc.monad.xyz` | `https://testnet-rpc.monad.xyz` |
 | Exchange | `0x34B6552d57a35a1D042CcAe1951BD1C370112a6F` | `0x1964C32f0bE608E7D29302AFF5E61268E72080cc` |
-| Collateral | AUSD `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a` (6 dp) | aUSD `0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC` (6 dp) (verify: the api-docs README lists a different testnet collateral address; trust `GET /api/v1/pub/context`) |
-| Markets | BTC 1, MON 10, ETH 20, SOL 31, HYPE 40, ZEC 50 | BTC 16, ETH 32, SOL 48, MON 64, ZEC 256 |
+| Collateral | AUSD `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a` (6 dp) | AUSD `0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC` (6 dp) (verified against live context on 23 Sep; the api-docs README's testnet address is stale) |
+| Markets | BTC 1, MON 10, ETH 20, SOL 31, HYPE 40, ZEC 50, LIT 60, PUMP 90 | BTC 16, ETH 32, SOL 48, MON 64, ZEC 256, LIT 272, PUMP 320 |
 
 - **Market IDs differ per network. Never hard-code them.** Read `GET /api/v1/pub/context` at startup.
 - **Auth:** API keys are Ed25519 keypairs. The user creates one in Perpl's UI (`/apikeys`) or an integration enrolls one programmatically (EIP-712 wallet signature plus Ed25519 proof of possession). **Programmatic enrollment requires Perpl to whitelist our Origin.** Scopes: `1` read, `2` trade (implies read). **Withdrawals and transfers out are never permitted via an API key, whatever the scope.** Keys can carry an IP allow-list (up to 4 CIDRs) and an expiry. Max 16 active keys per profile. Listing and revoking happen in Perpl's UI only.
-- **API auth ≠ exchange account.** The exchange account is onchain (`createAccount(uint256)`, `getAccountByAddr(address)`).
+- **API auth ≠ exchange account ≠ order forwarding.** The exchange account is onchain (`createAccount(uint256)`, `getAccountByAddr(address)`). Posting orders through the API also needs `allowOrderForwarding(true)` called from the account's wallet ("One-Click Trading" in Perpl's UI). It is **off** on new accounts; without it every order fails with `sr: 34`. Its state is only visible as `Account.fw` on the trading WS, so onboarding and key health must check it.
 - **Trading WebSocket** `…/ws/v1/trading`. Sign-in frame `mt: 29` (chain_id, api_key, timestamp, nonce, signature over `<chain_id>\ntrading-ws-signin\n<timestamp_ms>\n<nonce>`). Snapshots: WalletSnapshot `mt:19`, AccountUpdate `mt:21`, OrdersSnapshot `mt:23`, OrdersUpdate `mt:24`, FillsUpdate `mt:25`, PositionsSnapshot `mt:26`, PositionsUpdate `mt:27`. Command status `mt:3` (`code: 0` means accepted for forwarding, **not** filled). Ping `{mt:1,t:Date.now()}` every ~30 s. Track `sn` sequence numbers and reconnect/resnapshot on gaps. Idle timeout closes the socket (5 s mainnet, 10 s testnet), including before sign-in.
-- **Order frame `mt: 22`**: `rq` (strictly increasing idempotency key), `mkt`, `acc`, `t` (order type), `p` (0 = market), `s` (scaled size), `ms` (max slippage bps), `fl` (flags), `lv` (leverage in hundredths), `lb` (last execution block: `head < lb ≤ head + order_ttl_blocks`), `a` (amount, for collateral), optional `bf` (builder fee).
+- **Order frame `mt: 22`**: `sn` (unique non-zero frame id, echoed as `cid` on `mt:3`; without it acks can't be matched), `rq` (strictly increasing idempotency key, seeded from `Account.lfr`), `mkt`, `acc`, `t` (order type), `p` (0 = market), `s` (scaled size), `ms` (max slippage bps), `fl` (flags), `lv` (leverage in hundredths), `lb` (last execution block: `head < lb ≤ head + order_ttl_blocks`, or `0` for the server's max window; `order_ttl_blocks` is 20 today), `a` (amount, for collateral), optional `bf` (builder fee).
   - `t`: 1 OpenLong, 2 OpenShort, **3 CloseLong, 4 CloseShort**, 5 Cancel, **6 IncreasePositionCollateral**, 7 Change.
   - `fl`: 0 GTC, 1 PostOnly, 2 FOK, **4 IOC**.
   - A "market" order is a marketable limit IOC bounded by the slippage limit. It can fill partly or not at all on a thin or fast book.
+  - `Close*` orders are reduce-only and clamped to the position size by the exchange, so they can never flip a position. `mnp` (max negative-PnL collateralization) never applies to reducing fills.
 - **Rate limits.** Trading WS: 60 req/min testnet, 120 mainnet, 4 connections per wallet (shared with the user's own browser sessions). Market-data WS `…/ws/v1/market-data`: 10 req/min and 16 subscriptions per connection; data arrives every block and needs no pings. Exceeding request rate closes the socket with code 1008 and silently drops anything in flight.
 - **Market-data streams:** `order-book@<mkt>`, `trades@<mkt>`, `market-state@<chain>` (prices, OI), `funding@<chain>`, `market-config@<chain>`, `gas-stats@<chain>`.
 - **Margin:** isolated only today (each position has its own margin). Initial margin is dynamic (can rise for large positions or volatility). Liquidation is triggered on the **mark price**.
-- **Liquidation price (Perpl docs):** `P_liq = P_entry + s · (C_MMR − C_deposit − C_funding) / L`, with `s = +1` long, `−1` short, `C_MMR` the maintenance requirement, `C_deposit` the position's collateral, `C_funding` funding owed (premium PnL), `L` lot size. Maintenance margin by market: BTC 4% (max 15x), ETH 5% (12x), SOL 5% (12x), MON 5% (10x), HYPE 5% (10x), ZEC ~6.7% (8x). Partial liquidations can happen. Large ones can be bought by the PLP vault.
-- **Funding** is applied about hourly: every 8,571 blocks per the docs. It settles virtually via a cumulative "funding product sum", so premium PnL must be included in equity. Note: funding does **not** move every block. The mark price does. Don't claim otherwise in copy.
-- **Stops and take-profits are not native contract operations.** They're SDK/keeper abstractions. That's part of why Airbag has a gap to fill.
+- **Partial closes release margin pro-rata.** On a decrease, the position's deposit shrinks in proportion to its size and the realized PnL settles to the account balance (verified on 400 `PositionDecreased` events per network, see `docs/RESEARCH.md`). **A reduce-only close alone leaves the liquidation price unchanged.** To move liquidation, the released equity must be added back with `IncreasePositionCollateral` (`t:6`).
+- **Liquidation price (Perpl docs):** `P_liq = P_entry + s · (C_MMR − C_deposit − C_funding) / L`, with `s = +1` long, `−1` short, `C_MMR` the maintenance requirement, `C_deposit` the position's collateral, `C_funding` funding owed (premium PnL), `L` lot size. Maintenance margin by market (mainnet, live context 23 Sep): BTC 4% (max 15x), ETH 5% (12x), SOL 5% (12x), MON 5% (10x), HYPE 5% (10x), ZEC 5.56% (10x), LIT 10%, PUMP 10%. `config.maintenance_margin` is **leverage in hundredths** (2500 = 25x = 4%), so `r = 100 / maintenance_margin`. Testnet values differ (MON 20%, ZEC 10%). Partial liquidations can happen. Large ones can be bought by the PLP vault.
+- **Funding** is applied every 8,571 blocks, which `funding_interval_sec` puts at **2,580 s (43 min)** at 300 ms blocks (Perpl's docs say "about hourly" because they assume 0.42 s blocks). It settles virtually via a cumulative "funding product sum", so premium PnL must be included in equity. Note: funding does **not** move every block. The mark price does. Don't claim otherwise in copy.
+- **Stops and take-profits are not native contract operations**, but the API now has trigger orders (`tp`/`tpc`, including mark-price conditions) that Perpl's forwarder executes, and Perpl's UI offers SL/TP. A stop closes a fixed size at a fixed price. Airbag's gap is sizing each trim to a liquidation-distance target, re-adding margin and re-arming.
 - **Builder codes** (later, for revenue): register with Perpl, bind at key enrollment, fee ≤ 0.1%, and only on size that opens or increases a position. Trims earn nothing. Don't build this now.
 
 ### Monad
 
 - Mainnet chain 143, testnet 10143 (network info: https://docs.monad.xyz/developer-essentials/testnet). Mainnet runs 300 ms blocks (Monad blog, 2026). Measure testnet yourself.
 - Explorers: https://monadvision.com (mainnet), https://testnet.monadvision.com (testnet).
-- WebSocket subscriptions: `newHeads`, `logs`, `monadNewHeads`, `monadLogs`. The `monad*` variants add `blockId` and `commitState` (`Proposed → Voted → Finalized → Verified`). Blocks can be abandoned implicitly. Public WS URLs aren't listed in the docs (verify with a provider: QuickNode, Alchemy, Chainstack and Dwellir all give free plans to hackathon teams).
+- WebSocket subscriptions: `newHeads`, `logs`, `monadNewHeads`, `monadLogs`. The `monad*` variants add `blockId` and `commitState` (`Proposed → Voted → Finalized → Verified`). Blocks can be abandoned implicitly. Public WS URLs: `wss://rpc.monad.xyz`, `wss://testnet-rpc.monad.xyz` (QuickNode, 50 rps), `wss://rpc-testnet.monadinfra.com` (20 rps). Use a provider plan (QuickNode, Alchemy, Chainstack, Dwellir) for production.
 - Execution Events SDK (C/Rust, shared memory, same host as a node) exists but is out of scope.
 - Docs index: https://docs.monad.xyz/llms.txt
 
 ### Envio
 
-- HyperIndex supports Monad (other Metropolis teams index Monad mainnet with it). Docs: https://docs.envio.dev. The Perpl exchange ABI is **not verified publicly** (one indexer project found no ABI on Sourcify/MonadScan). Check whether `dex-sdk` ships ABIs before planning to index Perpl events. Our own contract (section 7) is always indexable.
+- HyperIndex supports Monad via HyperSync (`https://143.hypersync.xyz`, `https://10143.hypersync.xyz`). Docs: https://docs.envio.dev. The Perpl exchange ABI isn't verified on explorers, but **`dex-sdk` (MIT) ships it** (`crates/sdk/abi/dex/Exchange.json`), including `PositionLiquidated`. Our own contract (section 7) is always indexable.
 
 ---
 
@@ -102,9 +104,9 @@ n        = position size (base units)
 E        = entry price
 M        = position deposit (collateral), after any realized PnL from earlier trims
 r        = maintenance margin fraction for the market (BTC 0.04)
-m        = r · E            (maintenance per unit, per Perpl's formula using entry notional; VERIFY)
+m        = r · E            (maintenance per unit, from entry notional; verified: C_MMR = P_entry·L/MMF)
 MMR      = m · n
-F        = accrued funding as premium PnL (positive = received), from Perpl's funding sum; VERIFY the sign convention against Perpl's C_funding
+F        = accrued funding as premium PnL (positive = received), from Perpl's funding sum; verified: C_funding is premium PnL, same sign
 equity(P)= M + F − n · (E − P)          long
 equity(P)= M + F − n · (P − E)          short
 liqPrice = E − (M + F − MMR)/n          long   (E + (M + F − MMR)/n short)
@@ -128,8 +130,9 @@ liqPrice = E − (M + F − MMR)/n          long   (E + (M + F − MMR)/n short)
    ```
    Shorts: `L'(s) = T − m + Q/(s·n)`, target `L' ≥ T·(1 + d)`, same bound on `s`.
 3. Send `CloseLong`/`CloseShort` (`t:3`/`t:4`), `fl:4` (IOC), with a worst price `0.5%` from mark (setting), valid `lb`.
-4. On partial fill, recompute and retry next block with the remainder, up to a small cap, then alert.
-5. **Re-arm** on the smaller position with the fill price as the new reference.
+4. **Re-add the released equity.** Perpl shrinks the deposit pro-rata on the close, which leaves the liquidation price where it was. As soon as the fill lands, send `IncreasePositionCollateral` (`t:6`) for the collateral the close released, net of the realized PnL (`(1 − s)·equity(P_fill)`, read from the account update). The position then carries equity `Q` on the smaller size, which is what `L'(s)` above assumes. All golden vectors describe this two-step deploy.
+5. On partial fill, re-add what was released, recompute and retry next block with the remainder, up to a small cap, then alert.
+6. **Re-arm** on the smaller position with the fill price as the new reference.
 
 ### Golden test vectors (from the design; must pass exactly, to the displayed precision)
 
@@ -268,9 +271,9 @@ Direction: **"crash-test instrument"**. Quiet until it matters.
 ## 10. Milestones (dates are IST; the deadline is 14 Oct 09:29 IST)
 
 **M0: spike and go/no-go (by Sep 25).** Stop here and report to the owner.
-- Testnet: fund a wallet, create the Perpl account onchain, create a Trade key, sign in to the trading WS, read positions.
+- Testnet: fund a wallet, create the Perpl account onchain, enable order forwarding, create a Trade key, sign in to the trading WS, read positions.
 - Compute the liquidation price for a live test position and **match Perpl's UI to the dollar**.
-- Send a `CloseLong` IOC reduce and see the fill. Send `IncreasePositionCollateral` with a Trade-scoped key and confirm it works (this decides whether the spare-margin feature ships).
+- Send a `CloseLong` IOC reduce and see the fill. Send `IncreasePositionCollateral` with a Trade-scoped key and confirm it works. **This decides whether the product works at all**: every trim needs it to move the liquidation price (see section 3, partial closes).
 - Measure: block time, market-state cadence, detect→fill latency.
 - **If any of this fails, report back before building further.**
 
