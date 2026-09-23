@@ -1,0 +1,18 @@
+{
+  "name": "@airbag/engine",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The always-on Airbag engine: per-block checks, deploys, API",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file-if-exists=../../.env src/main.ts",
+    "dev": "node --watch --env-file-if-exists=../../.env src/main.ts",
+    "simulate": "ENGINE_MODE=simulation node --env-file-if-exists=../../.env src/main.ts"
+  },
+  "dependencies": {
+    "@airbag/perpl": "workspace:*",
+    "@airbag/risk": "workspace:*",
+    "viem": "2.56.8"
+  }
+}

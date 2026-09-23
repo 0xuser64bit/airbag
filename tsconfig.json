@@ -15,5 +15,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["packages/*/src", "packages/*/test", "spike"]
+  "include": ["packages/*/src", "packages/*/test", "apps/engine/src", "apps/engine/test", "spike"]
 }
