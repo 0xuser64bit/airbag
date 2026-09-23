@@ -13,6 +13,10 @@
   "dependencies": {
     "@airbag/perpl": "workspace:*",
     "@airbag/risk": "workspace:*",
-    "viem": "2.56.8"
+    "viem": "2.56.8",
+    "web-push": "3.6.7"
+  },
+  "devDependencies": {
+    "@types/web-push": "3.6.4"
   }
 }

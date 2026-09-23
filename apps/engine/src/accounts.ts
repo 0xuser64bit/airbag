@@ -1,0 +1,252 @@
+// Linking, unlinking and running accounts. A key is verified before it is stored: Perpl accepts
+// it, it belongs to the wallet that signed in, the wallet has an exchange account, and it has
+// the Trade scope (probed with a cancel that can't remove anything). The IP allow-list can't be
+// read through any API, so the user confirms it and we say so.
+
+import type { KeyObject } from 'node:crypto';
+import {
+  type ConnectionState,
+  ed25519Key,
+  scopeProbe,
+  sleep,
+  type TradingClient,
+  type TradingEvent,
+} from '@airbag/perpl';
+import { fmt } from '@airbag/risk';
+import type { Store } from './db.ts';
+import type { Engine } from './engine.ts';
+import type { Logger } from './log.ts';
+import type { SimChain } from './sim.ts';
+import { type MasterKeys, open, seal } from './vault.ts';
+
+export class LinkError extends Error {
+  readonly status: number;
+  readonly code: string;
+  constructor(status: number, code: string, message: string) {
+    super(message);
+    this.status = status;
+    this.code = code;
+  }
+}
+
+export interface KeyCheck {
+  accountId: number;
+  forwarding: boolean;
+  frozen: boolean;
+}
+
+type Client = Pick<
+  TradingClient,
+  'start' | 'ready' | 'close' | 'state' | 'wallet' | 'account' | 'openOrders' | 'submit'
+>;
+
+/** Verifies a freshly opened trading client. Throws LinkError with a message for the user. */
+export async function checkKey(
+  client: Client,
+  wallet: string,
+  probeMarketId: number,
+  timeoutMs = 15_000,
+): Promise<KeyCheck> {
+  client.start();
+  try {
+    await client.ready(timeoutMs);
+  } catch {
+    if (client.state === 'rejected') {
+      throw new LinkError(
+        400,
+        'key_rejected',
+        "Perpl refused this key. Check the key and secret, that the key isn't revoked or expired, and that its IP allow-list has Airbag's addresses.",
+      );
+    }
+    if (client.state === 'limited') {
+      throw new LinkError(
+        409,
+        'too_many_connections',
+        'This wallet already has four Perpl connections open, and browser tabs count. Close a Perpl tab and try again.',
+      );
+    }
+    throw new LinkError(
+      504,
+      'perpl_timeout',
+      "Perpl didn't answer in time. Try again in a minute.",
+    );
+  }
+  if (client.wallet?.toLowerCase() !== wallet) {
+    throw new LinkError(
+      403,
+      'wrong_wallet',
+      `This key belongs to ${fmt.short(client.wallet ?? 'another wallet')}, not the wallet you signed in with.`,
+    );
+  }
+  const account = client.account;
+  if (!account) {
+    throw new LinkError(
+      400,
+      'no_account',
+      'This wallet has no Perpl exchange account yet. Deposit on Perpl first, then link the key.',
+    );
+  }
+  const probe = client.submit((ids) =>
+    scopeProbe(
+      { ...ids, mkt: probeMarketId, acc: account.id, lb: 0 },
+      new Set(client.openOrders.keys()),
+    ),
+  );
+  const outcome = await Promise.race([probe, sleep(8_000).then(() => undefined)]);
+  if (outcome?.result === 'rejected' && outcome.code === 403) {
+    throw new LinkError(
+      400,
+      'read_only',
+      'This is a Read key. Airbag needs the Trade scope to trim. Create a Trade key on Perpl and paste that one.',
+    );
+  }
+  return { accountId: account.id, forwarding: account.fw, frozen: account.fr };
+}
+
+export interface AccountsDeps {
+  store: Store;
+  engine: Engine;
+  log: Logger;
+  master: MasterKeys;
+  /** Opens a live trading client (not started). */
+  openTrading: (
+    apiKey: string,
+    key: KeyObject,
+    onEvent: (e: TradingEvent) => void,
+  ) => TradingClient;
+  /** A covered market id, used for the scope probe. */
+  probeMarketId: number;
+  sim?: SimChain;
+  onState?: (wallet: string, state: ConnectionState) => void;
+}
+
+export interface Linked {
+  accountId: number;
+  keyHint: string;
+  forwarding: boolean;
+  simulated: boolean;
+}
+
+const aad = (wallet: string, accountId: number) => `airbag:v1:${wallet}:${accountId}`;
+
+export class Accounts {
+  private readonly deps: AccountsDeps;
+  private readonly clients = new Map<string, TradingClient>();
+
+  constructor(deps: AccountsDeps) {
+    this.deps = deps;
+  }
+
+  private open(wallet: string, apiKey: string, secret: KeyObject): TradingClient {
+    return this.deps.openTrading(apiKey, secret, (e) => {
+      if (e.type === 'state') {
+        this.deps.log.info('trading.state', {
+          wallet,
+          state: e.state,
+          code: e.code,
+          reason: e.reason,
+        });
+        this.deps.onState?.(wallet, e.state);
+      }
+    });
+  }
+
+  /** Reconnects every linked account at boot. Keys are decrypted only here, into memory. */
+  startAll(): void {
+    for (const link of this.deps.store.links()) {
+      try {
+        if (this.deps.sim) {
+          this.deps.engine.add(link.wallet, this.deps.sim.paper(link.wallet, link.accountId));
+          continue;
+        }
+        const { apiKey, secret } = JSON.parse(
+          open(link.sealed, aad(link.wallet, link.accountId), this.deps.master),
+        ) as { apiKey: string; secret: string };
+        const client = this.open(link.wallet, apiKey, ed25519Key(secret));
+        client.start();
+        this.clients.set(link.wallet, client);
+        this.deps.engine.add(link.wallet, client);
+      } catch (err) {
+        this.deps.log.error('account.start.error', { wallet: link.wallet, err });
+      }
+    }
+  }
+
+  async link(wallet: string, apiKey: string, secretHex: string): Promise<Linked> {
+    let key: KeyObject;
+    try {
+      key = ed25519Key(secretHex);
+    } catch {
+      throw new LinkError(400, 'bad_secret', 'The API secret should be 64 hex characters.');
+    }
+    const keyHint = apiKey.slice(-4);
+    const now = Date.now();
+    if (this.deps.sim) {
+      const accountId = 4000 + (Number.parseInt(wallet.slice(-4), 16) % 1000);
+      this.deps.store.putLink({
+        wallet,
+        accountId,
+        keyHint,
+        sealed: seal(
+          JSON.stringify({ apiKey, secret: 'simulated' }),
+          aad(wallet, accountId),
+          this.deps.master,
+        ),
+        linkedAt: now,
+      });
+      this.replace(wallet, this.deps.sim.paper(wallet, accountId), undefined);
+      return { accountId, keyHint, forwarding: true, simulated: true };
+    }
+    const client = this.open(wallet, apiKey, key);
+    let check: KeyCheck;
+    try {
+      check = await checkKey(client, wallet, this.deps.probeMarketId);
+    } catch (err) {
+      await client.close();
+      throw err;
+    }
+    this.deps.store.putLink({
+      wallet,
+      accountId: check.accountId,
+      keyHint,
+      sealed: seal(
+        JSON.stringify({ apiKey, secret: secretHex.replace(/^0x/, '') }),
+        aad(wallet, check.accountId),
+        this.deps.master,
+      ),
+      linkedAt: now,
+    });
+    this.replace(wallet, client, client);
+    this.deps.log.info('key.linked', {
+      wallet,
+      account: check.accountId,
+      forwarding: check.forwarding,
+    });
+    return { accountId: check.accountId, keyHint, forwarding: check.forwarding, simulated: false };
+  }
+
+  private replace(wallet: string, exchange: Parameters<Engine['add']>[1], client?: TradingClient) {
+    const old = this.clients.get(wallet);
+    this.deps.engine.remove(wallet);
+    if (old && old !== client) void old.close();
+    if (client) this.clients.set(wallet, client);
+    else this.clients.delete(wallet);
+    this.deps.engine.add(wallet, exchange);
+  }
+
+  async unlink(wallet: string): Promise<void> {
+    this.deps.engine.remove(wallet);
+    const client = this.clients.get(wallet);
+    this.clients.delete(wallet);
+    await client?.close();
+    this.deps.store.deleteLink(wallet);
+    const s = this.deps.store.settings(wallet);
+    this.deps.store.putSettings(wallet, { ...s, armed: false });
+    this.deps.log.info('key.unlinked', { wallet });
+  }
+
+  async closeAll(): Promise<void> {
+    await Promise.all([...this.clients.values()].map((c) => c.close()));
+    this.clients.clear();
+  }
+}

@@ -98,7 +98,10 @@ export interface PositionView {
   entry: number;
   mark: number;
   equity: number;
+  /** Leverage at the mark. */
   leverage: number;
+  /** Leverage the position was opened with, as Perpl shows it ("10x"). */
+  nominalLeverage: number;
   liquidation: number;
   distance: number;
   covered: boolean;
@@ -151,7 +154,8 @@ export class AccountGuard {
   private readonly busy = new Set<number>();
   private readonly cooldownUntil = new Map<number, number>();
   private readonly lastDeployAt = new Map<number, number>();
-  private readonly pending = new Map<string, Deploy>();
+  /** Finished deploys whose position is open: waiting to be a save, or a save still counting. */
+  private readonly tracked = new Map<string, Deploy>();
   private readonly refs = new Map<
     number,
     { positionId: number; reference: number; lots: number }
@@ -163,7 +167,7 @@ export class AccountGuard {
     this.exchange = exchange;
     this.settings = settings;
     this.deps = deps;
-    for (const d of deps.store.pendingDeploys()) if (d.wallet === wallet) this.pending.set(d.id, d);
+    for (const d of deps.store.trackedDeploys()) if (d.wallet === wallet) this.tracked.set(d.id, d);
   }
 
   get cd(): number {
@@ -273,6 +277,7 @@ export class AccountGuard {
         mark,
         equity: equity(risk, mark),
         leverage: leverage(risk, mark),
+        nominalLeverage: p.lv / 100,
         liquidation: liq,
         distance: distanceToLiquidation(risk, mark),
         covered,
@@ -368,6 +373,7 @@ export class AccountGuard {
           liquidation: liquidationPrice(risk),
           distance: distanceToLiquidation(risk, mark),
           leverage: leverage(risk, mark),
+          nominal: p.lv / 100,
         },
         positionId: p.pid,
         target: policy.target,
@@ -740,27 +746,31 @@ export class AccountGuard {
       latency: d.data.latency,
     });
     if (phase === 'done' && d.outcome === 'pending') {
-      if (p) this.pending.set(d.id, d);
+      if (p) this.tracked.set(d.id, d);
       else this.classify(d, 'precaution');
       this.deps.notify.deployed(d);
     }
   }
 
-  /** Save or precaution for finished deploys (brief §4). */
+  /**
+   * Save or precaution for finished deploys (brief §4). The value kept stays live while the
+   * position is open and freezes when it closes; it's persisted every ~30 s meanwhile.
+   */
   private watchSaves(head: number) {
-    for (const d of this.pending.values()) {
-      if (d.phase !== 'done') continue;
+    for (const d of this.tracked.values()) {
       const p = this.exchange.positions.get(d.marketId);
-      const m = this.market(d.marketId);
-      const mark = m && this.markOf(m);
       if (!p || p.pid !== d.data.positionId) {
-        this.classify(d, 'precaution');
+        if (d.outcome === 'pending') this.classify(d, 'precaution');
+        else this.close(d);
         continue;
       }
+      const m = this.market(d.marketId);
+      const mark = m && this.markOf(m);
       if (!m || mark === undefined) continue;
       const risk = this.risk(p, m, head);
       d.data.kept = saveValue(equity(risk, mark), d.data.spareAdded, d.data.counterfactual);
-      if (crossed(d.side, mark, d.data.before.liquidation)) {
+      d.data.keptMark = mark;
+      if (d.outcome === 'pending' && crossed(d.side, mark, d.data.before.liquidation)) {
         d.data.save = { block: head, at: Date.now(), mark };
         this.entry(
           d,
@@ -769,6 +779,8 @@ export class AccountGuard {
           { tone: 'airbag' },
         );
         this.classify(d, 'save');
+      } else if (head % 100 === 0) {
+        this.save(d);
       }
     }
   }
@@ -776,11 +788,18 @@ export class AccountGuard {
   private classify(d: Deploy, outcome: 'save' | 'precaution') {
     d.outcome = outcome;
     if (outcome === 'save') d.savedAt = Date.now();
-    else d.closedAt = Date.now();
-    this.pending.delete(d.id);
+    else return this.close(d);
     this.save(d);
     this.deps.log.info('deploy.outcome', { id: d.id, outcome, kept: d.data.kept });
-    if (outcome === 'save') this.deps.notify.saved(d);
+    this.deps.notify.saved(d);
+  }
+
+  /** The position is gone: freeze the deploy. */
+  private close(d: Deploy) {
+    d.closedAt = Date.now();
+    this.tracked.delete(d.id);
+    this.save(d);
+    this.deps.log.info('deploy.closed', { id: d.id, outcome: d.outcome, kept: d.data.kept });
   }
 
   /**
@@ -866,9 +885,9 @@ export class AccountGuard {
     return pred();
   }
 
-  /** Current save value for a deploy, live while the position is open. */
-  kept(d: Deploy): number | undefined {
-    return this.pending.get(d.id)?.data.kept ?? d.data.kept;
+  /** The live copy of a deploy this guard is still tracking, if any. */
+  live(id: string): Deploy | undefined {
+    return this.tracked.get(id);
   }
 }
 

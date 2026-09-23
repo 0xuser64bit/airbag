@@ -133,6 +133,8 @@ export interface DeployData {
     liquidation: number;
     distance: number;
     leverage: number;
+    /** Opening leverage, as Perpl shows it. */
+    nominal?: number;
   };
   positionId: number;
   target: number;
@@ -163,6 +165,8 @@ export interface DeployData {
   save?: { block: number; at: number; mark: number };
   /** Save value at the last check, frozen when the position closes. */
   kept?: number;
+  /** The mark `kept` was measured at. */
+  keptMark?: number;
   latency?: { detectToSendMs: number; sendToFillMs: number; fillToReaddMs: number; blocks: number };
   attempts: number;
   /** State when the latest close was sent, for finishing it after a restart. CNS as strings. */
@@ -350,11 +354,13 @@ export function openStore(path: string) {
       (q(`SELECT * FROM deploys WHERE phase IN ('closing', 'readding')`).all() as Row[]).map(
         toDeploy,
       ),
-    /** Deploys still waiting to become a save or a precaution. */
-    pendingDeploys: (): Deploy[] =>
-      (q(`SELECT * FROM deploys WHERE outcome = 'pending' AND phase = 'done'`).all() as Row[]).map(
-        toDeploy,
-      ),
+    /** Finished deploys whose position is still open: pending, or saves still counting. */
+    trackedDeploys: (): Deploy[] =>
+      (
+        q(
+          `SELECT * FROM deploys WHERE phase = 'done' AND closed_at IS NULL AND outcome IN ('pending', 'save')`,
+        ).all() as Row[]
+      ).map(toDeploy),
 
     addPush(wallet: string, sub: PushSubscription, now = Date.now()) {
       q(

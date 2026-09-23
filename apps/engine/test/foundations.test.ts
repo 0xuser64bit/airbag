@@ -201,7 +201,7 @@ describe('store', () => {
     if (!d1) throw new Error('missing');
     s.updateDeploy({ ...d1, phase: 'done', data: { ...d1.data, attempts: 2 } });
     expect(s.deploy('d1')?.data.attempts).toBe(2);
-    expect(s.pendingDeploys().map((d) => d.id)).toEqual(['d1']);
+    expect(s.trackedDeploys().map((d) => d.id)).toEqual(['d1']);
 
     s.addPush(WALLET, { endpoint: 'https://push.example/1', keys: { p256dh: 'p', auth: 'a' } });
     expect(s.pushSubscriptions(WALLET)).toHaveLength(1);
