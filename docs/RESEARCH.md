@@ -59,7 +59,7 @@ Brief section 4 is updated to say this.
 - `order_max_market_slippage_bps` is 100 (1%) on mainnet and 1000 on testnet BTC/ETH/SOL. Our 0.5% worst price fits both.
 - `t: 6` takes the amount in `a` as a string. The docs don't say whether it's scaled CNS or a decimal. M0 finds out.
 
-**Heartbeats and block numbers.** The trading WS sends `mt: 100 {sn, h}`, where `h` is the head block. `sn` must be strictly +1, starting from the WalletSnapshot's `sn`; a gap means reconnect. The market-data WS has a `heartbeat@<chain>` stream. `MarketState.at.b` carries the block number of each price, which is the input to the stale-data guard.
+**Heartbeats and block numbers.** The trading WS sends `mt: 100 {sn, h}`, where `h` is the head block. `sn` must be strictly +1, starting from the WalletSnapshot's `sn`; a gap means reconnect. The market-data WS has a `heartbeat@<chain>` stream. `MarketState.at.b` carries the block at which that market's state last changed. It is *not* a freshness signal on its own (see 3a).
 
 **Entry price has a residue.** `Position.ep` is rounded (ceil for longs, floor for shorts) and `epr` carries a Q16 residue. Effective long entry = `(ep − 1 + epr/65536) / 10^pd` when `epr > 0`. Needed to match Perpl's liquidation price to the dollar.
 
@@ -70,6 +70,28 @@ Brief section 4 is updated to say this.
 **No key-introspection endpoint.** Listing keys (scope, IP list) is UI-only. At link time we can prove the key signs in and can see the account. Scope can be probed with a harmless order the exchange will refuse (e.g. cancel a non-existent order: a read key gets `403` at the gateway, a trade key gets `code: 0` then `sr: 33`). The IP lock can't be read. Options: ask Perpl for a `GET /v1/api-key/self`, or probe sign-in from a second, non-allowlisted egress and expect `3401`. Open question for M0/M2.
 
 **Trading WS connections are capped at 4 per wallet**, shared with the user's browser tabs. The engine needs one. If a user has four Perpl tabs open, our connection is refused. Surface it in key health.
+
+## 3a. Measured on 23 Sep (M0, public data)
+
+`spike/measure.ts`, 60 s per network, plus `MarkUpdated` logs over 6,000 blocks (~30 min):
+
+| | Testnet | Mainnet |
+|---|---|---|
+| Monad block time (header timestamps) | 303 ms | 303 ms |
+| Monad `newHeads` arrival interval p50 / p95 | 301 / 405 ms | 306 / 469 ms |
+| Perpl `heartbeat` | every block, no `sn` gaps | every block, no `sn` gaps |
+| Perpl `market-state` messages per block | 0.66 (largest skip 4 blocks) | 0.92 (largest skip 2) |
+| `market-state` for block b arrives after Monad's `newHeads` for b, p50 / p95 | 177 / 353 ms | 335 / 496 ms |
+| Blocks behind the newest head when it arrives, p95 / max | 1 / 1 | 1 / 2 |
+| BTC `MarkUpdated` in 30 min | 76 | 76 |
+| Gap between mark updates p50 / p90 / max (blocks) | 1 / 167 / 169 | 1 / 168 / 169 |
+| Mark step size p90 / max | 0.033% / 0.057% | 0.028% / 0.056% |
+
+What it means:
+- **The mark moves in small steps, not every block.** Perpl posts a new mark when the price moves roughly 0.03–0.06%, or after at most ~169 blocks (~51 s), often in back-to-back pairs. Airbag still checks every block, but the value that decides liquidation changes a few times a minute.
+- **The stale guard must measure feed lag, not mark age.** An unchanged mark is legitimately ~169 blocks old. We compare the latest heartbeat head (and Monad's head) with the newest block our market data has caught up to.
+- Perpl's price feed runs about one block (~200–350 ms) behind Monad's head. Budget: mark lands in block k, we see it around k+1, the close is forwarded around k+2. Real numbers come from the M0 deploy.
+- **Liquidation split confirmed onchain:** `getLiquidationInfo(perpId)` returns user/insurance/protocol = 80,000/10,000/10,000 per 100k on every market on both networks. The engine reads it rather than hard-coding 0.8.
 
 ## 4. Hosting with a static egress IP
 
