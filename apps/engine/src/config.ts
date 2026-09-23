@@ -29,6 +29,8 @@ export interface Config {
   vapid?: { publicKey: string; privateKey: string; subject: string };
   airbagLog?: { address: `0x${string}`; privateKey: `0x${string}`; rpcUrl: string };
   logLevel: 'debug' | 'info' | 'warn' | 'error';
+  /** Header with the client IP behind a proxy (rate limits), e.g. fly-client-ip. */
+  clientIpHeader?: string;
 }
 
 const list = (v: string | undefined) =>
@@ -88,6 +90,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     demoMove: 0.003,
     logLevel: level,
   };
+  if (env.CLIENT_IP_HEADER) cfg.clientIpHeader = env.CLIENT_IP_HEADER.toLowerCase();
   if (env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY) {
     cfg.vapid = {
       publicKey: env.VAPID_PUBLIC_KEY,

@@ -149,9 +149,7 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
     ...(chain ? { chain } : {}),
     ...(sim ? { sim } : {}),
     ...(cfg.vapid ? { vapidPublicKey: cfg.vapid.publicKey } : {}),
-    ...(process.env.CLIENT_IP_HEADER
-      ? { clientIpHeader: process.env.CLIENT_IP_HEADER.toLowerCase() }
-      : {}),
+    ...(cfg.clientIpHeader ? { clientIpHeader: cfg.clientIpHeader } : {}),
   });
 
   let purge: ReturnType<typeof setInterval> | undefined;
@@ -185,7 +183,9 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
     async stop() {
       clearInterval(purge);
       sim?.stop();
-      await new Promise<void>((resolve) => api.close(() => resolve()));
+      const closed = new Promise<void>((resolve) => api.close(() => resolve()));
+      api.closeAllConnections(); // open dashboard streams never end on their own
+      await closed;
       await accounts.closeAll();
       await feed.close();
       store.close();

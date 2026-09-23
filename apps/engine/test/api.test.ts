@@ -266,7 +266,7 @@ describe('onboarding to a deploy, over HTTP', () => {
     const text = new TextDecoder().decode(first?.value);
     expect(text.startsWith('data: ')).toBe(true);
     expect(JSON.parse(text.slice(6)).status).toBe('unlinked');
-    await reader?.cancel();
+    // Left open on purpose: afterAll's app.stop() has to end it, as a deploy's SIGTERM would.
   });
 });
 
