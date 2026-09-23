@@ -214,3 +214,27 @@ describe('store', () => {
     expect(s.link(WALLET)).toBeUndefined();
   });
 });
+
+describe('master key rotation', () => {
+  it('re-wraps every stored key under the new master key, and the old key can then go', async () => {
+    const { rotateLinks, keyVersions } = await import('../src/cli.ts');
+    const s = openStore(':memory:');
+    const v1: MasterKeys = { current: 1, keys: new Map([[1, Buffer.from(KEY_A, 'base64')]]) };
+    const sealed = seal('{"apiKey":"k","secret":"s"}', `airbag:v1:${WALLET}:42`, v1);
+    s.putLink({ wallet: WALLET, accountId: 42, keyHint: 'k', sealed, linkedAt: 1 });
+    const both: MasterKeys = {
+      current: 2,
+      keys: new Map([
+        [1, Buffer.from(KEY_A, 'base64')],
+        [2, Buffer.from(KEY_B, 'base64')],
+      ]),
+    };
+    expect(rotateLinks(s, both)).toBe(1);
+    expect(rotateLinks(s, both)).toBe(0);
+    const v2only: MasterKeys = { current: 2, keys: new Map([[2, Buffer.from(KEY_B, 'base64')]]) };
+    expect(keyVersions(s, v2only)).toEqual({ v2: 1 });
+    const link = s.link(WALLET);
+    if (!link) throw new Error('missing');
+    expect(open(link.sealed, `airbag:v1:${WALLET}:42`, v2only)).toBe('{"apiKey":"k","secret":"s"}');
+  });
+});

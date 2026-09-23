@@ -11,5 +11,8 @@
   "dependencies": {
     "@airbag/risk": "workspace:*",
     "viem": "2.56.8"
-  }
+  },
+  "files": [
+    "src"
+  ]
 }

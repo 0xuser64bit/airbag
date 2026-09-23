@@ -1,0 +1,39 @@
+# The engine on Fly.io (ADR 0004). One machine: the engine is a single process with its state
+# in SQLite on a volume (ADR 0010). Deploy steps and secrets: docs/DEPLOY.md.
+
+app = "airbag-engine"
+primary_region = "iad"
+
+[build]
+  dockerfile = "apps/engine/Dockerfile"
+
+[env]
+  PERPL_NETWORK = "testnet"
+  HOST = "0.0.0.0"
+  PORT = "8787"
+  DATABASE_PATH = "/data/airbag.db"
+  CLIENT_IP_HEADER = "fly-client-ip"
+  LOG_LEVEL = "info"
+
+[mounts]
+  source = "airbag_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  # Protection must never sleep.
+  auto_stop_machines = "off"
+  auto_start_machines = false
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "30s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

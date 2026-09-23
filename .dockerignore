@@ -1,0 +1,17 @@
+**/node_modules
+**/.next
+**/.envio
+.git
+.github
+.claude
+design
+docs
+e2e
+test-results
+playwright-report
+contracts/out
+contracts/cache
+spike/out
+data
+.env
+.env.*

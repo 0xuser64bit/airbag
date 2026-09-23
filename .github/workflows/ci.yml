@@ -92,3 +92,18 @@ jobs:
       - run: pnpm --filter @airbag/indexer codegen
       - run: pnpm --filter @airbag/indexer exec tsc -p .
       - run: pnpm --filter @airbag/indexer test
+
+  engine-image:
+    # Builds the production image and checks it serves: Node won't strip types under
+    # node_modules, so a wrong layout only shows up at runtime.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker build -f apps/engine/Dockerfile -t airbag-engine .
+      - name: smoke test
+        run: |
+          docker run -d --name engine -p 8787:8787 -e ENGINE_MODE=simulation -e DATABASE_PATH=/data/airbag.db airbag-engine
+          for i in $(seq 1 20); do curl -fsS localhost:8787/health && exit 0; sleep 1; done
+          docker logs engine
+          exit 1
