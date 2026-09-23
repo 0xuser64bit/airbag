@@ -32,6 +32,15 @@ importers:
 
   packages/risk: {}
 
+  spike:
+    dependencies:
+      '@airbag/perpl':
+        specifier: workspace:*
+        version: link:../packages/perpl
+      '@airbag/risk':
+        specifier: workspace:*
+        version: link:../packages/risk
+
 packages:
 
   '@biomejs/biome@2.5.14':

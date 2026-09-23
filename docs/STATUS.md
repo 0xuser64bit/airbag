@@ -21,6 +21,7 @@ Updated every session. Newest first within each section.
 
 | Date | Section | Was | Now | Evidence |
 |---|---|---|---|---|
+| 23 Sep | 3, 5 | The mark price moves every block; `market-state` arrives every block; stale = data older than N blocks | Mark updates onchain every ~0.03–0.06% move or ≤ 169 blocks (~51 s). `market-state` is change-driven (66–92% of blocks). The stale guard measures feed lag against the head (heartbeat), not mark age. | `spike/measure.ts` runs and `MarkUpdated` logs, 30 min on mainnet BTC/ETH and testnet BTC |
 | 23 Sep | 3, 4, 10 | A reduce-only trim moves the liquidation price (e.g. $94,000 → $87,300) | Perpl releases deposit pro-rata on a partial close, so the trim alone leaves liquidation where it was. A deploy is **close, then `IncreasePositionCollateral` of the released equity**. Golden vectors unchanged. `t:6` becomes a hard requirement, not an optional feature. | 400 `PositionDecreased` events per network, deposit ratio = size ratio (`docs/RESEARCH.md` §1) |
 | 23 Sep | 3 | Auth needs a key plus an exchange account | Also needs `allowOrderForwarding(true)` ("One-Click Trading"). Off on new accounts. | api-docs README |
 | 23 Sep | 3 | Maintenance margins; ZEC ~6.7% | Config value is leverage in hundredths. ZEC is 5.56% on mainnet; testnet MON 20%, ZEC 10%. LIT and PUMP markets added. | live `/pub/context` |

@@ -1,0 +1,17 @@
+{
+  "name": "@airbag/spike",
+  "version": "0.0.0",
+  "private": true,
+  "description": "M0 spike scripts against Perpl testnet. Folded into the engine after M1.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "measure": "node --env-file-if-exists=../.env measure.ts",
+    "account": "node --env-file-if-exists=../.env account.ts",
+    "deploy": "node --env-file-if-exists=../.env deploy.ts"
+  },
+  "dependencies": {
+    "@airbag/perpl": "workspace:*",
+    "@airbag/risk": "workspace:*"
+  }
+}
