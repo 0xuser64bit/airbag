@@ -1,34 +1,69 @@
-/* Airbag design system. Values come from design/*.dc.html (brief §8).
-   Graphite and bone while safe. Yellow is Airbag. Red is only ever liquidation. */
+/* Airbag design system (apps/web/DESIGN.md): the original crash-test instrument, rebuilt as a
+   panel of instruments. Graphite and bone while safe. Yellow is Airbag. Red is only ever
+   liquidation. Nothing else gets colour. */
 
 :root {
+  /* Surfaces: the panel, instrument glass set into it, raised parts */
   --ground: #11110f;
+  --well: #0c0c0b;
   --panel: #181815;
   --raised: #1f1f1b;
   --line: #2b2a25;
   --line-strong: #3a3932;
+  --scale: #57554c; /* tape graduations */
+
+  /* Ink */
   --bone: #ece9e0;
-  --text-2: #a5a298;
-  --text-3: #86837a;
   --soft-bone: #d6d3ca;
+  --text-2: #a5a298;
+  --text-3: #86837a; /* 4.5:1 on ground, panel and well; not on raised */
+
+  /* Meaning */
   --airbag: #f2c12e;
-  --liq: #ff6a55;
-  --airbag-tint: rgba(242, 193, 46, 0.07);
+  --airbag-hover: #f5cc4f;
+  --airbag-tint: rgba(242, 193, 46, 0.08);
   --airbag-edge: rgba(242, 193, 46, 0.5);
+  --liq: #ff6a55;
+  --liq-tint: rgba(255, 106, 85, 0.1);
   --liq-edge: rgba(255, 106, 85, 0.45);
 
-  --r-control: 8px;
-  --r-small: 10px;
-  --r-medium: 12px;
-  --r-card: 16px;
-
+  /* Patterns: the hatch between liquidation and the line, the hazard stripe when Airbag acts */
   --hazard: repeating-linear-gradient(-45deg, var(--airbag) 0 10px, var(--ground) 10px 20px);
   --hatch: repeating-linear-gradient(135deg, var(--line-strong) 0 1.5px, transparent 1.5px 6px);
   --hatch-warm: repeating-linear-gradient(
     135deg,
-    rgba(242, 193, 46, 0.45) 0 1.5px,
+    rgba(242, 193, 46, 0.5) 0 1.5px,
     transparent 1.5px 6px
   );
+
+  /* Type */
+  --display: var(--font-display), "Helvetica Neue", sans-serif;
+  --ui: var(--font-ui), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Shape */
+  --r-control: 6px;
+  --r-well: 8px;
+  --r-panel: 12px;
+
+  /* Space: 4px steps */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --s-9: 96px;
+  --gutter: clamp(16px, 3vw, 32px);
+
+  /* Motion: instrument physics. Needles and bugs are damped, lamps switch at once. */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --t-fast: 120ms;
+  --t-move: 240ms;
+  --t-panel: 320ms;
 
   color-scheme: dark;
 }
@@ -39,7 +74,9 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  background: var(--ground);
   scroll-behavior: smooth;
+  scrollbar-color: var(--line-strong) transparent;
 }
 
 body {
@@ -47,21 +84,25 @@ body {
   min-height: 100dvh;
   background: var(--ground);
   color: var(--bone);
-  font-family: var(--font-ui), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--ui);
   -webkit-font-smoothing: antialiased;
   line-height: 1.5;
 }
 
+::selection {
+  background: var(--bone);
+  color: var(--ground);
+}
+
 a {
   color: var(--bone);
+  text-underline-offset: 0.22em;
+  text-decoration-thickness: 1px;
 }
 a:hover {
   color: var(--airbag);
 }
-a:focus-visible,
-button:focus-visible,
-input:focus-visible,
-[tabindex]:focus-visible {
+:focus-visible {
   outline: 2px solid var(--airbag);
   outline-offset: 2px;
 }
@@ -73,13 +114,36 @@ p,
 dl,
 dd,
 ol,
-ul {
+ul,
+figure {
   margin: 0;
 }
 ol,
 ul {
   padding: 0;
   list-style: none;
+}
+button {
+  font: inherit;
+}
+fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+legend {
+  padding: 0;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border: 3px solid var(--ground);
+  border-radius: 999px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -92,6 +156,8 @@ ul {
     /* biome-ignore lint/complexity/noImportantStyles: reduced motion must beat inline transitions */
     animation-duration: 0.01ms !important;
     /* biome-ignore lint/complexity/noImportantStyles: reduced motion must beat inline transitions */
+    animation-iteration-count: 1 !important;
+    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must beat inline transitions */
     transition-duration: 0.01ms !important;
   }
 }
@@ -99,7 +165,7 @@ ul {
 /* ---- Type ---------------------------------------------------------------------------- */
 
 .display {
-  font-family: var(--font-display), "Helvetica Neue", sans-serif;
+  font-family: var(--display);
   font-stretch: 125%;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -108,7 +174,7 @@ ul {
 }
 
 .wordmark {
-  font-family: var(--font-display), "Helvetica Neue", sans-serif;
+  font-family: var(--display);
   font-stretch: 125%;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -116,26 +182,38 @@ ul {
 
 /* Every number is mono and tabular. */
 .num {
-  font-family: var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  font-family: var(--mono);
   font-stretch: 87.5%;
   font-variant-numeric: tabular-nums;
 }
 
+/* Big instrument readouts. */
 .big {
-  font-family: var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  font-family: var(--mono);
   font-stretch: 75%;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
   line-height: 0.9;
 }
 
+/* An instrument label: names a value, never introduces a heading. */
+.label,
 .eyebrow {
-  font-family: var(--font-mono), ui-monospace, monospace;
+  font-family: var(--mono);
   font-stretch: 87.5%;
   font-size: 11px;
+  font-weight: 500;
   letter-spacing: 0.1em;
+  line-height: 1.4;
   text-transform: uppercase;
   color: var(--text-2);
+}
+
+/* A panel's title. */
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
 }
 
 .muted {
@@ -156,7 +234,7 @@ ul {
   width: 1px;
   height: 1px;
   overflow: hidden;
-  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
   white-space: nowrap;
 }
 
@@ -173,18 +251,25 @@ ul {
   border-radius: var(--r-control);
   background: transparent;
   color: var(--bone);
-  font:
-    500 15px var(--font-ui),
-    system-ui,
-    sans-serif;
+  font: 500 15px var(--ui);
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
+  user-select: none;
+  transition:
+    background-color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease),
+    transform var(--t-fast) var(--ease);
+}
+.btn:active {
+  transform: translateY(1px) scale(0.99);
 }
 .btn:disabled,
 .btn[aria-disabled="true"] {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 .btn-primary {
   background: var(--airbag);
@@ -193,13 +278,17 @@ ul {
 }
 .btn-primary:hover {
   color: var(--ground);
-  background: #f5cc4f;
+  background: var(--airbag-hover);
+}
+.btn-primary:disabled {
+  background: var(--airbag);
 }
 .btn-secondary {
   border-color: var(--line-strong);
 }
 .btn-secondary:hover {
   border-color: var(--text-3);
+  background: var(--raised);
   color: var(--bone);
 }
 .btn-ghost {
@@ -208,6 +297,7 @@ ul {
 }
 .btn-ghost:hover {
   color: var(--bone);
+  background: var(--panel);
 }
 .btn-lg {
   min-height: 52px;
@@ -215,7 +305,7 @@ ul {
   font-size: 16px;
 }
 .btn-sm {
-  min-height: 34px;
+  min-height: 36px;
   padding: 0 12px;
   font-size: 13px;
 }
@@ -224,35 +314,50 @@ ul {
   width: 100%;
   height: 44px;
   padding: 0 12px;
-  background: var(--panel);
+  background: var(--well);
   border: 1px solid var(--line-strong);
   border-radius: var(--r-control);
   color: var(--bone);
-  font-family: var(--font-mono), ui-monospace, monospace;
+  font-family: var(--mono);
   font-stretch: 87.5%;
   font-size: 13px;
+  transition: border-color var(--t-fast) var(--ease);
+}
+.input:hover {
+  border-color: var(--text-3);
 }
 .input::placeholder {
   color: var(--text-3);
+}
+.input:user-invalid {
+  border-color: var(--bone);
+  border-style: dashed;
 }
 .field {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 .field > label {
   font-size: 13px;
   color: var(--text-2);
 }
 
-/* Segmented choices: real buttons with aria-pressed. */
+/* Segmented choices: real buttons with aria-pressed. Choosing sets Airbag's line, so yellow. */
 .seg {
   border: 1px solid var(--line-strong);
-  border-radius: var(--r-small);
+  border-radius: var(--r-control);
   background: transparent;
   color: var(--bone);
   cursor: pointer;
   font: inherit;
+  transition:
+    border-color var(--t-fast) var(--ease),
+    background-color var(--t-fast) var(--ease);
+}
+.seg:hover {
+  border-color: var(--text-3);
 }
 .seg[aria-pressed="true"] {
   border-color: var(--airbag);
@@ -268,17 +373,22 @@ ul {
   padding: 3px;
   border: 1px solid var(--line-strong);
   border-radius: 999px;
-  background: var(--raised);
+  background: var(--well);
   cursor: pointer;
   display: flex;
   align-items: center;
+  transition:
+    background-color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease);
 }
 .switch > span {
   width: 20px;
   height: 20px;
   border-radius: 50%;
   background: var(--text-2);
-  transition: transform 150ms ease;
+  transition:
+    transform var(--t-move) var(--ease),
+    background-color var(--t-fast) var(--ease);
 }
 .switch[aria-checked="true"] {
   background: var(--airbag);
@@ -293,86 +403,89 @@ ul {
   cursor: not-allowed;
 }
 
-/* ---- Status --------------------------------------------------------------------------- */
+/* ---- Instruments ------------------------------------------------------------------------ */
 
-.pill {
+/* Glass set into the panel. */
+.well {
+  background: var(--well);
+  border: 1px solid var(--line);
+  border-radius: var(--r-well);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+/* An annunciator: dark when off, bone when on, yellow when Airbag acts, inverted bone when
+   the trader has to act. It boxes itself for ten seconds after it changes. */
+.ann {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 30px;
-  padding: 0 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-.pill-sm {
-  height: 26px;
+  min-height: 28px;
   padding: 0 10px;
-  font-size: 12px;
-  gap: 6px;
-}
-.pill-xs {
-  height: 22px;
-  padding: 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-stretch: 87.5%;
   font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--bone);
 }
-.pill .dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--airbag);
+.ann[data-state="off"] {
+  border-color: var(--line);
+  color: var(--text-3);
 }
-.pill-sm .dot {
-  width: 6px;
-  height: 6px;
-}
-.pill-muted {
-  color: var(--text-2);
-}
-.pill-muted .dot {
-  background: var(--text-3);
-}
-.pill-solid {
+.ann[data-state="airbag"] {
   border-color: var(--airbag);
   background: var(--airbag);
   color: var(--ground);
-  font-weight: 600;
 }
-.pill-airbag {
-  border-color: var(--airbag);
+.ann[data-state="airbag-line"] {
+  border-color: var(--airbag-edge);
   color: var(--airbag);
 }
-.pill-liq {
-  border-color: var(--liq);
-  color: var(--liq);
+.ann[data-state="alert"] {
+  border-color: var(--bone);
+  background: var(--bone);
+  color: var(--ground);
+}
+.ann[data-size="sm"] {
+  min-height: 22px;
+  padding: 0 7px;
+  font-size: 10px;
+}
+.ann[data-fresh="true"]::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  animation: box-on var(--t-fast) steps(2, jump-none);
+}
+.ann[data-state="airbag"][data-fresh="true"]::after {
+  border-color: var(--airbag);
+}
+.ann[data-state="alert"][data-fresh="true"]::after {
+  border-color: var(--bone);
+}
+@keyframes box-on {
+  from {
+    opacity: 0;
+  }
 }
 
-/* ---- Surfaces ------------------------------------------------------------------------- */
-
-.card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--r-card);
+/* Readout digits roll when a block changes them. */
+.roll {
+  display: inline-block;
+  animation: roll var(--t-fast) var(--ease);
 }
-
-.notice {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  padding: 14px 16px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-small);
-  font-size: 14px;
-  line-height: 1.5;
-}
-.notice-airbag {
-  border-color: var(--airbag-edge);
-  background: var(--airbag-tint);
-}
-.notice-liq {
-  border-color: var(--liq-edge);
+@keyframes roll {
+  from {
+    transform: translateY(-0.45em);
+    opacity: 0.2;
+  }
 }
 
 .hazard {
@@ -382,14 +495,54 @@ ul {
 }
 
 .sim-banner {
-  padding: 8px 16px;
-  text-align: center;
+  padding: 8px var(--gutter);
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
   font-size: 13px;
-  color: var(--ground);
-  background: var(--soft-bone);
+  color: var(--text-2);
+  text-align: center;
 }
 .sim-banner strong {
+  font-family: var(--mono);
+  font-stretch: 87.5%;
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bone);
+  margin-right: 6px;
+}
+
+/* ---- Surfaces ------------------------------------------------------------------------- */
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+}
+
+.notice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-control);
+  font-size: 14px;
+  line-height: 1.5;
+}
+/* Airbag's heads-up. */
+.notice[data-tone="airbag"],
+.notice-airbag {
+  border-color: var(--airbag-edge);
+  background: var(--airbag-tint);
+}
+/* The trader has to act: bone, not red. Red is only liquidation. */
+.notice[data-tone="alert"],
+.notice-liq {
+  border-color: var(--bone);
+  background: var(--raised);
 }
 
 /* dl rows: label left, number right. */
@@ -400,6 +553,7 @@ ul {
 .rows > div {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: 12px;
   padding: 12px 0;
   border-bottom: 1px solid var(--line);
@@ -445,7 +599,55 @@ ul {
   }
 }
 
-/* ---- Deploy timeline (Deployed and MobileDeploy designs) ------------------------------ */
+/* A panel that arrives redraws top to bottom, the way a display unit repaints. */
+.redraw {
+  animation: redraw var(--t-panel) var(--ease) both;
+}
+@keyframes redraw {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* ---- Navigation ------------------------------------------------------------------------ */
+
+/* The page under the masthead cross-fades and rises a few pixels; the masthead stays put. */
+::view-transition {
+  pointer-events: none;
+}
+::view-transition-old(root),
+::view-transition-new(root),
+::view-transition-group(.page) {
+  animation: none;
+}
+::view-transition-old(.page) {
+  animation: page-out var(--t-fast) var(--ease-in) both;
+}
+::view-transition-new(.page) {
+  animation: page-in var(--t-move) var(--ease) both;
+}
+@keyframes page-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(.page),
+  ::view-transition-new(.page) {
+    animation: none;
+  }
+}
+
+/* ---- Deploy timeline (legacy until the deploy screens move to the block log) ----------- */
 
 .timeline {
   display: flex;
@@ -492,7 +694,6 @@ ul {
 .timeline-compact .tl-tx:has(> span:empty) {
   display: none;
 }
-
 @media (max-width: 760px) {
   .timeline li {
     grid-template-columns: 76px minmax(0, 1fr);
@@ -507,4 +708,56 @@ ul {
   .timeline .tl-tx:has(> span:empty) {
     display: none;
   }
+}
+
+/* ---- Status pills (legacy until every screen uses annunciators) ------------------------ */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.pill-sm {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 12px;
+  gap: 6px;
+}
+.pill-xs {
+  height: 22px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+.pill .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--airbag);
+}
+.pill-muted {
+  color: var(--text-2);
+}
+.pill-muted .dot {
+  background: var(--text-3);
+}
+.pill-solid {
+  border-color: var(--airbag);
+  background: var(--airbag);
+  color: var(--ground);
+  font-weight: 600;
+}
+.pill-airbag {
+  border-color: var(--airbag);
+  color: var(--airbag);
+}
+.pill-liq {
+  border-color: var(--liq);
+  color: var(--liq);
 }

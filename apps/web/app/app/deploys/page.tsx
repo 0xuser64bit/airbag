@@ -4,7 +4,8 @@
 
 import Link from 'next/link';
 import { relativeDay } from '@/components/dashboard.tsx';
-import { deploySentence, OutcomeBadge } from '@/components/ui.tsx';
+import { OutcomeAnnunciator } from '@/components/instruments.tsx';
+import { deploySentence } from '@/components/ui.tsx';
 import { useApi } from '@/lib/api.ts';
 import type { DeploySummary } from '@/lib/types.ts';
 
@@ -54,7 +55,7 @@ export default function DeploysPage() {
                       {relativeDay(d.createdAt)}
                     </span>
                   </span>
-                  <OutcomeBadge d={d} />
+                  <OutcomeAnnunciator d={d} />
                 </span>
                 <span className="muted" style={{ fontSize: 14 }}>
                   {deploySentence(d)}

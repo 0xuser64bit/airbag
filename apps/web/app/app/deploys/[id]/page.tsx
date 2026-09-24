@@ -7,7 +7,8 @@ import Link from 'next/link';
 import { use, useEffect } from 'react';
 import { deployTitle } from '@/components/dashboard.tsx';
 import { Back, External } from '@/components/icons.tsx';
-import { OutcomeBadge, Timeline, TxLink } from '@/components/ui.tsx';
+import { OutcomeAnnunciator } from '@/components/instruments.tsx';
+import { Timeline, TxLink } from '@/components/ui.tsx';
 import { useApi } from '@/lib/api.ts';
 import type { DeployDetail } from '@/lib/types.ts';
 
@@ -42,7 +43,7 @@ export default function DeployPage({ params }: { params: Promise<{ id: string }>
           <Back />
           Deploys
         </Link>
-        <OutcomeBadge d={d} />
+        <OutcomeAnnunciator d={d} />
       </div>
       <div className="hazard" aria-hidden="true" style={{ height: 6, borderRadius: 2 }} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

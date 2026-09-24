@@ -15,8 +15,9 @@ import type {
 } from '@/lib/types.ts';
 import s from './dashboard.module.css';
 import { Check, Cross, External } from './icons.tsx';
+import { OutcomeAnnunciator, RowAnnunciator } from './instruments.tsx';
 import { Runway } from './Runway.tsx';
-import { deploySentence, OutcomeBadge, Timeline } from './ui.tsx';
+import { deploySentence, Timeline } from './ui.tsx';
 
 const sideWord = (side: 'long' | 'short') => (side === 'long' ? 'falling' : 'rising');
 const f = (st: Settings) => (st.demo ? 0.5 : SENSITIVITY[st.sensitivity]);
@@ -105,25 +106,6 @@ function Stat({ k, v, tone }: { k: string; v: string; tone?: 'liq' | 'airbag' })
   );
 }
 
-const ROW_STATUS: Record<PositionView['status'], { text: string; cls: string; dot: boolean }> = {
-  armed: { text: 'Armed', cls: '', dot: true },
-  're-armed': { text: 'Re-armed', cls: 'pill-airbag', dot: false },
-  deploying: { text: 'Deploying', cls: 'pill-solid', dot: false },
-  paused: { text: 'Paused', cls: 'pill-muted', dot: true },
-  blocked: { text: 'Held', cls: 'pill-muted', dot: true },
-  'not-covered': { text: 'Not covered', cls: 'pill-muted', dot: false },
-};
-
-export function RowPill({ status }: { status: PositionView['status'] }) {
-  const r = ROW_STATUS[status];
-  return (
-    <span className={`pill pill-sm ${r.cls}`}>
-      {r.dot && <span className="dot" aria-hidden="true" />}
-      {r.text}
-    </span>
-  );
-}
-
 export function PositionsTable({ data }: { data: Dashboard }) {
   const account = data.account;
   return (
@@ -181,7 +163,7 @@ export function PositionsTable({ data }: { data: Dashboard }) {
                   <td className="num airbag">{p.line === undefined ? '—' : fmt.usd(p.line)}</td>
                   <td className="num">{fmt.pct(p.distance)}</td>
                   <td>
-                    <RowPill status={p.status} />
+                    <RowAnnunciator status={p.status} />
                   </td>
                 </tr>
               ))}
@@ -410,7 +392,7 @@ export function RecentDeploys({
                       {relativeDay(d.createdAt)}
                     </span>
                   </span>
-                  <OutcomeBadge d={d} />
+                  <OutcomeAnnunciator d={d} />
                 </span>
                 <span className="muted" style={{ fontSize: 13, lineHeight: 1.45 }}>
                   {deploySentence(d)}

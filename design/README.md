@@ -1,5 +1,7 @@
 # Airbag design reference
 
+> **24 Sep 2026:** the web app keeps this identity (palette, type, mark, colour meaning, copy, numbers) but rebuilds the screens as an instrument panel. See `apps/web/DESIGN.md` and `docs/BRIEF.md` §8.
+
 These are the source files of the approved Airbag design, exported from a design canvas. They are **reference material, not code to import.**
 
 ## How to read them

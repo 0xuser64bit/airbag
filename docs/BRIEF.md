@@ -1,6 +1,6 @@
 # Airbag: build brief
 
-You are the founding engineer on Airbag. This file is the source of truth for what we're building, why, and the constraints. The design files in `/design` are the source of truth for how it looks and reads. Where this brief and the design disagree, ask.
+You are the founding engineer on Airbag. This file is the source of truth for what we're building, why, and the constraints. The design files in `/design` set the identity, copy and numbers; `apps/web/DESIGN.md` is how the web app builds them (the instrument-panel redesign, 24 Sep). Where this brief and the design disagree, ask.
 
 Owner: Arth (solo founder). Written 23 Sep 2026. Deadline: **13 Oct 2026, 11:59 PM ET** (Monad Metropolis hackathon). We are building a real product, not a throwaway demo, but the deadline is fixed.
 
@@ -194,7 +194,7 @@ Add property tests (e.g. fast-check): trims never increase size, never flip side
 
 ## 6. Product surface (routes and screens)
 
-The design is in `/design` (see `design/README.md` for how to read it). Build these, matching layout, copy and numbers:
+The design is in `/design` (see `design/README.md` for how to read it). Its identity, copy and numbers hold; the layouts were rebuilt as an instrument panel (§8, 24 Sep). The routes:
 
 | Route | Design file | Notes |
 |---|---|---|
@@ -226,9 +226,9 @@ Deploy it to testnet (and mainnet if time allows). Index it with Envio. Put the 
 
 ---
 
-## 8. Design system (summary; exact values are in `/design`)
+## 8. Design system (summary; exact values are in `/design`, the web build in `apps/web/DESIGN.md`)
 
-Direction: **"crash-test instrument"**. Quiet until it matters.
+Direction: **"crash-test instrument"**. Quiet until it matters. Since 24 Sep the screens are built as an instrument panel ("envelope protection"): the identity below is unchanged; composition, components and motion are new.
 
 - **Color rule:** graphite and bone while safe. **Yellow = Airbag** (the line it acts at, and anything it did). **Red = liquidation only.** Nothing else gets color.
 
@@ -247,10 +247,12 @@ Direction: **"crash-test instrument"**. Quiet until it matters.
 | liquidation | `#FF6A55` | liquidation only |
 
 - **Type:** Archivo at `font-stretch: 125%`, 700–800, for display (h1/h2 and the wordmark only). Instrument Sans for UI and body. Martian Mono at 75–87.5% width with `font-variant-numeric: tabular-nums` for **every number**. Load via `next/font/google` (or equivalent) with the `wdth` axis.
-- **Shape:** 8 px control radius, 10–12 px small containers, 16 px cards, 999 px pills. 1 px borders. No drop shadows, no gradients. The **only** patterned fill is the hazard stripe (`repeating-linear-gradient(-45deg, #F2C12E 0 10px, #11110F 10px 20px)`), shown only when Airbag deploys and on the save card.
+- **Shape:** 6 px controls, 8 px instrument wells, 12 px panels. 1 px borders and bezels. Instruments sit in darker glass wells (`#0C0C0B`) set into the panel; no floating card grid, no drop shadows, no gradients. The **only** patterned fill is the hazard stripe (`repeating-linear-gradient(-45deg, #F2C12E 0 10px, #11110F 10px 20px)`), shown only when Airbag deploys and on the save card.
 - **Logo:** crash-test target (inline SVG in every design file). Wordmark "AIRBAG" in Archivo 125% 800, letter-spacing 0.06em.
 - **Signature component, the Runway:** horizontal track; red tick = liquidation, yellow tick = Airbag line, hatched zone between them (neutral when safe, yellow-tinted when near the line), bone dot = mark, dashed tick = entry or old liquidation ghost. Labels in mono caps (`LIQ $94,000`, `AIRBAG $97,000`, `MARK $99,420`).
-- **Components to build:** Button (primary yellow / secondary outline / ghost), StatusPill (Armed, Deploying, Deployed · re-armed, Paused, Key rejected · relink), Runway, StatCell / before→after cell, PositionsTable, DeployTimeline row, BlockTape, SaveCard (also rendered as an OG image), HazardStripe, Stepper, Segmented, Switch, Toast.
+- **Instrument grammar (24 Sep):** each position is a tape, vertical for the primary display and horizontal (the Runway) in lists: a red band beyond liquidation, a hatched protection band, a yellow bug at the Airbag line, a bone readout for the mark whose digits roll each block. Annunciators replace pills: dark when off, bone when on, yellow when Airbag acts, inverted bone when the trader must act (red stays liquidation-only); a lamp that changes is boxed for ten seconds. An annunciator strip under the masthead carries protection, mode, feed and key.
+- **Components to build:** Button (primary yellow / secondary outline / ghost), Annunciator (Armed, Deploying, Deployed · re-armed, Paused, Key rejected · relink), Tape and Runway, Readout, before→after cell, PositionsTable, block log, BlockTape, SaveCard (also rendered as an OG image), HazardStripe, Stepper, Segmented, Switch.
+- **Motion:** instrument physics. Bugs, bands and the mark move with a damped ease-out (240 ms); lamps switch at once; readout digits roll (120 ms); arriving panels redraw top to bottom; pages cross-fade with a 6 px rise under a fixed masthead. Reduced motion changes values without movement.
 - **Voice:** plain, precise, trader-literate. Sentence case. Numbers over adjectives. Honest about limits. No "seamless", "unlock", "leverage" (as a verb), and no exclamation marks.
 - **Accessibility:** real buttons and links, labels on inputs, `aria-pressed`/`role="switch"` where used, focus-visible outline in yellow, 44 px targets, 4.5:1 text contrast, reduced-motion support. Run axe in CI.
 

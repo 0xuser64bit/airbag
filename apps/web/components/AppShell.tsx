@@ -11,7 +11,8 @@ import { useSession } from '@/lib/session.ts';
 import { type Live, useDashboard } from '@/lib/useDashboard.ts';
 import s from './AppShell.module.css';
 import { DeploysIcon, ListIcon, Sliders } from './icons.tsx';
-import { Brand, SimBanner, StatusPill } from './ui.tsx';
+import { StatusAnnunciator } from './instruments.tsx';
+import { Brand, SimBanner } from './ui.tsx';
 
 const LiveContext = createContext<Live>({ connected: false, failed: false, unauthorized: false });
 export const useLive = () => useContext(LiveContext);
@@ -74,7 +75,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </nav>
           </div>
           <div className={s.right}>
-            {data && <StatusPill status={data.status} />}
+            {data && <StatusAnnunciator status={data.status} />}
             {data && (
               <span className={`num muted ${s.ticker}`}>
                 Block {fmt.block(data.block.head)}

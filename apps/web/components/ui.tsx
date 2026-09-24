@@ -1,8 +1,8 @@
-// Small shared pieces from design/System.dc.html.
+// Small shared pieces that also render on the server (the landing and the save report).
 
 import { fmt } from '@airbag/risk';
 import Link from 'next/link';
-import type { DeploySummary, GuardStatus, TimelineEntry } from '@/lib/types.ts';
+import type { DeploySummary, TimelineEntry } from '@/lib/types.ts';
 import { Mark } from './icons.tsx';
 
 export function Brand({
@@ -32,59 +32,6 @@ export function Brand({
       </span>
     </Link>
   );
-}
-
-const STATUS: Record<
-  GuardStatus,
-  { text: string; kind: 'armed' | 'solid' | 'airbag' | 'muted' | 'liq' }
-> = {
-  armed: { text: 'Armed', kind: 'armed' },
-  're-armed': { text: 'Deployed · re-armed', kind: 'airbag' },
-  deploying: { text: 'Deploying', kind: 'solid' },
-  paused: { text: 'Paused', kind: 'muted' },
-  'key-rejected': { text: 'Key rejected · relink', kind: 'liq' },
-  'forwarding-off': { text: 'One-Click Trading off', kind: 'liq' },
-  'too-many-connections': { text: 'Perpl connection limit', kind: 'liq' },
-  frozen: { text: 'Account frozen', kind: 'liq' },
-  connecting: { text: 'Connecting to Perpl', kind: 'muted' },
-  stale: { text: 'Data stale · holding', kind: 'muted' },
-  unlinked: { text: 'No key linked', kind: 'muted' },
-};
-
-export function StatusPill({ status, small = false }: { status: GuardStatus; small?: boolean }) {
-  const s = STATUS[status];
-  const cls =
-    s.kind === 'solid'
-      ? 'pill-solid'
-      : s.kind === 'airbag'
-        ? 'pill-airbag'
-        : s.kind === 'liq'
-          ? 'pill-liq'
-          : s.kind === 'muted'
-            ? 'pill-muted'
-            : '';
-  return (
-    <span className={`pill ${small ? 'pill-sm' : ''} ${cls}`} role="status">
-      {(s.kind === 'armed' || s.kind === 'muted') && <span className="dot" aria-hidden="true" />}
-      {s.text}
-    </span>
-  );
-}
-
-export function OutcomeBadge({ d }: { d: Pick<DeploySummary, 'phase' | 'outcome'> }) {
-  if (d.outcome === 'save') {
-    return (
-      <span className="pill pill-xs pill-solid" style={{ fontWeight: 600 }}>
-        Saved
-      </span>
-    );
-  }
-  if (d.phase === 'failed')
-    return <span className="pill pill-xs pill-muted">Didn&apos;t fill</span>;
-  if (d.outcome === 'precaution')
-    return <span className="pill pill-xs pill-muted">Precaution</span>;
-  if (d.phase !== 'done') return <span className="pill pill-xs pill-solid">Deploying</span>;
-  return <span className="pill pill-xs pill-airbag">Deployed</span>;
 }
 
 /** One line of what a deploy did, for lists. */
