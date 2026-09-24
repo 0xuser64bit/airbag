@@ -1,7 +1,7 @@
-// Onboarding shell (design/Connect.dc.html, LinkKey, Settings): a stepper on the left, the
-// step on the right. On a phone the stepper folds into a header.
+// Onboarding shell: the three steps as a preflight checklist in the masthead, the step below.
 
 import { ModeBanner } from '@/components/ModeBanner.tsx';
+import { Page } from '@/components/Page.tsx';
 import { Brand } from '@/components/ui.tsx';
 import s from './onboarding.module.css';
 import { Steps } from './Steps.tsx';
@@ -10,16 +10,20 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
   return (
     <>
       <ModeBanner />
-      <div className={s.shell}>
-        <aside className={s.aside}>
-          <Brand size={24} text={16} />
+      <div className={s.frame}>
+        <header className={s.masthead}>
+          <Brand size={24} text={15} />
           <Steps />
-          <div className={s.safety}>
-            <span className="eyebrow">Safety</span>
-            <p>Airbag’s key can trim. It can’t take. Perpl blocks withdrawals for every API key.</p>
-          </div>
-        </aside>
-        <main className={s.main}>{children}</main>
+        </header>
+        <Page className={s.main}>
+          <main>{children}</main>
+        </Page>
+        <footer className={s.foot}>
+          <span className="label">Safety</span>
+          <span>
+            Airbag’s key can trim. It can’t take. Perpl blocks withdrawals for every API key.
+          </span>
+        </footer>
       </div>
     </>
   );

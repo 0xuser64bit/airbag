@@ -1,30 +1,46 @@
 'use client';
 
-// The signed-in app's frame (design/Dashboard.dc.html header, MobileHome tab bar). It owns the
-// live stream so every page shares one connection to the engine.
+// The signed-in app's frame: the masthead, an annunciator strip (protection, mode, feed), the
+// page, and a tab bar on phones. It owns the live stream so every page shares one connection
+// to the engine.
 
 import { fmt } from '@airbag/risk';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useSession } from '@/lib/session.ts';
+import type { Settings } from '@/lib/types.ts';
 import { type Live, useDashboard } from '@/lib/useDashboard.ts';
 import s from './AppShell.module.css';
 import { DeploysIcon, ListIcon, Sliders } from './icons.tsx';
-import { StatusAnnunciator } from './instruments.tsx';
+import { Annunciator, Readout, StatusAnnunciator, useFresh } from './instruments.tsx';
+import { Page } from './Page.tsx';
 import { Brand, SimBanner } from './ui.tsx';
 
 const LiveContext = createContext<Live>({ connected: false, failed: false, unauthorized: false });
 export const useLive = () => useContext(LiveContext);
 
-/** Re-renders every 100 ms so "checked 0.3 s ago" counts up between blocks. */
-function useNow(ms = 100) {
+/** Re-renders every `ms` so "checked 0.3 s ago" counts up between blocks. */
+export function useNow(ms = 100) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), ms);
     return () => clearInterval(t);
   }, [ms]);
   return now;
+}
+
+const NAV = [
+  { href: '/app', label: 'Positions', icon: ListIcon, exact: true },
+  { href: '/app/deploys', label: 'Deploys', icon: DeploysIcon, exact: false },
+  { href: '/app/settings', label: 'Settings', icon: Sliders, exact: false },
+] as const;
+
+/** "Balanced · 10% · max 50%": the mode Airbag is flying in. */
+export function modeText(st: Settings): string {
+  if (!st.armed) return 'Paused';
+  if (st.demo) return 'Demo · 0.3% move';
+  return `${st.sensitivity} · ${st.targetPct}% · max ${st.maxTrimPct}%`;
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -40,100 +56,132 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     else if (data?.status === 'unlinked') router.replace('/link-key');
   }, [session, live.unauthorized, data?.status, router]);
 
-  const nav = [
-    { href: '/app', label: 'Positions', icon: ListIcon, exact: true },
-    { href: '/app/deploys', label: 'Deploys', icon: DeploysIcon, exact: false },
-    {
-      href: '/app/settings',
-      label: 'Airbag settings',
-      short: 'Airbag',
-      icon: Sliders,
-      exact: false,
-    },
-  ];
-  const active = (href: string, exact: boolean) => (exact ? path === href : path.startsWith(href));
+  const active = (n: (typeof NAV)[number]) => (n.exact ? path === n.href : path.startsWith(n.href));
   const age = data?.block.at ? Math.max(0, (now - data.block.at) / 1000) : undefined;
+  const reconnecting = !!data && !live.connected;
+  const mode = data ? modeText(data.settings) : '';
+  const modeFresh = useFresh(mode);
+  const feedFresh = useFresh(reconnecting || data?.block.stale);
 
   return (
     <LiveContext.Provider value={live}>
       {data?.mode === 'simulation' && <SimBanner />}
       <div className={s.frame}>
-        <header className={s.header}>
-          <div className={s.left}>
-            <Brand href="/app" size={22} text={15} />
+        <header className={s.masthead}>
+          <div className={s.lead}>
+            <Brand href="/app" size={24} text={15} />
             <nav aria-label="App" className={s.nav}>
-              {nav.map((n) => (
+              {NAV.map((n) => (
                 <Link
                   key={n.href}
                   href={n.href}
                   className={s.navLink}
-                  {...(active(n.href, n.exact) ? { 'aria-current': 'page' as const } : {})}
+                  {...(active(n) ? { 'aria-current': 'page' as const } : {})}
                 >
                   {n.label}
                 </Link>
               ))}
             </nav>
           </div>
-          <div className={s.right}>
-            {data && <StatusAnnunciator status={data.status} />}
-            {data && (
-              <span className={`num muted ${s.ticker}`}>
-                Block {fmt.block(data.block.head)}
-                {age !== undefined && ` · checked ${age.toFixed(1)} s ago`}
+          {data?.account && (
+            <p className={s.account}>
+              <span>
+                Perpl <span className="num">#{data.account.id}</span>
               </span>
-            )}
-            {data?.account && (
-              <>
-                <span className={s.divider} />
-                <span className={s.account}>
-                  Perpl{' '}
-                  <span className="num" style={{ fontSize: 13 }}>
-                    #{data.account.id}
-                  </span>
-                </span>
-                <span className={`num muted ${s.wallet}`}>{fmt.short(data.wallet)}</span>
-              </>
-            )}
-          </div>
-        </header>
-        {data && (
-          <div className={`num muted ${s.mobileTicker}`}>
-            Block {fmt.block(data.block.head)}
-            {age !== undefined && ` · checked ${age.toFixed(1)} s ago`}
-          </div>
-        )}
-        {data && !live.connected && (
-          <div className={s.offline} role="status">
-            Reconnecting to Airbag’s engine. What you see may be out of date.
-          </div>
-        )}
-        <div className={s.body}>
-          {data ? (
-            children
-          ) : (
-            <p className="muted" role="status">
-              {session === undefined
-                ? ''
-                : live.failed
-                  ? 'Can’t reach Airbag’s engine. Retrying every few seconds…'
-                  : 'Connecting to Airbag’s engine…'}
+              <span className="num faint">{fmt.short(data.wallet)}</span>
             </p>
           )}
+        </header>
+
+        {/* The annunciator strip: what the system is doing, block by block. */}
+        <div className={s.strip}>
+          <div className={s.cell}>
+            <span className="label">Protection</span>
+            {reconnecting ? (
+              <Annunciator state="off" role="status">
+                Unknown
+              </Annunciator>
+            ) : data ? (
+              <StatusAnnunciator status={data.status} />
+            ) : (
+              <Annunciator state="off" role="status">
+                {live.failed ? 'Engine unreachable' : 'Connecting'}
+              </Annunciator>
+            )}
+          </div>
+          {data && (
+            <div className={`${s.cell} ${s.modeCell}`}>
+              <span className="label">Mode</span>
+              <Annunciator state={data.settings.armed ? 'on' : 'off'} fresh={modeFresh}>
+                {mode}
+              </Annunciator>
+            </div>
+          )}
+          {data && (
+            <div className={s.cell}>
+              <span className="label">Feed</span>
+              <Annunciator
+                state={reconnecting ? 'off' : data.block.stale ? 'alert' : 'on'}
+                fresh={feedFresh}
+              >
+                {reconnecting ? 'Reconnecting' : data.block.stale ? 'Stale' : 'Live'}
+              </Annunciator>
+              <span className={`num ${s.block}`}>
+                <Readout value={fmt.block(data.block.head)} />
+                <span className={`faint ${s.age}`}>
+                  {age === undefined ? '' : ` · ${age.toFixed(1)} s ago`}
+                </span>
+              </span>
+            </div>
+          )}
         </div>
+
+        {reconnecting && (
+          <p className={s.offline} role="status">
+            Can’t reach Airbag’s engine right now. What you see is the last block it sent, and it
+            may be out of date.
+          </p>
+        )}
+
+        <Page className={s.body}>
+          {data ? children : session === undefined ? null : <PoweringUp failed={live.failed} />}
+        </Page>
+
         <nav aria-label="App" className={s.tabs}>
-          {nav.map((n) => (
+          {NAV.map((n) => (
             <Link
               key={n.href}
               href={n.href}
               className={s.tab}
-              {...(active(n.href, n.exact) ? { 'aria-current': 'page' as const } : {})}
+              {...(active(n) ? { 'aria-current': 'page' as const } : {})}
             >
               <n.icon />
-              {n.short ?? n.label}
+              {n.label}
             </Link>
           ))}
         </nav>
       </div>
     </LiveContext.Provider>
+  );
+}
+
+/** Before the first block: the instrument with its scale drawn and nothing on it yet. */
+function PoweringUp({ failed }: { failed: boolean }) {
+  return (
+    <div className={s.powering}>
+      <div className={`well ${s.blank}`} aria-hidden="true">
+        <div className={s.blankScale} />
+      </div>
+      <div className={s.poweringText}>
+        <p className="title" role="status">
+          {failed ? 'Can’t reach Airbag’s engine' : 'Connecting to Airbag’s engine'}
+        </p>
+        <p className="muted">
+          {failed
+            ? 'Retrying every few seconds. Your positions show up as soon as it answers.'
+            : 'Your positions show up with the next Monad block.'}
+        </p>
+      </div>
+    </div>
   );
 }
