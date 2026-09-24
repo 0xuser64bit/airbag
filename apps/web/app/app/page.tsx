@@ -1,27 +1,25 @@
 'use client';
 
-// The dashboard (design/Dashboard.dc.html; Deployed.dc.html when Airbag has just acted;
-// MobileHome.dc.html on a phone).
+// The dashboard: the primary flight display for the closest position (the deploy card for ten
+// minutes after Airbag acts), the positions ledger, the per-block strip, and the side panel.
 
-import { fmt } from '@airbag/risk';
 import { useEffect, useState } from 'react';
 import { useLive } from '@/components/AppShell.tsx';
 import s from '@/components/dashboard.module.css';
 import {
   AirbagSummary,
-  Closest,
+  BlockStrip,
   DeployDetailCard,
+  FlightDisplay,
   KeepsFalling,
   KeyHealth,
   PausedBanner,
-  PositionCards,
-  PositionsTable,
+  PositionsLedger,
   RecentDeploys,
   SimControls,
   StatusBanner,
   useDeploy,
 } from '@/components/dashboard.tsx';
-import { BlockTape } from '@/components/ui.tsx';
 import { useEngineConfig } from '@/lib/api.ts';
 
 /** A deploy stays on the dashboard for ten minutes, then moves to the list. */
@@ -44,63 +42,32 @@ export default function DashboardPage() {
   const detail = useDeploy(fresh ? latest : undefined);
   if (!data) return null;
 
-  const [first, ...rest] = data.positions;
+  const [first] = data.positions;
   const deployed = detail ? data.positions.find((p) => p.marketId === detail.marketId) : undefined;
-  const others = detail ? data.positions.filter((p) => p !== deployed) : rest;
+  const lead = detail ? deployed : first;
 
   return (
     <div className={s.grid}>
-      <main className={s.main}>
+      <div className={s.main}>
         <StatusBanner data={data} />
         {data.status === 'paused' && <PausedBanner />}
         {detail ? (
           <DeployDetailCard d={detail} />
         ) : (
-          first && <Closest p={first} settings={data.settings} />
+          first && <FlightDisplay p={first} settings={data.settings} />
         )}
-        <PositionsTable data={data} />
-        <PositionCards positions={others} />
-        {data.account && (
-          <div className={s.tiles}>
-            <div>
-              <span className="muted" style={{ fontSize: 12 }}>
-                Account value
-              </span>
-              <span className="num" style={{ fontSize: 16 }}>
-                {fmt.usd(data.account.value)}
-              </span>
-            </div>
-            <div>
-              <span className="muted" style={{ fontSize: 12 }}>
-                Spare margin
-              </span>
-              <span className="num" style={{ fontSize: 16 }}>
-                {fmt.usd(data.account.spare)}
-              </span>
-            </div>
-          </div>
-        )}
-        {!first && data.positions.length === 0 && (
-          <section
-            className="card"
-            style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 8 }}
-          >
-            <h2 style={{ fontSize: 17, fontWeight: 600 }}>No open positions</h2>
-            <p className="muted" style={{ fontSize: 15 }}>
-              Airbag checks every block and arms on anything you open in{' '}
-              {config.data?.markets.map((m) => m.symbol).join(' or ') ?? 'a covered market'}.
-            </p>
-          </section>
-        )}
-        <BlockTape tape={data.tape} />
-      </main>
-      <aside className={s.aside}>
+        <PositionsLedger data={data} {...(lead ? { exclude: lead.marketId } : {})} />
+        <BlockStrip tape={data.tape} />
+      </div>
+      <aside className={s.aside} aria-label="Airbag, key and deploys">
         {detail?.phase === 'done' && detail.kind === 'trim' && (
           <KeepsFalling d={detail} p={deployed} />
         )}
-        <AirbagSummary settings={data.settings} slippageBps={config.data?.slippageBps} />
-        <KeyHealth data={data} now={now} />
-        <RecentDeploys deploys={data.deploys} />
+        <div className={s.sidePanel}>
+          <AirbagSummary settings={data.settings} slippageBps={config.data?.slippageBps} />
+          <KeyHealth data={data} now={now} perplUrl={config.data?.perplUrl} />
+          <RecentDeploys deploys={data.deploys} />
+        </div>
         {data.mode === 'simulation' && (
           <SimControls symbols={config.data?.markets.map((m) => m.symbol) ?? []} />
         )}

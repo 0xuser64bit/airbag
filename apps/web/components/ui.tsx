@@ -52,58 +52,6 @@ export function deploySentence(d: DeploySummary, sizeDecimals = 3): string {
   return what;
 }
 
-export function BlockTape({ tape }: { tape: { block: number; ok: boolean; at: number }[] }) {
-  const missed = tape.filter((t) => !t.ok).length;
-  const span = tape.length > 1 ? ((tape.at(-1)?.at ?? 0) - (tape[0]?.at ?? 0)) / 1000 : 0;
-  return (
-    <section
-      className="card"
-      aria-labelledby="tape-title"
-      style={{
-        padding: '20px 32px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 32,
-        flexWrap: 'wrap',
-      }}
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <h2 id="tape-title" style={{ fontSize: 16, fontWeight: 600 }}>
-          Every block, checked
-        </h2>
-        <span className="muted" style={{ fontSize: 13 }}>
-          Last {tape.length} Monad blocks
-          {span > 0 ? ` · ${Math.round(span)} s` : ''} ·{' '}
-          {missed === 0 ? 'no gaps' : `${missed} not checked (stale or missed)`}
-        </span>
-      </div>
-      <div
-        aria-hidden="true"
-        style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}
-      >
-        {tape.map((t, i) => (
-          <span
-            key={t.block}
-            title={`${fmt.block(t.block)}${t.ok ? '' : ' · not checked'}`}
-            style={{
-              width: 6,
-              height: 20,
-              borderRadius: 2,
-              background: !t.ok
-                ? 'transparent'
-                : i === tape.length - 1
-                  ? 'var(--bone)'
-                  : 'var(--line-strong)',
-              border: t.ok ? 'none' : '1px solid var(--line-strong)',
-            }}
-          />
-        ))}
-      </div>
-    </section>
-  );
-}
-
 export function TxLink({
   tx,
   explorerUrl,

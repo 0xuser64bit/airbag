@@ -318,14 +318,7 @@ export function AirbagForm(props: AirbagFormProps) {
             {Math.round(view?.nominalLeverage ?? SAMPLE.nominalLeverage)}x · mark {fmt.usd(mark)}
           </span>
         </div>
-        <Runway
-          side={pos.side}
-          liquidation={liq}
-          line={line.price}
-          mark={mark}
-          size="md"
-          near={past}
-        />
+        <Runway liquidation={liq} line={line.price} mark={mark} size="md" near={past} />
         <dl className={s.dl}>
           <div>
             <dt>Deploys at</dt>

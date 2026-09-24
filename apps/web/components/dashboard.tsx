@@ -1,6 +1,7 @@
 'use client';
 
-// Dashboard parts (design/Dashboard.dc.html, Deployed.dc.html, MobileHome.dc.html).
+// Dashboard parts: the primary flight display for the closest position, the positions ledger,
+// the per-block strip, the side panel, and the deploy card.
 
 import { equity, fmt, SENSITIVITY } from '@airbag/risk';
 import Link from 'next/link';
@@ -15,12 +16,14 @@ import type {
 } from '@/lib/types.ts';
 import s from './dashboard.module.css';
 import { Check, Cross, External } from './icons.tsx';
-import { OutcomeAnnunciator, RowAnnunciator } from './instruments.tsx';
+import { Annunciator, OutcomeAnnunciator, Readout, RowAnnunciator } from './instruments.tsx';
 import { Runway } from './Runway.tsx';
+import { Tape } from './Tape.tsx';
 import { deploySentence, Timeline } from './ui.tsx';
 
 const sideWord = (side: 'long' | 'short') => (side === 'long' ? 'falling' : 'rising');
-const f = (st: Settings) => (st.demo ? 0.5 : SENSITIVITY[st.sensitivity]);
+/** The share of the cushion used when Airbag deploys; demo mode deploys on a move instead. */
+const trigger = (st: Settings) => (st.demo ? undefined : SENSITIVITY[st.sensitivity]);
 
 /** "BTC long · 10x". */
 export const label = (p: Pick<PositionView, 'symbol' | 'side' | 'nominalLeverage'>) =>
@@ -46,165 +49,232 @@ function atLineSentence(p: PositionView, st: Settings): string {
   return `${where} trims ${size}, fee-free, so liquidation sits ${target} away.`;
 }
 
-export function Closest({ p, settings }: { p: PositionView; settings: Settings }) {
-  const near = (p.cushionUsed ?? 0) >= 0.8 * f(settings);
+/**
+ * The primary flight display: the closest position's tape, the distance to liquidation, how
+ * much of the margin cushion is used against the share where Airbag acts, and what it does there.
+ */
+export function FlightDisplay({ p, settings }: { p: PositionView; settings: Settings }) {
+  const at = trigger(settings);
+  const used = Math.max(0, p.cushionUsed ?? 0);
+  const near = at !== undefined && used >= 0.8 * at;
   return (
-    <section className={`card ${s.hero}`} aria-labelledby="closest">
-      <div className={s.heroTop}>
-        <div className={s.heroLeft}>
-          <span id="closest" className="eyebrow">
-            Closest to liquidation
-          </span>
-          <span style={{ fontSize: 17, fontWeight: 500 }}>
-            {p.symbol} {p.side} · {fmt.size(p.size, p.sizeDecimals)} {p.symbol} ·{' '}
-            {Math.round(p.nominalLeverage)}x
-          </span>
-          <div className={s.bigRow}>
+    <section className={s.pfd} aria-labelledby="closest">
+      <header className={s.pfdHead}>
+        <h2 id="closest" className="title">
+          Closest to liquidation
+        </h2>
+        <p className={s.position}>
+          <span className={s.symbol}>{p.symbol}</span> {p.side} ·{' '}
+          <span className="num">
+            {fmt.size(p.size, p.sizeDecimals)} {p.symbol}
+          </span>{' '}
+          · <span className="num">{Math.round(p.nominalLeverage)}x</span>
+        </p>
+        <RowAnnunciator status={p.status} />
+      </header>
+      <div className={s.pfdBody}>
+        <div className={`well ${s.tapeWell}`}>
+          <Tape
+            side={p.side}
+            liquidation={p.liquidation}
+            line={p.line}
+            mark={p.mark}
+            entry={p.entry}
+            near={near}
+            height={380}
+          />
+        </div>
+        <div className={s.readouts}>
+          <div className={s.distance}>
+            <span className="label">To liquidation</span>
             <span className={`big ${s.bigNum}`}>
-              {(p.distance * 100).toFixed(2)}
-              <span className={s.bigPct}>%</span>
-            </span>
-            <span className="muted" style={{ fontSize: 17 }}>
-              to liquidation
+              <Readout value={(p.distance * 100).toFixed(2)} />
+              <span className={s.pctSign}>%</span>
             </span>
           </div>
+          {p.cushionUsed !== undefined && <CushionGauge used={used} at={at} />}
+          <div className={s.memo}>
+            <span className="label">At the line</span>
+            <p>{atLineSentence(p, settings)}</p>
+          </div>
         </div>
-        <dl className={s.stats}>
-          <Stat k="Mark" v={fmt.usd(p.mark)} />
-          <Stat k="Liquidation" v={fmt.usd(p.liquidation)} tone="liq" />
-          {p.line !== undefined && <Stat k="Airbag line" v={fmt.usd(p.line)} tone="airbag" />}
-          {p.cushionUsed !== undefined && (
-            <Stat k="Cushion used" v={fmt.pct(Math.max(0, p.cushionUsed), 1)} />
-          )}
-        </dl>
       </div>
-      <Runway
-        side={p.side}
-        liquidation={p.liquidation}
-        line={p.line}
-        mark={p.mark}
-        entry={p.entry}
-        near={near}
-      />
-      <p className="muted" style={{ fontSize: 15, lineHeight: 1.5 }}>
-        {atLineSentence(p, settings)}
-      </p>
     </section>
   );
 }
 
-function Stat({ k, v, tone }: { k: string; v: string; tone?: 'liq' | 'airbag' }) {
+/** Cushion used: 0 at the reference price, 100% at liquidation, Airbag's share marked. */
+function CushionGauge({ used, at }: { used: number; at: number | undefined }) {
+  const pct = (v: number) => `${Math.min(1, Math.max(0, v)) * 100}%`;
   return (
-    <div>
-      <dt className="eyebrow" style={{ letterSpacing: '0.08em' }}>
-        {k}
-      </dt>
-      <dd className={`num ${tone ?? ''}`} style={{ marginTop: 6, fontSize: 18 }}>
-        {v}
-      </dd>
+    <div className={s.gauge}>
+      <div className={s.gaugeHead}>
+        <span className="label">Cushion used</span>
+        <span className="num">{fmt.pct(used, 1)}</span>
+      </div>
+      <div
+        className={s.gaugeTrack}
+        role="img"
+        aria-label={`${fmt.pct(used, 1)} of the margin cushion used${at === undefined ? '' : `; Airbag deploys at ${fmt.pct(at, 0)}`}; liquidation at 100%`}
+      >
+        <div className={s.gaugeFill} style={{ width: pct(used) }} />
+        {at !== undefined && <div className={s.gaugeLine} style={{ left: pct(at) }} />}
+        <div className={s.gaugeEnd} />
+      </div>
+      <div className={`num ${s.gaugeScale}`} aria-hidden="true">
+        <span>0</span>
+        {at !== undefined && (
+          <span className={s.gaugeAt} style={{ left: pct(at) }}>
+            Airbag {fmt.pct(at, 0)}
+          </span>
+        )}
+        <span className={s.gaugeLiq}>Liq</span>
+      </div>
     </div>
   );
 }
 
-export function PositionsTable({ data }: { data: Dashboard }) {
+export function PositionsLedger({ data, exclude }: { data: Dashboard; exclude?: number }) {
   const account = data.account;
+  const others = data.positions.filter((p) => p.marketId !== exclude);
   return (
-    <section className={`card ${s.positions}`} aria-labelledby="open-positions">
-      <div className={s.positionsHead}>
-        <h2 id="open-positions" style={{ fontSize: 16, fontWeight: 600 }}>
+    <section className={s.ledger} aria-labelledby="open-positions">
+      <div className={s.ledgerHead}>
+        <h2 id="open-positions" className="title">
           Open positions
         </h2>
         {account && (
-          <span className="muted" style={{ fontSize: 13 }}>
-            Account value{' '}
-            <span className="num" style={{ color: 'var(--bone)' }}>
-              {fmt.usd(account.value)}
-            </span>{' '}
-            · Spare margin{' '}
-            <span className="num" style={{ color: 'var(--bone)' }}>
-              {fmt.usd(account.spare)}
-            </span>
-          </span>
+          <dl className={s.account}>
+            <div>
+              <dt className="label">Account value</dt>
+              <dd className="num">{fmt.usd(account.value)}</dd>
+            </div>
+            <div>
+              <dt className="label">Spare margin</dt>
+              <dd className="num">{fmt.usd(account.spare)}</dd>
+            </div>
+          </dl>
         )}
       </div>
       {data.positions.length === 0 ? (
-        <p className="muted" style={{ padding: '8px 32px 24px', fontSize: 15 }}>
+        <p className={s.empty}>
           No open positions. Airbag checks every block and arms on anything you open in a covered
           market.
         </p>
       ) : (
-        <div className={s.tableWrap}>
-          <table className={s.table}>
-            <thead>
-              <tr>
-                <th scope="col">Market</th>
-                <th scope="col">Size</th>
-                <th scope="col">Entry</th>
-                <th scope="col">Mark</th>
-                <th scope="col">Liquidation</th>
-                <th scope="col">Airbag line</th>
-                <th scope="col">To liq</th>
-                <th scope="col">Airbag</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.positions.map((p) => (
-                <tr key={p.marketId}>
-                  <th scope="row">
-                    <span style={{ fontWeight: 600 }}>{p.symbol}</span>{' '}
-                    <span className="muted">
-                      {p.side} · {Math.round(p.nominalLeverage)}x
-                    </span>
+        <>
+          <div className={s.tableWrap}>
+            <table className={s.table}>
+              <thead>
+                <tr>
+                  <th scope="col">Market</th>
+                  <th scope="col">Size</th>
+                  <th scope="col">Entry</th>
+                  <th scope="col">Mark</th>
+                  <th scope="col">Liquidation</th>
+                  <th scope="col">Airbag line</th>
+                  <th scope="col" className={s.runwayCol}>
+                    <span className="visually-hidden">Runway</span>
                   </th>
-                  <td className="num">{fmt.size(p.size, p.sizeDecimals)}</td>
-                  <td className="num">{fmt.usd(p.entry)}</td>
-                  <td className="num">{fmt.usd(p.mark)}</td>
-                  <td className="num">{fmt.usd(p.liquidation)}</td>
-                  <td className="num airbag">{p.line === undefined ? '—' : fmt.usd(p.line)}</td>
-                  <td className="num">{fmt.pct(p.distance)}</td>
-                  <td>
-                    <RowAnnunciator status={p.status} />
-                  </td>
+                  <th scope="col">To liq</th>
+                  <th scope="col">Airbag</th>
                 </tr>
+              </thead>
+              <tbody>
+                {data.positions.map((p) => (
+                  <tr key={p.marketId}>
+                    <th scope="row">
+                      <span className={s.symbol}>{p.symbol}</span>{' '}
+                      <span className="muted">
+                        {p.side} · {Math.round(p.nominalLeverage)}x
+                      </span>
+                    </th>
+                    <td className="num">{fmt.size(p.size, p.sizeDecimals)}</td>
+                    <td className="num">{fmt.usd(p.entry)}</td>
+                    <td className="num">{fmt.usd(p.mark)}</td>
+                    <td className="num liq">{fmt.usd(p.liquidation)}</td>
+                    <td className="num airbag">{p.line === undefined ? '—' : fmt.usd(p.line)}</td>
+                    <td className={s.runwayCol}>
+                      <Runway liquidation={p.liquidation} line={p.line} mark={p.mark} size="sm" />
+                    </td>
+                    <td className="num">{fmt.pct(p.distance)}</td>
+                    <td>
+                      <RowAnnunciator status={p.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {others.length > 0 && (
+            <ul className={s.cards}>
+              {others.map((p) => (
+                <li key={p.marketId} className={s.miniCard} aria-label={label(p)}>
+                  <div className={s.miniHead}>
+                    <span>
+                      <span className={s.symbol}>{p.symbol}</span>{' '}
+                      <span className="muted">
+                        {p.side} · {Math.round(p.nominalLeverage)}x
+                      </span>
+                    </span>
+                    <span className="num">{fmt.pct(p.distance)}</span>
+                  </div>
+                  <Runway liquidation={p.liquidation} line={p.line} mark={p.mark} size="sm" />
+                  <div className={`num ${s.miniLabels}`}>
+                    <span className="liq">Liq {fmt.usd(p.liquidation)}</span>
+                    {p.line !== undefined ? (
+                      <span className="airbag">Airbag {fmt.usd(p.line)}</span>
+                    ) : (
+                      <span className="faint">Not covered</span>
+                    )}
+                    <span>Mark {fmt.usd(p.mark)}</span>
+                  </div>
+                </li>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </ul>
+          )}
+        </>
       )}
     </section>
   );
 }
 
-/** Phone layout of the other positions (design/MobileHome.dc.html). */
-export function PositionCards({ positions }: { positions: PositionView[] }) {
+/** Every Monad block the engine checked, newest at the right; the strip feeds left each block. */
+export function BlockStrip({ tape }: { tape: Dashboard['tape'] }) {
+  const missed = tape.filter((t) => !t.ok).length;
+  const span = tape.length > 1 ? ((tape.at(-1)?.at ?? 0) - (tape[0]?.at ?? 0)) / 1000 : 0;
+  const head = tape.at(-1)?.block ?? 0;
+  const first = tape[0]?.block;
   return (
-    <div className={s.cards}>
-      {positions.map((p) => (
-        <section key={p.marketId} className={`card ${s.miniCard}`} aria-label={label(p)}>
-          <div className={s.miniHead}>
-            <span style={{ fontSize: 15 }}>
-              <span style={{ fontWeight: 600 }}>{p.symbol}</span>{' '}
-              <span className="muted">
-                {p.side} · {Math.round(p.nominalLeverage)}x
-              </span>
-            </span>
-            <span className="num" style={{ fontSize: 15 }}>
-              {fmt.pct(p.distance)}
-            </span>
-          </div>
-          <Runway side={p.side} liquidation={p.liquidation} line={p.line} mark={p.mark} size="sm" />
-          <div className={`num muted ${s.miniLabels}`}>
-            <span>Liq {fmt.usd(p.liquidation)}</span>
-            {p.line !== undefined ? (
-              <span className="airbag">Airbag {fmt.usd(p.line)}</span>
-            ) : (
-              <span>Not covered</span>
-            )}
-            <span>Mark {fmt.usd(p.mark)}</span>
-          </div>
-        </section>
-      ))}
-    </div>
+    <section className={s.strip} aria-labelledby="tape-title">
+      <div className={s.stripHead}>
+        <h2 id="tape-title" className="title">
+          Every block, checked
+        </h2>
+        <p className="muted">
+          Last {tape.length} Monad blocks
+          {span > 0 ? ` · ${Math.round(span)} s` : ''} ·{' '}
+          {missed === 0 ? 'no gaps' : `${missed} not checked (stale or missed)`}
+        </p>
+      </div>
+      <div className={`well ${s.stripWell}`} aria-hidden="true">
+        <div
+          className={`${s.cells} ${head % 2 ? s.feedA : s.feedB}`}
+          style={{ '--n': Math.max(1, tape.length) } as React.CSSProperties}
+        >
+          {tape.map((t, i) => (
+            <span
+              key={t.block}
+              className={!t.ok ? s.miss : i === tape.length - 1 ? s.head : undefined}
+            />
+          ))}
+        </div>
+      </div>
+      <div className={`num ${s.stripEnds}`} aria-hidden="true">
+        <span>{first === undefined ? '' : fmt.block(first)}</span>
+        <span>{fmt.block(head)}</span>
+      </div>
+    </section>
   );
 }
 
@@ -372,12 +442,19 @@ export function RecentDeploys({
   limit?: number;
 }) {
   return (
-    <section className={`card ${s.side}`} aria-labelledby="recent">
-      <h2 id="recent" style={{ fontSize: 16, fontWeight: 600 }}>
-        Recent deploys
-      </h2>
+    <section className={s.section} aria-labelledby="recent">
+      <div className={s.sectionHead}>
+        <h2 id="recent" className="title">
+          Recent deploys
+        </h2>
+        {deploys.length > limit && (
+          <Link href="/app/deploys" className={s.sideLink}>
+            All deploys
+          </Link>
+        )}
+      </div>
       {deploys.length === 0 ? (
-        <p className="muted" style={{ fontSize: 14 }}>
+        <p className={s.sideNote}>
           None yet. When Airbag acts, the fill and the transaction show up here.
         </p>
       ) : (
@@ -386,26 +463,17 @@ export function RecentDeploys({
             <li key={d.id}>
               <Link href={`/app/deploys/${d.id}`} className={s.recentLink}>
                 <span className={s.recentHead}>
-                  <span style={{ fontSize: 14, fontWeight: 500 }}>
+                  <span className={s.recentTitle}>
                     {d.symbol} {d.side}{' '}
-                    <span className="num muted" style={{ fontSize: 12, fontWeight: 400 }}>
-                      {relativeDay(d.createdAt)}
-                    </span>
+                    <span className="num faint">{relativeDay(d.createdAt)}</span>
                   </span>
                   <OutcomeAnnunciator d={d} />
                 </span>
-                <span className="muted" style={{ fontSize: 13, lineHeight: 1.45 }}>
-                  {deploySentence(d)}
-                </span>
+                <span className="muted">{deploySentence(d)}</span>
               </Link>
             </li>
           ))}
         </ul>
-      )}
-      {deploys.length > limit && (
-        <Link href="/app/deploys" className="muted" style={{ fontSize: 13 }}>
-          All deploys
-        </Link>
       )}
     </section>
   );
@@ -446,12 +514,12 @@ export function AirbagSummary({
         late: 'Late, when three quarters are gone',
       }[settings.sensitivity];
   return (
-    <section className={`card ${s.side}`} aria-labelledby="your-airbag" style={{ gap: 18 }}>
-      <div className={s.sideHead}>
-        <h2 id="your-airbag" style={{ fontSize: 16, fontWeight: 600 }}>
+    <section className={s.section} aria-labelledby="your-airbag">
+      <div className={s.sectionHead}>
+        <h2 id="your-airbag" className="title">
           Your airbag
         </h2>
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div className={s.sectionActions}>
           <button type="button" className="btn btn-ghost btn-sm" onClick={toggle} disabled={busy}>
             {settings.armed ? 'Pause' : 'Resume'}
           </button>
@@ -461,7 +529,7 @@ export function AirbagSummary({
         </div>
       </div>
       {error && (
-        <p className="liq" role="alert" style={{ fontSize: 13 }}>
+        <p className="notice" data-tone="alert" role="alert">
           {error}
         </p>
       )}
@@ -491,85 +559,83 @@ export function AirbagSummary({
   );
 }
 
-export function KeyHealth({ data, now }: { data: Dashboard; now: number }) {
+export function KeyHealth({
+  data,
+  now,
+  perplUrl,
+}: {
+  data: Dashboard;
+  now: number;
+  perplUrl: string | undefined;
+}) {
   const key = data.key;
   if (!key) return null;
   const live = key.state === 'live';
   const ago = key.lastMessageAt ? Math.max(0, (now - key.lastMessageAt) / 1000) : undefined;
   const forwardingOff = data.account && !data.account.forwarding;
+  const ok = live && !forwardingOff;
   return (
-    <section className={`card ${s.side}`} aria-labelledby="perpl-key">
-      <div className={s.sideHead}>
-        <h2 id="perpl-key" style={{ fontSize: 16, fontWeight: 600 }}>
-          Perpl key{' '}
-          <span className="num muted" style={{ fontSize: 12, fontWeight: 400 }}>
-            …{key.keyHint}
-          </span>
+    <section className={s.section} aria-labelledby="perpl-key">
+      <div className={s.sectionHead}>
+        <h2 id="perpl-key" className="title">
+          Perpl key <span className="num faint">…{key.keyHint}</span>
         </h2>
         <a
-          href="https://app.perpl.xyz/apikeys"
+          href={`${perplUrl ?? 'https://app.perpl.xyz'}/apikeys`}
           target="_blank"
           rel="noreferrer"
-          className="muted"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            fontSize: 13,
-            textDecoration: 'none',
-          }}
+          className={s.sideLink}
         >
           Revoke on Perpl
           <External size={13} />
         </a>
       </div>
-      <ul className="check-list">
+      <ul className={s.checks}>
         <li>
-          <Check color="#ECE9E0" />
-          <span className={s.twoLine}>
-            <span>Can’t withdraw or transfer</span>
+          <Check />
+          <span>
+            Can’t withdraw or transfer
             <span className="faint">Enforced by Perpl</span>
           </span>
         </li>
         <li>
-          <Check color="#ECE9E0" />
-          <span className={s.twoLine}>
-            <span>Reduce-only orders</span>
+          <Check />
+          <span>
+            Reduce-only orders
             <span className="faint">Enforced by Airbag’s open-source engine</span>
           </span>
         </li>
-        <li>
-          {live && !forwardingOff ? <Check color="#ECE9E0" /> : <Cross color="#FF6A55" />}
-          <span className={s.twoLine}>
-            <span>
-              {forwardingOff
-                ? 'One-Click Trading is off'
-                : live
-                  ? 'Connected, healthy'
-                  : key.state === 'rejected'
-                    ? 'Perpl refused this key'
-                    : key.state === 'limited'
-                      ? 'Too many Perpl connections'
-                      : 'Connecting to Perpl'}
-            </span>
-            <span className="num faint" style={{ fontSize: 11 }}>
-              {forwardingOff
-                ? 'Turn it on in Perpl’s settings'
+        <li className={ok ? undefined : s.failing}>
+          {ok ? <Check /> : <Cross />}
+          <span>
+            {forwardingOff
+              ? 'One-Click Trading is off'
+              : live
+                ? 'Connected, healthy'
                 : key.state === 'rejected'
-                  ? 'Relink a working key'
-                  : ago !== undefined
-                    ? `Last message ${ago.toFixed(1)} s ago · IP lock set by you`
-                    : 'IP lock set by you'}
+                  ? 'Perpl refused this key'
+                  : key.state === 'limited'
+                    ? 'Too many Perpl connections'
+                    : 'Connecting to Perpl'}
+            <span className="faint">
+              {forwardingOff ? (
+                'Turn it on in Perpl’s settings'
+              ) : key.state === 'rejected' ? (
+                'Relink a working key'
+              ) : ago !== undefined ? (
+                <>
+                  Last message <span className="num">{ago.toFixed(1)} s</span> ago · IP lock set by
+                  you
+                </>
+              ) : (
+                'IP lock set by you'
+              )}
             </span>
           </span>
         </li>
       </ul>
       {key.state === 'rejected' && (
-        <Link
-          href="/link-key"
-          className="btn btn-secondary btn-sm"
-          style={{ alignSelf: 'flex-start' }}
-        >
+        <Link href="/link-key" className="btn btn-secondary btn-sm" style={{ alignSelf: 'start' }}>
           Relink key
         </Link>
       )}
@@ -577,28 +643,46 @@ export function KeyHealth({ data, now }: { data: Dashboard; now: number }) {
   );
 }
 
-const BANNERS: Partial<Record<Dashboard['status'], string>> = {
-  'key-rejected':
-    'Perpl refused Airbag’s key, so Airbag can’t act. Revoked, expired, or an IP allow-list that doesn’t include Airbag are the usual causes. Link a working key.',
-  'forwarding-off':
-    'One-Click Trading is off on your Perpl account, so every order Airbag sent would fail. Turn it on in Perpl’s settings; Airbag picks it up on its own.',
-  'too-many-connections':
-    'Your wallet has four Perpl connections open (browser tabs count), so Perpl refused Airbag’s. Close a Perpl tab; Airbag retries on its own.',
-  frozen: 'Your Perpl account is frozen. Airbag can’t act until Perpl unfreezes it.',
-  stale:
-    'Market data is behind the chain, so Airbag is holding: it never acts on stale prices. It resumes when data catches up.',
-  connecting: 'Connecting to Perpl with your key. Airbag isn’t protecting you until this finishes.',
+const BANNERS: Partial<Record<Dashboard['status'], { lamp: string; text: string }>> = {
+  'key-rejected': {
+    lamp: 'Key rejected',
+    text: 'Perpl refused Airbag’s key, so Airbag can’t act. Revoked, expired, or an IP allow-list that doesn’t include Airbag are the usual causes. Link a working key.',
+  },
+  'forwarding-off': {
+    lamp: 'One-Click off',
+    text: 'One-Click Trading is off on your Perpl account, so every order Airbag sent would fail. Turn it on in Perpl’s settings; Airbag picks it up on its own.',
+  },
+  'too-many-connections': {
+    lamp: 'Connection limit',
+    text: 'Your wallet has four Perpl connections open (browser tabs count), so Perpl refused Airbag’s. Close a Perpl tab; Airbag retries on its own.',
+  },
+  frozen: {
+    lamp: 'Frozen',
+    text: 'Your Perpl account is frozen. Airbag can’t act until Perpl unfreezes it.',
+  },
+  stale: {
+    lamp: 'Holding',
+    text: 'Market data is behind the chain, so Airbag is holding: it never acts on stale prices. It resumes when data catches up.',
+  },
+  connecting: {
+    lamp: 'Connecting',
+    text: 'Connecting to Perpl with your key. Airbag isn’t protecting you until this finishes.',
+  },
 };
 
+/** What's wrong, in the words of the lamp that's lit, and what to do about it. */
 export function StatusBanner({ data }: { data: Dashboard }) {
-  const text = BANNERS[data.status];
-  if (!text) return null;
+  const b = BANNERS[data.status];
+  if (!b) return null;
   const blocking = data.status !== 'stale' && data.status !== 'connecting';
   return (
-    <div className={`notice ${blocking ? 'notice-liq' : ''}`} role="alert">
-      {text}
+    <div className={`notice ${s.banner}`} data-tone={blocking ? 'alert' : undefined} role="alert">
+      <Annunciator state={blocking ? 'alert' : 'on'} size="sm">
+        {b.lamp}
+      </Annunciator>
+      <p>{b.text}</p>
       {data.status === 'key-rejected' && (
-        <Link href="/link-key" style={{ whiteSpace: 'nowrap' }}>
+        <Link href="/link-key" className="btn btn-secondary btn-sm">
           Relink
         </Link>
       )}
@@ -609,14 +693,11 @@ export function StatusBanner({ data }: { data: Dashboard }) {
 export function PausedBanner() {
   const [busy, setBusy] = useState(false);
   return (
-    <div
-      className="notice"
-      role="status"
-      style={{ justifyContent: 'space-between', alignItems: 'center' }}
-    >
-      <span>
-        Airbag is paused. It keeps checking, but won’t trim or add margin until you resume.
-      </span>
+    <div className={`notice ${s.banner}`} role="status">
+      <Annunciator state="off" size="sm">
+        Paused
+      </Annunciator>
+      <p>Airbag is paused. It keeps checking, but won’t trim or add margin until you resume.</p>
       <button
         type="button"
         className="btn btn-primary btn-sm"
@@ -647,19 +728,20 @@ export function SimControls({ symbols }: { symbols: string[] }) {
     }
   };
   return (
-    <section
-      className={`card ${s.side}`}
-      aria-labelledby="sim-controls"
-      style={{ borderStyle: 'dashed' }}
-    >
-      <h2 id="sim-controls" style={{ fontSize: 16, fontWeight: 600 }}>
-        Simulation controls
-      </h2>
-      <p className="muted" style={{ fontSize: 13, lineHeight: 1.5 }}>
+    <section className={s.sim} aria-labelledby="sim-controls">
+      <div className={s.sectionHead}>
+        <h2 id="sim-controls" className="title">
+          Simulation controls
+        </h2>
+        <Annunciator state="off" size="sm">
+          Paper
+        </Annunciator>
+      </div>
+      <p className="muted">
         Plays the landing page’s crash-test wick, one price per block, through the real engine on a
         paper exchange.
       </p>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div className={s.simButtons}>
         {symbols.map((sym) => (
           <button
             key={sym}
@@ -679,7 +761,7 @@ export function SimControls({ symbols }: { symbols: string[] }) {
         </button>
       </div>
       {note && (
-        <p className="faint" role="status" style={{ fontSize: 13 }}>
+        <p className="faint" role="status">
           {note}
         </p>
       )}
