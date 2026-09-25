@@ -124,9 +124,12 @@
   clip-path: polygon(100% 0, 100% 100%, 0 50%);
 }
 
+/* A flag knocks the glass out behind its text, so a dashed ghost line never runs through it. */
 .flag {
   position: absolute;
-  left: 16px;
+  left: 12px;
+  padding: 0 4px;
+  background: var(--well);
   line-height: 18px;
   letter-spacing: 0.06em;
   white-space: nowrap;

@@ -75,14 +75,16 @@ interface Flag {
 }
 
 const GAP = 4;
+/** Clearance between the mark's readout box and the flags pushed away from it. */
+const BOX_GAP = 8;
 
 /**
  * Keeps marker labels apart around the mark's readout box, which never moves: labels above the
  * box are pushed up, labels below pushed down, all kept inside the tape.
  */
 export function stack(flags: Flag[], fixed: { y: number; h: number }, height: number) {
-  const top = fixed.y - fixed.h / 2 - GAP;
-  const bottom = fixed.y + fixed.h / 2 + GAP;
+  const top = fixed.y - fixed.h / 2 - BOX_GAP;
+  const bottom = fixed.y + fixed.h / 2 + BOX_GAP;
   const above = flags.filter((f) => f.y < fixed.y).sort((a, b) => b.y - a.y);
   const below = flags.filter((f) => f.y >= fixed.y).sort((a, b) => a.y - b.y);
   const out = new Map<string, number>();

@@ -31,7 +31,11 @@ export default async function SavePage({ params }: Props) {
   const save = await getSave(id);
   if (!save) notFound();
   const max = Math.max(save.withAirbag, save.counterfactual, 1);
-  const verb = save.side === 'long' ? 'back at' : 'back down at';
+  // "Back at" only once the price has moved back past the old liquidation price.
+  const m = save.measuredAt;
+  const recovered =
+    m !== null && (save.side === 'long' ? m > save.oldLiquidation : m < save.oldLiquidation);
+  const verb = !recovered ? 'at' : save.side === 'long' ? 'back at' : 'back down at';
   const lev = save.nominalLeverage ? ` · ${Math.round(save.nominalLeverage)}x` : '';
   return (
     <>
@@ -64,7 +68,8 @@ export default async function SavePage({ params }: Props) {
                 <>
                   {' '}
                   {save.closed ? 'When the position closed, ' : 'Now, '}
-                  {save.symbol} is {verb} <span className="num">{fmt.usd(save.measuredAt)}</span>.
+                  {save.symbol} {save.closed ? 'was' : 'is'} {verb}{' '}
+                  <span className="num">{fmt.usd(save.measuredAt)}</span>.
                 </>
               )}
             </p>

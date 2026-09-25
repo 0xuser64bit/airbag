@@ -281,8 +281,12 @@ legend {
   color: var(--ground);
   background: var(--airbag-hover);
 }
-.btn-primary:disabled {
-  background: var(--airbag);
+/* A disabled primary is an unlit lamp, never a dimmed yellow: yellow only means Airbag. */
+.btn-primary:disabled,
+.btn-primary[aria-disabled="true"] {
+  opacity: 1;
+  background: var(--unlit);
+  color: var(--text-3);
 }
 .btn-secondary {
   border-color: var(--line-strong);
