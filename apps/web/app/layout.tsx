@@ -17,7 +17,8 @@ export const metadata: Metadata = {
   description,
   applicationName: 'Airbag',
   appleWebApp: { capable: true, title: 'Airbag', statusBarStyle: 'black-translucent' },
-  icons: { apple: '/pwa-icon/180' },
+  // Listed here because setting `icons` at all makes Next drop the file-based app/icon.svg.
+  icons: { icon: { url: '/icon.svg', type: 'image/svg+xml' }, apple: '/pwa-icon/180' },
   openGraph: { title: 'Airbag: get trimmed, not liquidated', description, siteName: 'Airbag' },
   twitter: { card: 'summary_large_image' },
 };
