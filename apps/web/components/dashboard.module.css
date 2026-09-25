@@ -83,7 +83,7 @@
   justify-content: space-between;
   align-items: baseline;
 }
-.gaugeHead .num {
+.gaugeHead :global(.num) {
   font-size: 15px;
 }
 .gaugeTrack {
@@ -95,10 +95,11 @@
 }
 .gaugeFill {
   position: absolute;
-  inset: 0 auto 0 0;
+  inset: 0;
   border-radius: 2px;
   background: var(--bone);
-  transition: width var(--t-move) var(--ease);
+  transform-origin: left center;
+  transition: transform var(--t-move) var(--ease);
 }
 .gaugeLine {
   position: absolute;
@@ -417,7 +418,7 @@
   flex-direction: column;
   gap: 2px;
 }
-.checks .faint {
+.checks :global(.faint) {
   font-size: 12px;
 }
 .failing {
@@ -456,7 +457,7 @@
   font-size: 14px;
   font-weight: 500;
 }
-.recentTitle .num {
+.recentTitle :global(.num) {
   font-size: 12px;
   font-weight: 400;
 }
@@ -589,10 +590,10 @@
   align-items: flex-end;
   gap: 2px;
 }
-.paths .big {
+.paths :global(.big) {
   font-size: 28px;
 }
-.paths .faint {
+.paths :global(.faint) {
   font-size: 12px;
 }
 .keepsNote {

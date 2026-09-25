@@ -397,7 +397,7 @@
   flex-direction: column;
   gap: 2px;
 }
-.verifiedText .muted {
+.verifiedText :global(.muted) {
   font-size: 13px;
 }
 
@@ -443,7 +443,7 @@
   flex-direction: column;
   gap: 2px;
 }
-.cant .faint {
+.cant :global(.faint) {
   font-size: 12px;
 }
 .source {

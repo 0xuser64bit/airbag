@@ -81,9 +81,18 @@
 .presetGauge > span {
   position: absolute;
   inset: 0 auto 0 0;
-  border-right: 2px solid var(--airbag);
   border-radius: 2px 0 0 2px;
   background: var(--line-strong);
+}
+/* Airbag's tick where this preset acts. */
+.presetGauge > span::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  right: -1px;
+  width: 2px;
+  background: var(--airbag);
 }
 .preset[aria-pressed="true"] .presetGauge > span {
   background: var(--airbag-edge);

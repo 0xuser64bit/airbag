@@ -49,7 +49,7 @@
   font-size: 14px;
   white-space: nowrap;
 }
-.account .faint {
+.account :global(.faint) {
   font-size: 12px;
 }
 

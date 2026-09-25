@@ -197,8 +197,7 @@ legend {
 }
 
 /* An instrument label: names a value, never introduces a heading. */
-.label,
-.eyebrow {
+.label {
   font-family: var(--mono);
   font-stretch: 87.5%;
   font-size: 11px;
@@ -519,12 +518,6 @@ legend {
 
 /* ---- Surfaces ------------------------------------------------------------------------- */
 
-.card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--r-panel);
-}
-
 .notice {
   display: flex;
   gap: 12px;
@@ -537,14 +530,12 @@ legend {
   line-height: 1.5;
 }
 /* Airbag's heads-up. */
-.notice[data-tone="airbag"],
-.notice-airbag {
+.notice[data-tone="airbag"] {
   border-color: var(--airbag-edge);
   background: var(--airbag-tint);
 }
 /* The trader has to act: bone, not red. Red is only liquidation. */
-.notice[data-tone="alert"],
-.notice-liq {
+.notice[data-tone="alert"] {
   border-color: var(--bone);
   background: var(--raised);
 }
@@ -571,22 +562,6 @@ legend {
 }
 .rows dd {
   text-align: right;
-}
-
-.check-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.check-list li {
-  display: flex;
-  gap: 10px;
-  font-size: 14px;
-  line-height: 1.45;
-}
-.check-list svg {
-  flex-shrink: 0;
-  margin-top: 2px;
 }
 
 .spinner {
@@ -616,41 +591,6 @@ legend {
   }
 }
 
-/* ---- Navigation ------------------------------------------------------------------------ */
-
-/* The page under the masthead cross-fades and rises a few pixels; the masthead stays put. */
-::view-transition {
-  pointer-events: none;
-}
-::view-transition-old(root),
-::view-transition-new(root),
-::view-transition-group(.page) {
-  animation: none;
-}
-::view-transition-old(.page) {
-  animation: page-out var(--t-fast) var(--ease-in) both;
-}
-::view-transition-new(.page) {
-  animation: page-in var(--t-move) var(--ease) both;
-}
-@keyframes page-out {
-  to {
-    opacity: 0;
-  }
-}
-@keyframes page-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(.page),
-  ::view-transition-new(.page) {
-    animation: none;
-  }
-}
-
 /* A transaction Airbag sent. */
 .txlink {
   color: var(--airbag);
@@ -659,56 +599,4 @@ legend {
 .txlink:hover {
   color: var(--airbag-hover);
   text-decoration: underline;
-}
-
-/* ---- Status pills (legacy until every screen uses annunciators) ------------------------ */
-
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 30px;
-  padding: 0 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-.pill-sm {
-  height: 26px;
-  padding: 0 10px;
-  font-size: 12px;
-  gap: 6px;
-}
-.pill-xs {
-  height: 22px;
-  padding: 0 8px;
-  font-size: 11px;
-}
-.pill .dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--airbag);
-}
-.pill-muted {
-  color: var(--text-2);
-}
-.pill-muted .dot {
-  background: var(--text-3);
-}
-.pill-solid {
-  border-color: var(--airbag);
-  background: var(--airbag);
-  color: var(--ground);
-  font-weight: 600;
-}
-.pill-airbag {
-  border-color: var(--airbag);
-  color: var(--airbag);
-}
-.pill-liq {
-  border-color: var(--liq);
-  color: var(--liq);
 }

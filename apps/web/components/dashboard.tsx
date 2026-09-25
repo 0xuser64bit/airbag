@@ -118,7 +118,10 @@ function CushionGauge({ used, at }: { used: number; at: number | undefined }) {
         role="img"
         aria-label={`${fmt.pct(used, 1)} of the margin cushion used${at === undefined ? '' : `; Airbag deploys at ${fmt.pct(at, 0)}`}; liquidation at 100%`}
       >
-        <div className={s.gaugeFill} style={{ width: pct(used) }} />
+        <div
+          className={s.gaugeFill}
+          style={{ transform: `scaleX(${Math.min(1, Math.max(0, used))})` }}
+        />
         {at !== undefined && <div className={s.gaugeLine} style={{ left: pct(at) }} />}
         <div className={s.gaugeEnd} />
       </div>

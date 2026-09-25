@@ -110,11 +110,10 @@
   position: absolute;
   left: 14px;
   top: -8px;
-  width: 0;
-  height: 0;
-  border-top: 7px solid transparent;
-  border-bottom: 7px solid transparent;
-  border-right: 9px solid var(--airbag);
+  width: 9px;
+  height: 14px;
+  background: var(--airbag);
+  clip-path: polygon(100% 0, 100% 100%, 0 50%);
 }
 
 .flag {
@@ -163,9 +162,8 @@
   left: -9px;
   top: 50%;
   margin-top: -6px;
-  width: 0;
-  height: 0;
-  border-top: 6px solid transparent;
-  border-bottom: 6px solid transparent;
-  border-right: 8px solid var(--bone);
+  width: 8px;
+  height: 12px;
+  background: var(--bone);
+  clip-path: polygon(100% 0, 100% 100%, 0 50%);
 }

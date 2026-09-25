@@ -1,17 +1,17 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { ViewTransition } from 'react';
 
 /**
- * The page under a fixed masthead. Keyed by path, so a navigation cross-fades the old page out
- * and brings the new one up a few pixels (globals.css `.page`); reduced motion swaps at once.
+ * The page under a fixed masthead. Keyed by path, so a navigation repaints the new page top to
+ * bottom (globals.css `.redraw`), the way a display unit redraws. Plain CSS on purpose: React's
+ * ViewTransition left the document without a <title> for a moment after each navigation.
  */
 export function Page({ className, children }: { className?: string; children: React.ReactNode }) {
   const path = usePathname();
   return (
-    <ViewTransition key={path} name="page" share="page" default="none">
-      <div className={className}>{children}</div>
-    </ViewTransition>
+    <div key={path} className={`redraw ${className ?? ''}`}>
+      {children}
+    </div>
   );
 }
