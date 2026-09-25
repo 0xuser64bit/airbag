@@ -451,6 +451,10 @@ legend {
   background: var(--bone);
   color: var(--ground);
 }
+.ann[data-state="liq"] {
+  border-color: var(--liq-edge);
+  color: var(--liq);
+}
 .ann[data-size="sm"] {
   min-height: 22px;
   padding: 0 7px;

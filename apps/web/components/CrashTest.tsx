@@ -1,8 +1,8 @@
 'use client';
 
-// The landing page's crash test (design/Main.dc.html): the same BTC long run twice through one
-// wick, one frame per Monad block. Every number comes from @airbag/risk, the code the engine
-// runs; the engine's own test plays this exact path and fires at frame 14, fills at 15.
+// The landing page's crash test: the same BTC long run twice through one scripted wick, one
+// frame per Monad block. Every number comes from @airbag/risk, the code the engine runs; the
+// engine's own test plays this exact path and fires at frame 14, fills at 15.
 
 import {
   applyTrim,
@@ -15,6 +15,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import s from './CrashTest.module.css';
 import { Replay } from './icons.tsx';
+import { Annunciator, Readout } from './instruments.tsx';
 
 const PATH = [
   100000, 99900, 99960, 99700, 99420, 99500, 99100, 98800, 98900, 98400, 98100, 98200, 97700, 97300,
@@ -46,19 +47,15 @@ const x = (i: number) => 16 + i * 13.2;
 const y = (p: number) => 16 + ((100_800 - p) / 7_800) * 208;
 
 const EVENTS = [
-  { at: LINE_AT, text: `Airbag line hit at ${fmt.usd(97_000)}`, tone: 'var(--airbag)' },
+  { at: LINE_AT, text: `Airbag line hit at ${fmt.usd(97_000)}`, tone: 'airbag' },
   {
     at: FILL_AT,
     text: `Trimmed ${fmt.size(trim)} BTC, fee $0. Liquidation now ${fmt.usd(plan.liquidation)}`,
-    tone: 'var(--airbag)',
+    tone: 'airbag',
   },
-  {
-    at: LIQ_AT,
-    text: `Without Airbag: liquidated, ${fmt.usd(returned)} returned`,
-    tone: 'var(--liq)',
-  },
-  { at: BACK_AT, text: `BTC back at ${fmt.usd(100_000)}`, tone: 'var(--bone)' },
-];
+  { at: LIQ_AT, text: `Without Airbag: liquidated, ${fmt.usd(returned)} returned`, tone: 'liq' },
+  { at: BACK_AT, text: `BTC back at ${fmt.usd(100_000)}`, tone: undefined },
+] as const;
 
 export function CrashTest() {
   const [t, setT] = useState(0);
@@ -89,128 +86,91 @@ export function CrashTest() {
   const pts = PATH.slice(0, frame + 1)
     .map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`)
     .join(' ');
-  const withStatus =
-    frame < LINE_AT
-      ? `Armed, line at ${fmt.usd(97_000)}`
-      : frame === LINE_AT
-        ? 'Line hit, deploying'
-        : `Trimmed ${fmt.size(trim)} BTC, fee $0, still open`;
 
   return (
-    <div id="crash" className={`card ${s.crash}`}>
+    <figure id="crash" className={s.crash} aria-labelledby="crash-title">
       <div className={s.head}>
-        <div className={s.title}>
-          <span className="eyebrow">Crash test · BTC long · 10x</span>
-          <span style={{ fontSize: 15, fontWeight: 500 }}>Same position, same wick, run twice</span>
+        <div className={s.titles}>
+          <h2 id="crash-title" className={s.title}>
+            Crash test · BTC long · 10x
+          </h2>
+          <p className="muted">Same position, same wick, run twice</p>
         </div>
         <div className={s.controls}>
           <div className={s.ticker} aria-hidden="true">
-            <span className="num" style={{ fontSize: 13 }}>
-              BTC {fmt.usd(p)}
+            <span className="num">
+              <span className="faint">BTC </span>
+              <Readout value={fmt.usd(p)} />
             </span>
-            <span className="num muted" style={{ fontSize: 11 }}>
-              Block {fmt.block(FIRST_BLOCK + frame)}
-            </span>
+            <span className="num faint">Block {fmt.block(FIRST_BLOCK + frame)}</span>
           </div>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            style={{ minHeight: 40 }}
-            onClick={play}
-          >
+          <button type="button" className="btn btn-secondary btn-sm" onClick={play}>
             <Replay />
             Replay
           </button>
         </div>
       </div>
 
-      <svg
-        viewBox="0 0 560 240"
-        role="img"
-        aria-label="BTC falls from $100,000 to $94,000 and recovers. Airbag trims at $97,000; without it the position is liquidated at $94,000."
-        className={s.chart}
-      >
-        <line
-          x1="16"
-          y1="37.33"
-          x2="544"
-          y2="37.33"
-          stroke="#3A3932"
-          strokeWidth="1"
-          strokeDasharray="3 5"
-        />
-        <text x="16" y="29" fill="#86837A" fontSize="10" className={s.svgText}>
-          ENTRY $100,000
-        </text>
-        <line x1="16" y1="117.33" x2="544" y2="117.33" stroke="#F2C12E" strokeWidth="1.5" />
-        <text x="16" y="109" fill="#F2C12E" fontSize="10" className={s.svgText}>
-          AIRBAG $97,000
-        </text>
-        <line x1="16" y1="197.33" x2="544" y2="197.33" stroke="#FF6A55" strokeWidth="1.5" />
-        <text x="16" y="189" fill="#FF6A55" fontSize="10" className={s.svgText}>
-          LIQUIDATION $94,000
-        </text>
-        <polyline
-          points={pts}
-          fill="none"
-          stroke="#ECE9E0"
-          strokeWidth="2"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-        <circle
-          cx={x(FILL_AT)}
-          cy={y(97_000)}
-          r={isTrimmed ? 6 : 0}
-          fill="#F2C12E"
-          stroke="#181815"
-          strokeWidth="3"
-        />
-        <circle
-          cx={x(LIQ_AT)}
-          cy={y(94_000)}
-          r={liquidated ? 6 : 0}
-          fill="#181815"
-          stroke="#FF6A55"
-          strokeWidth="2.5"
-        />
-        <circle cx={x(frame)} cy={y(p)} r="4.5" fill="#ECE9E0" />
-      </svg>
+      <div className={`well ${s.chartWell}`}>
+        <svg
+          viewBox="0 0 560 240"
+          role="img"
+          aria-label="BTC falls from $100,000 to $94,000 and recovers. Airbag trims at $97,000; without it the position is liquidated at $94,000."
+          className={s.chart}
+        >
+          <line className={s.entry} x1="16" y1="37.33" x2="544" y2="37.33" />
+          <text className={`${s.svgText} ${s.faintText}`} x="16" y="29">
+            ENTRY $100,000
+          </text>
+          <line className={s.lineAirbag} x1="16" y1="117.33" x2="544" y2="117.33" />
+          <text className={`${s.svgText} ${s.airbagText}`} x="16" y="109">
+            AIRBAG $97,000
+          </text>
+          <line className={s.lineLiq} x1="16" y1="197.33" x2="544" y2="197.33" />
+          <text className={`${s.svgText} ${s.liqText}`} x="16" y="189">
+            LIQUIDATION $94,000
+          </text>
+          <polyline className={s.trace} points={pts} />
+          <circle className={s.fillMark} cx={x(FILL_AT)} cy={y(97_000)} r={isTrimmed ? 6 : 0} />
+          <circle className={s.liqMark} cx={x(LIQ_AT)} cy={y(94_000)} r={liquidated ? 6 : 0} />
+          <circle className={s.now} cx={x(frame)} cy={y(p)} r="4.5" />
+        </svg>
+      </div>
 
       <div className={s.lanes}>
-        <div className={s.lane} style={{ borderColor: liquidated ? 'var(--liq)' : 'var(--line)' }}>
-          <span className="eyebrow">Without Airbag</span>
-          <span
-            className="big"
-            style={{
-              fontSize: 34,
-              lineHeight: 1.1,
-              color: liquidated ? 'var(--liq)' : 'var(--bone)',
-            }}
-          >
+        <div className={s.lane} data-state={liquidated ? 'liq' : undefined}>
+          <div className={s.laneHead}>
+            <span className="label">Without Airbag</span>
+            <Annunciator state={liquidated ? 'liq' : 'on'} size="sm">
+              {liquidated ? 'Liquidated' : 'Open'}
+            </Annunciator>
+          </div>
+          <span className={`big ${s.laneValue} ${liquidated ? 'liq' : ''}`}>
             {fmt.usd(withoutEq)}
           </span>
-          <span className="muted" style={{ fontSize: 14 }}>
+          <span className="muted">
             {liquidated ? `Liquidated at ${fmt.usd(94_000)}` : 'Open, 1.000 BTC'}
           </span>
         </div>
-        <div
-          className={s.lane}
-          style={{ borderColor: isTrimmed ? 'var(--airbag)' : 'var(--line)' }}
-        >
-          <span className="eyebrow">With Airbag</span>
-          <span
-            className="big"
-            style={{
-              fontSize: 34,
-              lineHeight: 1.1,
-              color: isTrimmed ? 'var(--airbag)' : 'var(--bone)',
-            }}
-          >
+        <div className={s.lane} data-state={isTrimmed ? 'airbag' : undefined}>
+          <div className={s.laneHead}>
+            <span className="label">With Airbag</span>
+            <Annunciator
+              state={frame < LINE_AT ? 'on' : frame === LINE_AT ? 'airbag' : 'airbag-line'}
+              size="sm"
+            >
+              {frame < LINE_AT ? 'Armed' : frame === LINE_AT ? 'Deploying' : 'Trimmed'}
+            </Annunciator>
+          </div>
+          <span className={`big ${s.laneValue} ${isTrimmed ? 'airbag' : ''}`}>
             {fmt.usd(withEq)}
           </span>
-          <span className="muted" style={{ fontSize: 14 }}>
-            {withStatus}
+          <span className="muted">
+            {frame < LINE_AT
+              ? `Armed, line at ${fmt.usd(97_000)}`
+              : frame === LINE_AT
+                ? 'Line hit, deploying'
+                : `Trimmed ${fmt.size(trim)} BTC, fee $0, still open`}
           </span>
         </div>
       </div>
@@ -219,24 +179,17 @@ export function CrashTest() {
         {EVENTS.map((e) => {
           const on = frame >= e.at;
           return (
-            <li key={e.at}>
-              <span
-                className="num"
-                style={{ fontSize: 12, color: on ? 'var(--text-2)' : 'var(--text-3)' }}
-              >
-                {on ? fmt.block(FIRST_BLOCK + e.at) : '#48,201,···'}
-              </span>
-              <span style={{ fontSize: 14, color: on ? e.tone : 'var(--text-3)' }}>
-                {on ? e.text : 'Waiting'}
-              </span>
+            <li key={e.at} data-tone={on ? e.tone : 'off'}>
+              <span className="num">{on ? fmt.block(FIRST_BLOCK + e.at) : '#48,201,···'}</span>
+              <span>{on ? e.text : 'Waiting'}</span>
             </li>
           );
         })}
       </ol>
-      <p className="faint" style={{ fontSize: 13, lineHeight: 1.5 }}>
-        Plays at real speed, one frame per 300 ms Monad block. Liquidation terms are Perpl&apos;s:
-        4% BTC maintenance margin, 80% of the remaining margin returned.
-      </p>
-    </div>
+      <figcaption className={s.caption}>
+        A scripted wick, compressed: one frame per Monad block. Liquidation terms are Perpl’s: 4%
+        BTC maintenance margin, 80% of the remaining margin returned.
+      </figcaption>
+    </figure>
   );
 }

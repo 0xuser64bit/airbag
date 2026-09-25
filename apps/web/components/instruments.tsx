@@ -24,7 +24,8 @@ export function useFresh(value: unknown, ms = 10_000): boolean {
   return fresh;
 }
 
-type Lamp = 'off' | 'on' | 'airbag' | 'airbag-line' | 'alert';
+/** Lamp states. 'liq' is only ever for liquidation itself. */
+type Lamp = 'off' | 'on' | 'airbag' | 'airbag-line' | 'alert' | 'liq';
 
 export function Annunciator({
   state,

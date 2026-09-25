@@ -1,21 +1,36 @@
 .crash {
-  padding: 28px;
+  margin: 0;
+  padding: var(--s-5);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
   min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+  background: var(--panel);
 }
 .head {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 16px;
+  align-items: flex-start;
+  gap: var(--s-4);
   flex-wrap: wrap;
 }
-.title {
+.titles {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+}
+.titles p {
+  font-size: 14px;
+}
+.title {
+  font-family: var(--mono);
+  font-stretch: 87.5%;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 .controls {
   display: flex;
@@ -27,6 +42,14 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 2px;
+  font-size: 13px;
+}
+.ticker > :last-child {
+  font-size: 11px;
+}
+
+.chartWell {
+  padding: 6px;
 }
 .chart {
   display: block;
@@ -34,29 +57,93 @@
   height: auto;
 }
 .svgText {
-  font-family: var(--font-mono), ui-monospace, monospace;
+  font-family: var(--mono);
+  font-size: 10px;
   letter-spacing: 0.6px;
 }
+.faintText {
+  fill: var(--text-3);
+}
+.airbagText {
+  fill: var(--airbag);
+}
+.liqText {
+  fill: var(--liq);
+}
+.entry {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+  stroke-dasharray: 3 5;
+}
+.lineAirbag {
+  stroke: var(--airbag);
+  stroke-width: 1.5;
+}
+.lineLiq {
+  stroke: var(--liq);
+  stroke-width: 1.5;
+}
+.trace {
+  fill: none;
+  stroke: var(--bone);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.fillMark {
+  fill: var(--airbag);
+  stroke: var(--well);
+  stroke-width: 3;
+  transition: r var(--t-move) var(--ease);
+}
+.liqMark {
+  fill: var(--well);
+  stroke: var(--liq);
+  stroke-width: 2.5;
+  transition: r var(--t-move) var(--ease);
+}
+.now {
+  fill: var(--bone);
+}
+
 .lanes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--s-3);
 }
 .lane {
-  background: var(--ground);
-  border: 1px solid var(--line);
-  border-radius: var(--r-medium);
-  padding: 18px 20px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  transition: border-color 200ms ease;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-well);
+  background: var(--well);
+  font-size: 14px;
+  transition: border-color var(--t-move) var(--ease);
 }
+.lane[data-state="liq"] {
+  border-color: var(--liq-edge);
+}
+.lane[data-state="airbag"] {
+  border-color: var(--airbag-edge);
+}
+.laneHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-2);
+}
+.laneValue {
+  font-size: 34px;
+  line-height: 1.1;
+}
+
 .events {
   display: flex;
   flex-direction: column;
-  gap: 9px;
-  padding-top: 18px;
+  gap: 8px;
+  padding-top: 16px;
   border-top: 1px solid var(--line);
 }
 .events li {
@@ -64,11 +151,30 @@
   grid-template-columns: 112px minmax(0, 1fr);
   gap: 14px;
   align-items: baseline;
+  font-size: 14px;
+}
+.events li > :first-child {
+  font-size: 12px;
+  color: var(--text-2);
+}
+.events li[data-tone="off"] > * {
+  color: var(--text-3);
+}
+.events li[data-tone="airbag"] > :last-child {
+  color: var(--airbag);
+}
+.events li[data-tone="liq"] > :last-child {
+  color: var(--liq);
+}
+.caption {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-3);
 }
 
 @media (max-width: 600px) {
   .crash {
-    padding: 20px;
+    padding: var(--s-4);
   }
   .lanes {
     grid-template-columns: 1fr;

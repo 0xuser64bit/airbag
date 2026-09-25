@@ -1,5 +1,5 @@
-// Landing page (design/Main.dc.html). Copy is the design's; the worked example's numbers are
-// computed with @airbag/risk so the page and the engine can't disagree.
+// Landing page. Copy is the approved design's; the worked example's numbers are computed with
+// @airbag/risk so the page and the engine can't disagree.
 
 import {
   applyTrim,
@@ -13,6 +13,8 @@ import {
 import Link from 'next/link';
 import { CrashTest } from '@/components/CrashTest.tsx';
 import { Check, Mark } from '@/components/icons.tsx';
+import { Annunciator } from '@/components/instruments.tsx';
+import { Runway } from '@/components/Runway.tsx';
 import { Brand } from '@/components/ui.tsx';
 import { SOURCE_URL } from '@/lib/config.ts';
 import { liquidationsLast30Days } from '@/lib/stats.ts';
@@ -47,27 +49,27 @@ const SAFETY = [
   [
     'It can’t withdraw or transfer your funds.',
     'Perpl API keys can never withdraw or transfer out, whatever their scope.',
-    'ENFORCED BY PERPL',
+    'Enforced by Perpl',
   ],
   [
     'It only works from Airbag’s servers.',
     'The key carries an IP allow-list. Requests from anywhere else are refused.',
-    'ENFORCED BY PERPL',
+    'Enforced by Perpl',
   ],
   [
     'It only shrinks positions.',
     'Every order it sends is reduce-only. It never opens, adds to or flips a position. The engine is open source, so you can check.',
-    'ENFORCED BY AIRBAG’S ENGINE',
+    'Enforced by Airbag’s engine',
   ],
   [
     'Every trim is public.',
     'Each deploy is a Monad transaction you can look up on MonadVision.',
-    'VERIFIABLE ONCHAIN',
+    'Verifiable onchain',
   ],
   [
     'You can cut it off in one click.',
     'Revoke the key on Perpl’s API keys page and Airbag stops.',
-    'ENFORCED BY PERPL',
+    'Enforced by Perpl',
   ],
 ] as const;
 
@@ -117,22 +119,17 @@ export default async function Landing() {
 
       <main>
         <section className={s.hero}>
-          <div className={s.heroHead}>
-            <span className="eyebrow" style={{ fontSize: 12 }}>
-              Liquidation protection for Perpl · on Monad
-            </span>
-            <h1 className={`display ${s.h1}`}>
-              Get trimmed,
-              <br />
-              not liquidated.
-            </h1>
-          </div>
+          <h1 className={`display ${s.h1}`}>
+            Get trimmed,
+            <br />
+            not liquidated.
+          </h1>
           <div className={s.heroGrid}>
             <div className={s.heroCopy}>
               <p className={s.lede}>
-                Airbag checks your Perpl positions every block. When a wick eats half your margin
-                cushion, it trims just enough of the position, fee-free, before the liquidation
-                engine can close all of it.
+                Airbag checks your Perpl positions every Monad block. When a wick eats half your
+                margin cushion, it trims just enough of the position, fee-free, before the
+                liquidation engine can close all of it.
               </p>
               <div className={s.ctas}>
                 <Link href="/connect" className="btn btn-primary btn-lg">
@@ -149,7 +146,7 @@ export default async function Landing() {
                   'Open source, and free during the beta.',
                 ].map((t) => (
                   <li key={t}>
-                    <Check color="#F2C12E" size={16} />
+                    <Check size={16} />
                     {t}
                   </li>
                 ))}
@@ -159,32 +156,28 @@ export default async function Landing() {
           </div>
         </section>
 
-        <section id="math" className={s.section}>
+        <section id="math" className={s.section} aria-labelledby="math-title">
           <div className={s.sectionHead}>
-            <span className="eyebrow" style={{ fontSize: 12 }}>
-              Why it works
-            </span>
-            <h2 className={`display ${s.h2}`}>
+            <h2 id="math-title" className={`display ${s.h2}`}>
               A liquidation costs a fifth of what’s left. Closing it yourself costs nothing.
             </h2>
             {liquidated !== null && (
-              <p className="muted" style={{ fontSize: 17 }}>
-                <span className="num" style={{ color: 'var(--liq)' }}>
-                  {liquidated.toLocaleString('en-US')}
-                </span>{' '}
-                Perpl position{liquidated === 1 ? ' was' : 's were'} liquidated in the last 30 days.{' '}
-                <span className="faint" style={{ fontSize: 13 }}>
-                  Counted onchain by Airbag’s Envio indexer.
-                </span>
+              <p className={s.stat}>
+                <span className="num liq">{liquidated.toLocaleString('en-US')}</span> Perpl position
+                {liquidated === 1 ? ' was' : 's were'} liquidated in the last 30 days.{' '}
+                <span className="faint">Counted onchain by Airbag’s Envio indexer.</span>
               </p>
             )}
           </div>
-          <div className={s.two}>
-            <div className={`card ${s.compare}`} style={{ borderColor: 'var(--liq-edge)' }}>
-              <span className="eyebrow liq" style={{ fontSize: 12 }}>
-                When Perpl liquidates you
-              </span>
-              <ul className={s.dashList} style={{ '--dash': 'var(--liq)' } as React.CSSProperties}>
+          <div className={s.paths}>
+            <div className={s.path} data-tone="liq">
+              <div className={s.pathHead}>
+                <h3>When Perpl liquidates you</h3>
+                <Annunciator state="liq" size="sm">
+                  Whole position
+                </Annunciator>
+              </div>
+              <ul className={s.dashList}>
                 <li>It closes the whole position on the order book.</li>
                 <li>
                   The margin left is split: 80% back to you, 10% to the insurance fund, 10% to the
@@ -193,14 +186,14 @@ export default async function Landing() {
                 <li>Then you’re flat, even if the price comes straight back.</li>
               </ul>
             </div>
-            <div className={`card ${s.compare}`} style={{ borderColor: 'rgba(242,193,46,0.45)' }}>
-              <span className="eyebrow airbag" style={{ fontSize: 12 }}>
-                When you close it yourself
-              </span>
-              <ul
-                className={s.dashList}
-                style={{ '--dash': 'var(--airbag)' } as React.CSSProperties}
-              >
+            <div className={s.path} data-tone="airbag">
+              <div className={s.pathHead}>
+                <h3>When you close it yourself</h3>
+                <Annunciator state="airbag-line" size="sm">
+                  Fee $0
+                </Annunciator>
+              </div>
+              <ul className={s.dashList}>
                 <li>Closing or reducing a position is fee-free on Perpl.</li>
                 <li>You choose how much goes, and keep the rest of the position.</li>
                 <li>Airbag does it for you, in the block after your line is crossed.</li>
@@ -209,7 +202,7 @@ export default async function Landing() {
           </div>
 
           <div className={s.wick}>
-            <h3 style={{ fontSize: 20, fontWeight: 600 }}>The same wick, twice</h3>
+            <h3 className={s.h3}>The same wick, twice</h3>
             <div className={s.tableWrap}>
               <table className={s.table}>
                 <thead>
@@ -259,7 +252,7 @@ export default async function Landing() {
                 </tbody>
               </table>
             </div>
-            <p className="faint" style={{ maxWidth: 900, fontSize: 14, lineHeight: 1.6 }}>
+            <p className={s.footnote}>
               1 BTC long from $100,000 at 10x with $10,000 margin. Perpl’s BTC maintenance margin is
               4%, so liquidation sits at {ex.liq}. The trim realizes a {ex.realized} loss. The
               liquidation would have realized {ex.liqLoss}.
@@ -267,88 +260,69 @@ export default async function Landing() {
           </div>
         </section>
 
-        <section id="how" className={s.section}>
+        <section id="how" className={s.section} aria-labelledby="how-title">
           <div className={s.sectionHead}>
-            <span className="eyebrow" style={{ fontSize: 12 }}>
-              How it works
-            </span>
-            <h2 className={`display ${s.h2}`}>Set it once. It checks every block after that.</h2>
+            <h2 id="how-title" className={`display ${s.h2}`}>
+              Set it once. It checks every block after that.
+            </h2>
           </div>
-          <div className={s.three}>
-            <div className={`card ${s.step}`}>
-              <span className="num airbag" style={{ fontSize: 13 }}>
-                01
-              </span>
-              <h3>Link a key that can’t withdraw</h3>
-              <p className="muted">
-                Create a Trade key on Perpl, lock it to Airbag’s servers, paste it in. Perpl blocks
-                withdrawals for every API key, whatever its scope.
-              </p>
-              <div className={s.tags}>
-                <span>TRADE SCOPE</span>
-                <span>IP-LOCKED</span>
-                <span>NO WITHDRAWALS</span>
+          <ol className={s.steps}>
+            <li className={s.step}>
+              <span className={`num ${s.stepNo}`}>01</span>
+              <div className={s.stepText}>
+                <h3>Link a key that can’t withdraw</h3>
+                <p>
+                  Create a Trade key on Perpl, lock it to Airbag’s servers, paste it in. Perpl
+                  blocks withdrawals for every API key, whatever its scope.
+                </p>
               </div>
-            </div>
-            <div className={`card ${s.step}`}>
-              <span className="num airbag" style={{ fontSize: 13 }}>
-                02
-              </span>
-              <h3>Set your airbag</h3>
-              <p className="muted">
-                Balanced deploys when half your margin cushion is gone and trims until liquidation
-                is 10% away. Make it earlier, later or gentler.
-              </p>
-              <div className={s.miniRunway} aria-hidden="true">
-                <div className={s.miniTrack} />
-                <div className={s.miniZone} />
-                <div className={s.miniTick} style={{ left: '12.5%', background: 'var(--liq)' }} />
-                <div className={s.miniTick} style={{ left: '50%', background: 'var(--airbag)' }} />
-                <div className={s.miniDot} />
-                <span style={{ left: '12.5%', color: 'var(--liq)', transform: 'translateX(-30%)' }}>
-                  LIQ
-                </span>
-                <span style={{ left: '50%', color: 'var(--airbag)' }}>AIRBAG</span>
-                <span style={{ left: '80%' }}>YOU</span>
+              <div className={s.stepArt} aria-hidden="true">
+                <Annunciator state="on">Trade scope</Annunciator>
+                <Annunciator state="on">IP-locked</Annunciator>
+                <Annunciator state="off">No withdrawals</Annunciator>
               </div>
-            </div>
-            <div className={`card ${s.step}`}>
-              <span className="num airbag" style={{ fontSize: 13 }}>
-                03
-              </span>
-              <h3>Trade like normal</h3>
-              <p className="muted">
-                Keep trading on Perpl. Airbag runs on its own servers, so no tab needs to stay open.
-                When it deploys, you get the fill and the transaction.
-              </p>
-              <div className={s.toast}>
-                <span
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    fontSize: 13,
-                    fontWeight: 600,
-                  }}
-                >
-                  <Mark size={14} stroke={2} />
+            </li>
+            <li className={s.step}>
+              <span className={`num ${s.stepNo}`}>02</span>
+              <div className={s.stepText}>
+                <h3>Set your airbag</h3>
+                <p>
+                  Balanced deploys when half your margin cushion is gone and trims until liquidation
+                  is 10% away. Make it earlier, later or gentler.
+                </p>
+              </div>
+              <div className={`well ${s.stepArt} ${s.stepTrack}`}>
+                <Runway liquidation={94_000} line={97_000} mark={99_420} />
+              </div>
+            </li>
+            <li className={s.step}>
+              <span className={`num ${s.stepNo}`}>03</span>
+              <div className={s.stepText}>
+                <h3>Trade like normal</h3>
+                <p>
+                  Keep trading on Perpl. Airbag runs on its own servers, so no tab needs to stay
+                  open. When it deploys, you get the fill and the transaction.
+                </p>
+              </div>
+              <div className={`${s.stepArt} ${s.toast}`} aria-hidden="true">
+                <span className={s.toastHead}>
+                  <Mark size={16} />
                   Airbag trimmed your BTC long
                 </span>
-                <span className="muted" style={{ fontSize: 13, lineHeight: 1.45 }}>
+                <span className="muted">
                   {ex.trim} BTC at $97,000. Liquidation now {ex.newLiq}. Fee $0.
                 </span>
               </div>
-            </div>
-          </div>
+            </li>
+          </ol>
         </section>
 
-        <section id="safety" className={s.section}>
+        <section id="safety" className={s.section} aria-labelledby="safety-title">
           <div className={s.sectionHead}>
-            <span className="eyebrow" style={{ fontSize: 12 }}>
-              Safety model
-            </span>
-            <h2 className={`display ${s.h2}`}>It can trim. It can’t take.</h2>
-            <p className="muted" style={{ maxWidth: 720, fontSize: 18, lineHeight: 1.55 }}>
+            <h2 id="safety-title" className={`display ${s.h2}`}>
+              It can trim. It can’t take.
+            </h2>
+            <p className={s.sectionLede}>
               Airbag holds one key, and that key is built to do very little. Here’s what it can’t
               do, and who stops it.
             </p>
@@ -357,20 +331,16 @@ export default async function Landing() {
             {SAFETY.map(([title, body, who]) => (
               <div key={title} className={s.safetyRow}>
                 <div>
-                  <span style={{ fontSize: 19, fontWeight: 500 }}>{title}</span>
-                  <span className="muted" style={{ fontSize: 15, lineHeight: 1.5 }}>
-                    {body}
-                  </span>
+                  <h3>{title}</h3>
+                  <p className="muted">{body}</p>
                 </div>
-                <span className={`num ${s.enforcer}`}>{who}</span>
+                <Annunciator state="on">{who}</Annunciator>
               </div>
             ))}
           </div>
           <div className={s.cant}>
-            <span className="eyebrow" style={{ fontSize: 12 }}>
-              What it can’t promise
-            </span>
-            <div className={s.three} style={{ gap: 32 }}>
+            <h3 className={s.h3}>What it can’t promise</h3>
+            <div className={s.cantGrid}>
               <p>
                 A price that gaps through your line and your liquidation price inside one block can
                 still liquidate you. Airbag acts on the next block.
@@ -387,47 +357,43 @@ export default async function Landing() {
           </div>
         </section>
 
-        <section id="faq" className={s.section}>
-          <h2 className="display" style={{ fontSize: 36, lineHeight: 1.1 }}>
-            Questions traders ask
-          </h2>
+        <section id="faq" className={s.section} aria-labelledby="faq-title">
+          <div className={s.sectionHead}>
+            <h2 id="faq-title" className={`display ${s.h2}`}>
+              Questions traders ask
+            </h2>
+          </div>
           <div className={s.faq}>
-            {FAQ.map(([q, a]) => (
-              <div key={q}>
-                <h3>{q}</h3>
+            {FAQ.map(([q, a], i) => (
+              <details key={q} className={s.qa} open={i === 0}>
+                <summary>
+                  <h3>{q}</h3>
+                  <span className={s.qaSign} aria-hidden="true" />
+                </summary>
                 <p className="muted">{a}</p>
-              </div>
+              </details>
             ))}
           </div>
         </section>
 
-        <section className={s.final}>
+        <section className={s.final} aria-labelledby="final-title">
           <Mark size={56} />
-          <h2
-            className="display"
-            style={{ fontSize: 'clamp(36px, 6vw, 64px)', fontWeight: 800, lineHeight: 1 }}
-          >
+          <h2 id="final-title" className={`display ${s.finalTitle}`}>
             Arm it before the next wick.
           </h2>
-          <Link
-            href="/connect"
-            className="btn btn-primary btn-lg"
-            style={{ minHeight: 56, fontSize: 17 }}
-          >
+          <Link href="/connect" className={`btn btn-primary btn-lg ${s.finalCta}`}>
             Protect my positions
           </Link>
-          <span className="num muted" style={{ fontSize: 12, letterSpacing: '0.06em' }}>
-            FREE DURING BETA · OPEN SOURCE · BTC AND ETH AT LAUNCH
+          <span className={`num ${s.finalNote}`}>
+            Free during beta · Open source · BTC and ETH at launch
           </span>
         </section>
       </main>
 
       <footer className={s.footer}>
         <div className={s.footLeft}>
-          <span className="wordmark" style={{ fontSize: 14 }}>
-            AIRBAG
-          </span>
-          <p className="faint" style={{ maxWidth: 640, fontSize: 13, lineHeight: 1.55 }}>
+          <span className="wordmark">AIRBAG</span>
+          <p>
             Independent software for Perpl traders on Monad. Perpetuals are risky: Airbag lowers the
             chance of a liquidation, it doesn’t remove it.
           </p>
