@@ -75,7 +75,8 @@ test('onboarding to a deploy and a save, as a trader would', async ({ page, wall
   await expect(page.getByRole('heading', { name: 'Trimmed 0.489 BTC at $97,000' })).toBeVisible();
   await checkA11y(page, 'deploy detail');
   await page.getByRole('link', { name: 'See the save report' }).click();
-  await expect(page.getByText('kept versus a liquidation')).toBeVisible();
+  // A heading, not text: Next's route announcer can repeat the h1 while streamed metadata lands.
+  await expect(page.getByRole('heading', { name: 'kept versus a liquidation' })).toBeVisible();
   await expect(page.getByText('$5,333', { exact: true })).toBeVisible();
   await checkA11y(page, 'save report');
   const og = await page.request.get(`${page.url()}/opengraph-image`);
