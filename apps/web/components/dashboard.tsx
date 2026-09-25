@@ -338,7 +338,9 @@ export function InterventionDisplay({ d, p }: { d: DeployDetail; p: PositionView
           </dl>
           <div className={s.interActions}>
             {d.outcome === 'save' && (
-              <Link href={`/s/${d.id}`} className="btn btn-primary btn-sm">
+              // No prefetch: the kept amount moves with the price, so a fetch
+              // now would plant a stale snapshot in the report's cache.
+              <Link href={`/s/${d.id}`} prefetch={false} className="btn btn-primary btn-sm">
                 See the save report
               </Link>
             )}

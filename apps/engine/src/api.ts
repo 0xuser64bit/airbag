@@ -335,6 +335,9 @@ export function createApi(deps: ApiDeps): Server {
 
   // ---- Simulation controls (ENGINE_MODE=simulation only) ---------------------------------
 
+  // Lookups are cached 15 s below; a reset moves the shared prices, so it drops the cache.
+  const lookupCache = new Map<string, { at: number; value: unknown }>();
+
   route('POST', '/v1/sim/price', { auth: true, limit: 120 }, async (ctx) => {
     wallet(ctx);
     const sim = simOnly();
@@ -371,6 +374,7 @@ export function createApi(deps: ApiDeps): Server {
     engine.add(w, sim.paper(w, link.accountId));
     sim.setPrice(16, 99_420);
     sim.setPrice(32, 3_060);
+    lookupCache.clear();
     return { ok: true };
   });
 
@@ -384,7 +388,6 @@ export function createApi(deps: ApiDeps): Server {
     throw bad(`No covered market ${symbol}.`);
   }
 
-  const lookupCache = new Map<string, { at: number; value: unknown }>();
   async function lookup(address: `0x${string}`) {
     const cached = lookupCache.get(address);
     if (cached && Date.now() - cached.at < 15_000) return cached.value;
@@ -396,7 +399,9 @@ export function createApi(deps: ApiDeps): Server {
 
   function simLookup(address: string) {
     const guard = engine.guards.get(address);
-    if (guard) {
+    // A new guard's views are empty until its first block; until then the account still
+    // holds the sample positions, so value those instead of reporting none.
+    if (guard && (guard.views.length > 0 || guard.exchange.positions.size === 0)) {
       return {
         address,
         simulated: true,

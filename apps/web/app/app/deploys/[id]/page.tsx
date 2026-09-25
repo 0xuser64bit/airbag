@@ -186,7 +186,9 @@ export default function DeployPage({ params }: { params: Promise<{ id: string }>
 
       <div className={s.detailActions}>
         {d.outcome === 'save' && (
-          <Link href={`/s/${d.id}`} className="btn btn-primary btn-lg">
+          // No prefetch: the kept amount moves with the price, so a fetch
+          // now would plant a stale snapshot in the report's cache.
+          <Link href={`/s/${d.id}`} prefetch={false} className="btn btn-primary btn-lg">
             See the save report
           </Link>
         )}
