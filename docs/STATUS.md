@@ -2,7 +2,7 @@
 
 Updated every session. Newest first within each section.
 
-**Milestone:** M1–M5 built and re-audited (session 2, 23 Sep). The product runs end to end against a simulated exchange, in CI and in a browser. **It has not traded on Perpl yet:** the M0 gate is waiting on the owner (checklist below). Nothing is deployed.
+**Milestone:** M1–M5 built and re-audited (session 2, 23 Sep). The product runs end to end against a simulated exchange, in CI and in a browser. **It has not traded on Perpl yet:** the M0 gate is waiting on the owner (checklist below). Nothing is deployed. The web app's redesign (session 3) is on branch `redesign/instrument`, not merged.
 
 ## Audit (23 Sep, session 2)
 
@@ -88,6 +88,7 @@ Ordered by dependency. Each item is one or a few commits, verified with `pnpm ch
 
 ## Done
 
+- 24–25 Sep, session 3: web app redesign on branch `redesign/instrument` (commits `5ab5541` … `52a6aac`, then this docs commit), not merged. The owner kept the original identity (palette, three fonts, mark, yellow = Airbag, red = liquidation) after a paper-stock redesign was built and rejected (`redesign/zine`, unmerged), and chose "envelope protection": every screen is one instrument panel. The page is the panel face cut by rules; instruments are dark glass (a vertical tape for the closest position, a runway per position, the block strip); annunciator lamps replace pills, and the strip carries protection, mode, key and feed at every width; a deploy is the flight display's hazard state, with the old line and liquidation left on the tape as ghosts; motion is damped and reduced motion switches it off. An independent finish review sent the first build back (the instruments sat in the old card grid), asked for three fixes on the rebuild, then passed them. Found on the way: the favicon never shipped (Next drops `app/icon.svg` once metadata sets `icons`); the save report said "back at" a price that hadn't recovered. The landing replay is captioned as a compressed wick (the open question is closed). Checks: 135 tests; 4 Playwright journeys with axe on 9 screens; the production build walked at 1440, 1024 and 390 px with no page errors. Design system: `apps/web/DESIGN.md`.
 - 23 Sep, session 2: backlog items 1–12 (commits `60c7f28` … `a7d2cc4`). Engine, web app, e2e, AirbagLog, indexer, engine image, docs (ADRs 0010–0013, architecture, security, deploy runbook, README), then the re-audit above. 135 unit/property/API tests, 4 Playwright journeys with axe on 9 screens, 8 Foundry tests, 3 indexer handler tests. The engine booted live against Perpl testnet public data, and live wallet lookups matched a real testnet account by hand.
 - 23 Sep: CI green again. `contracts` ran Foundry as uid 1000 against a checkout owned by the runner, so `forge` couldn't create `out/`; it now runs with `--user root` (CI, `pnpm contracts:*`, deploy README). `audit` failed on 5 highs via `envio@3.12.1` (express 4.19.2, ws 8.20.1); pinned via `pnpm-workspace.yaml` overrides to express 4.22.3, body-parser 1.20.8, ws 8.21.3. One low left (esbuild dev-server on Windows, dev-only). Also added the missing `setup-node` step to the `audit` job.
 - 23 Sep: `spike/account.ts` and `spike/deploy.ts` (dry-run by default, testnet only, orders only through the allowlisted `sendOrder`).
@@ -111,6 +112,7 @@ Ordered by dependency. Each item is one or a few commits, verified with `pnpm ch
 
 | Date | Section | Was | Now | Evidence |
 |---|---|---|---|---|
+| 25 Sep | 8 | Instruments in 12 px panels (cards), a positions table, annunciators "dark when off, bone when on" | One continuous panel: no cards, the page is the panel face cut by 1 px rules; a runway per position; lamps are tiles with a lit face; selection is bone, never yellow; the strip keeps protection, mode, key and feed at every width | Independent finish review (rebuild, fix, pass); commits `a52e5a2`, `52a6aac` |
 | 24 Sep | 1, 6, 8 | The `/design` layouts are built as drawn: a grid of rounded cards, pills for status | Same identity (palette, fonts, mark, yellow/red meaning, hazard stripe), rebuilt as an instrument panel: tapes with a red band and yellow bug, annunciators for status, glass wells instead of cards, instrument motion. A paper-stock redesign was built first and rejected by the owner (branch `redesign/zine`, unmerged). | Owner's choice, 24 Sep (`apps/web/PRODUCT.md`, `apps/web/.impeccable/surfaces/app.md`) |
 | 23 Sep | 5 | Type 5 is for cancelling Airbag's own orders | Airbag's closes are IOC, so it never has one. Type 5 is used once, at link time, to probe a key's scope with a cancel of an order id the account doesn't have (a Read key gets 403). The own-order cancel builder is removed. | `packages/perpl/src/orders.ts`, `apps/engine/src/accounts.ts` |
 | 23 Sep | 3, 5 | The mark price moves every block; `market-state` arrives every block; stale = data older than N blocks | Mark updates onchain every ~0.03–0.06% move or ≤ 169 blocks (~51 s). `market-state` is change-driven (66–92% of blocks). The stale guard measures feed lag against the head (heartbeat), not mark age. | `spike/measure.ts` runs and `MarkUpdated` logs, 30 min on mainnet BTC/ETH and testnet BTC |
@@ -125,10 +127,13 @@ Ordered by dependency. Each item is one or a few commits, verified with `pnpm ch
 
 ## Not verified
 
+- The redesign's motion (bugs and bands sliding, lamps boxing for ten seconds, digits rolling) runs without errors with motion on, but every review capture is a reduced-motion still. No capture shows the short Deploying state or the inverted-bone alert lamps (key rejected, connection limit, One-Click off).
 - Anything against a funded Perpl account (M0 gate). Push delivery to a real browser (no VAPID keys). The indexer against real chain data (token). Any deployment. An independent review of key handling.
 
 ## Known limits (accepted for now)
 
+- The public save report caches the engine's reading for 30 s, and Next serves the old copy while it refreshes (`apps/web/lib/save.ts`); production also prefetches the report from the dashboard at the moment of the save. So "Now, BTC is at …" can lag the market. The figures always match the price the page states.
+- Dev server only: React logs "Failed to execute 'measure' on 'Performance': 'SavePage' cannot have a negative time stamp" on client navigation to a save report, and Next's issue badge shows it. The production build doesn't.
 - One engine process on one machine: if it's down, nothing is protected. Add an external uptime check on `/health` when deployed.
 - The scope probe cancels the smallest order id the account doesn't have. On an account that has never had an order, a first order placed in the same second could get that id and be cancelled. Harmless to positions; rare.
 - If the funding seed from Perpl's REST API fails at boot, premium PnL counts as zero until the next funding event, which can put the liquidation price off by the accrued premium. It's logged as `funding.seed.error`.
@@ -141,5 +146,4 @@ Ordered by dependency. Each item is one or a few commits, verified with `pnpm ch
 - **Key verification.** No API returns a key's scope or IP list. Scope is probed at link time (finding 5). For the IP lock, ask Perpl for a key-info endpoint, or probe from a second egress.
 - **`t:6` amount format.** Scaled CNS integer string or decimal? Found out in M0. The engine sends the CNS integer string, as the spike does.
 - **Design change.** The deploy timeline needs a row for the margin re-add, and "fill" latency now spans two orders. Built with the extra row; confirm with the owner.
-- **Landing copy.** The hero replay says it "plays at real speed, one frame per 300 ms Monad block" while the price moves $100–600 per frame. Perpl's real mark moves in ~0.03–0.06% steps (~$25–50 on BTC). It's a scripted crash test, but "real speed" invites the question. Suggest "one frame per Monad block" or labelling it as a compressed wick. Owner's call.
 - **Early warning.** The mark lags the oracle by design. The engine could also watch `orl` (oracle) and pre-compute the trim so it's ready when the mark crosses. Deferred: the per-block plan is cheap enough to compute on the trigger block.

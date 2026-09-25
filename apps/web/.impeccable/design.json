@@ -1,0 +1,557 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-25T18:12:07.667Z",
+  "title": "Design System: Airbag",
+  "extensions": {
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Panel Graphite",
+        "canonical": "#11110f",
+        "oklch": "oklch(17.7% 0.004 106.8)",
+        "tonalRamp": [
+          "#0b0b09",
+          "#242422",
+          "#40403d",
+          "#5e5e5b",
+          "#80807e",
+          "#a5a5a2",
+          "#cbcbc8",
+          "#efefec"
+        ]
+      },
+      "well": {
+        "role": "neutral",
+        "displayName": "Glass Black",
+        "canonical": "#0c0c0b",
+        "oklch": "oklch(15.4% 0.002 106.6)",
+        "tonalRamp": [
+          "#0b0b0a",
+          "#242423",
+          "#40403e",
+          "#5e5e5c",
+          "#80807f",
+          "#a5a5a3",
+          "#cacac9",
+          "#eeeeed"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "Bay Graphite",
+        "canonical": "#181815",
+        "oklch": "oklch(20.8% 0.006 106.9)",
+        "tonalRamp": [
+          "#0b0b09",
+          "#242421",
+          "#40403c",
+          "#5e5e5a",
+          "#80807d",
+          "#a5a5a1",
+          "#cbcbc6",
+          "#efefea"
+        ]
+      },
+      "raised": {
+        "role": "neutral",
+        "displayName": "Raised Graphite",
+        "canonical": "#1f1f1b",
+        "oklch": "oklch(23.8% 0.007 107.0)",
+        "tonalRamp": [
+          "#0b0b08",
+          "#242420",
+          "#40403c",
+          "#5e5e59",
+          "#80817b",
+          "#a5a5a0",
+          "#cbcbc5",
+          "#efefe9"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Bezel Line",
+        "canonical": "#2b2a25",
+        "oklch": "oklch(28.4% 0.009 97.7)",
+        "tonalRamp": [
+          "#0c0b07",
+          "#25241f",
+          "#41403a",
+          "#5f5e58",
+          "#81807a",
+          "#a6a59e",
+          "#cccbc4",
+          "#f0efe8"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Strong Line",
+        "canonical": "#3a3932",
+        "oklch": "oklch(34.3% 0.012 100.3)",
+        "tonalRamp": [
+          "#0c0b06",
+          "#25241e",
+          "#414039",
+          "#5f5e56",
+          "#828078",
+          "#a6a59d",
+          "#cccbc2",
+          "#f0efe6"
+        ]
+      },
+      "scale": {
+        "role": "neutral",
+        "displayName": "Scale Grey",
+        "canonical": "#57554c",
+        "oklch": "oklch(44.9% 0.015 96.6)",
+        "tonalRamp": [
+          "#0d0b05",
+          "#26241c",
+          "#424037",
+          "#605e55",
+          "#828077",
+          "#a7a59b",
+          "#cdcbc0",
+          "#f1efe4"
+        ]
+      },
+      "lit": {
+        "role": "neutral",
+        "displayName": "Lit Face",
+        "canonical": "rgba(236, 233, 224, 0.12)"
+      },
+      "unlit": {
+        "role": "neutral",
+        "displayName": "Unlit Face",
+        "canonical": "rgba(236, 233, 224, 0.04)"
+      },
+      "bone": {
+        "role": "neutral",
+        "displayName": "Bone",
+        "canonical": "#ece9e0",
+        "oklch": "oklch(93.4% 0.012 91.5)",
+        "tonalRamp": [
+          "#0d0b06",
+          "#26241d",
+          "#424038",
+          "#605d56",
+          "#838078",
+          "#a7a49c",
+          "#cdcac2",
+          "#f1eee5"
+        ]
+      },
+      "soft-bone": {
+        "role": "neutral",
+        "displayName": "Soft Bone",
+        "canonical": "#d6d3ca",
+        "oklch": "oklch(86.7% 0.013 91.5)",
+        "tonalRamp": [
+          "#0d0b06",
+          "#26241d",
+          "#424038",
+          "#605d56",
+          "#838078",
+          "#a7a49c",
+          "#cdcac1",
+          "#f1eee5"
+        ]
+      },
+      "text-2": {
+        "role": "neutral",
+        "displayName": "Ash",
+        "canonical": "#a5a298",
+        "oklch": "oklch(71.2% 0.015 93.0)",
+        "tonalRamp": [
+          "#0d0b05",
+          "#26241c",
+          "#424037",
+          "#605e54",
+          "#838077",
+          "#a8a59b",
+          "#cecac0",
+          "#f2eee4"
+        ]
+      },
+      "text-3": {
+        "role": "neutral",
+        "displayName": "Faint Ash",
+        "canonical": "#86837a",
+        "oklch": "oklch(61.0% 0.014 91.6)",
+        "tonalRamp": [
+          "#0d0b05",
+          "#26241d",
+          "#424038",
+          "#605d55",
+          "#838077",
+          "#a8a49b",
+          "#cecac1",
+          "#f2eee4"
+        ]
+      },
+      "airbag": {
+        "role": "primary",
+        "displayName": "Airbag Yellow",
+        "canonical": "#f2c12e",
+        "oklch": "oklch(83.2% 0.159 88.6)",
+        "tonalRamp": [
+          "#100a00",
+          "#2e2200",
+          "#503d01",
+          "#745a03",
+          "#9e7b07",
+          "#ca9e02",
+          "#f5c432",
+          "#ffedc2"
+        ]
+      },
+      "airbag-hover": {
+        "role": "primary",
+        "displayName": "Airbag Yellow, Pressed Lit",
+        "canonical": "#f5cc4f",
+        "oklch": "oklch(85.9% 0.147 90.6)",
+        "tonalRamp": [
+          "#100a00",
+          "#2e2300",
+          "#4f3d02",
+          "#725b04",
+          "#9c7c00",
+          "#c79f03",
+          "#efc648",
+          "#ffeebe"
+        ]
+      },
+      "airbag-tint": {
+        "role": "primary",
+        "displayName": "Airbag Tint",
+        "canonical": "rgba(242, 193, 46, 0.12)"
+      },
+      "airbag-edge": {
+        "role": "primary",
+        "displayName": "Airbag Edge",
+        "canonical": "rgba(242, 193, 46, 0.5)"
+      },
+      "liq": {
+        "role": "secondary",
+        "displayName": "Liquidation Red",
+        "canonical": "#ff6a55",
+        "oklch": "oklch(70.7% 0.186 30.4)",
+        "tonalRamp": [
+          "#1f0000",
+          "#4a0200",
+          "#7b0901",
+          "#ae1606",
+          "#d94634",
+          "#ff735f",
+          "#ffb5a8",
+          "#fee9e5"
+        ]
+      },
+      "liq-tint": {
+        "role": "secondary",
+        "displayName": "Liquidation Tint",
+        "canonical": "rgba(255, 106, 85, 0.1)"
+      },
+      "liq-edge": {
+        "role": "secondary",
+        "displayName": "Liquidation Edge",
+        "canonical": "rgba(255, 106, 85, 0.45)"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The landing hero tagline only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Landing section heads, deploy and page titles."
+      },
+      "wordmark": {
+        "displayName": "Wordmark",
+        "purpose": "AIRBAG in the masthead beside the mark."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "The title of a bay section in the app."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Prose; memo at 60ch, rows and side bay at 14px."
+      },
+      "readout": {
+        "displayName": "Readout",
+        "purpose": "Distance to liquidation and the save figure."
+      },
+      "number": {
+        "displayName": "Number",
+        "purpose": "Every other number, inline."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Names a value on an instrument; never a kicker."
+      },
+      "lamp": {
+        "displayName": "Lamp",
+        "purpose": "Annunciator legends."
+      }
+    },
+    "shadows": [
+      {
+        "name": "glass-well",
+        "value": "inset 0 1px 3px rgba(0, 0, 0, 0.45)",
+        "purpose": "Every instrument well; depth goes inward only."
+      },
+      {
+        "name": "segment-selected",
+        "value": "inset 0 0 0 1px var(--bone)",
+        "purpose": "Doubles the bone border of a chosen segment."
+      },
+      {
+        "name": "marker-cutout",
+        "value": "0 0 0 3px var(--well)",
+        "purpose": "Knocks the runway mark dot out of its track."
+      },
+      {
+        "name": "marker-ringed",
+        "value": "0 0 0 3px var(--well), 0 0 0 5px var(--airbag)",
+        "purpose": "The mark dot while Airbag is at work on it."
+      },
+      {
+        "name": "tab-current",
+        "value": "inset 0 2px 0 var(--bone)",
+        "purpose": "Top edge of the current phone tab."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(0.2, 0, 0, 1)",
+        "purpose": "Damped instrument curve for bugs, bands, ticks, gauges and labels."
+      },
+      {
+        "name": "ease-in",
+        "value": "cubic-bezier(0.4, 0, 1, 1)",
+        "purpose": "Exits."
+      },
+      {
+        "name": "t-fast",
+        "value": "120ms",
+        "purpose": "Hover and colour changes, digit roll, lamp box-on (two steps)."
+      },
+      {
+        "name": "t-move",
+        "value": "240ms",
+        "purpose": "Anything that moves along a scale; the block strip shifting one cell."
+      },
+      {
+        "name": "t-panel",
+        "value": "320ms",
+        "purpose": "A panel redrawing top to bottom; the hazard stripe wiping in."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation: none; transition-duration: 0.01ms",
+        "purpose": "Nothing moves; every keyframe animates in from rest."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "side-bay-narrow",
+        "value": "320px (container)"
+      },
+      {
+        "name": "phone",
+        "value": "760px"
+      },
+      {
+        "name": "one-bay",
+        "value": "900px"
+      }
+    ],
+    "patterns": [
+      {
+        "name": "hazard",
+        "value": "repeating-linear-gradient(-45deg, var(--airbag) 0 10px, var(--ground) 10px 20px)",
+        "purpose": "Only when Airbag acts: deploys, the save report."
+      },
+      {
+        "name": "hatch",
+        "value": "repeating-linear-gradient(135deg, var(--line-strong) 0 1.5px, transparent 1.5px 6px)",
+        "purpose": "Between liquidation and the line."
+      },
+      {
+        "name": "hatch-warm",
+        "value": "repeating-linear-gradient(135deg, rgba(242, 193, 46, 0.5) 0 1.5px, transparent 1.5px 6px)",
+        "purpose": "The protection band when the mark is inside it."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one action that arms or commits Airbag; yellow because it is Airbag.",
+      "html": "<button class=\"ds-btn-primary\">Arm Airbag</button>",
+      "css": ".ds-btn-primary{font:500 15px var(--ui,'Instrument Sans',sans-serif);min-height:44px;padding:0 20px;border:1px solid transparent;border-radius:6px;cursor:pointer;transition:background-color 120ms cubic-bezier(.2,0,0,1),border-color 120ms cubic-bezier(.2,0,0,1),color 120ms cubic-bezier(.2,0,0,1),transform 120ms cubic-bezier(.2,0,0,1);background:var(--airbag,#f2c12e);color:var(--ground,#11110f);font-weight:600}.ds-btn-primary:hover{background:var(--airbag-hover,#f5cc4f)}.ds-btn-primary:focus-visible{outline:2px solid var(--airbag,#f2c12e);outline-offset:2px}.ds-btn-primary:active{transform:translateY(1px) scale(.99)}"
+    },
+    {
+      "name": "Primary Button, disabled",
+      "kind": "button",
+      "refersTo": "button-primary-disabled",
+      "description": "An unlit face, never a dimmed yellow.",
+      "html": "<button class=\"ds-btn-off\" disabled>Arm Airbag</button>",
+      "css": ".ds-btn-off{font:500 15px var(--ui,'Instrument Sans',sans-serif);min-height:44px;padding:0 20px;border:1px solid transparent;border-radius:6px;cursor:pointer;transition:background-color 120ms cubic-bezier(.2,0,0,1),border-color 120ms cubic-bezier(.2,0,0,1),color 120ms cubic-bezier(.2,0,0,1),transform 120ms cubic-bezier(.2,0,0,1);background:var(--unlit,rgba(236,233,224,.04));color:var(--text-3,#86837a);font-weight:600;cursor:not-allowed}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Every other action: a strong-line outline on the panel.",
+      "html": "<button class=\"ds-btn-secondary\">Deploy details</button>",
+      "css": ".ds-btn-secondary{font:500 15px var(--ui,'Instrument Sans',sans-serif);min-height:44px;padding:0 20px;border:1px solid transparent;border-radius:6px;cursor:pointer;transition:background-color 120ms cubic-bezier(.2,0,0,1),border-color 120ms cubic-bezier(.2,0,0,1),color 120ms cubic-bezier(.2,0,0,1),transform 120ms cubic-bezier(.2,0,0,1);background:transparent;color:var(--bone,#ece9e0);border-color:var(--line-strong,#3a3932)}.ds-btn-secondary:hover{background:var(--raised,#1f1f1b);border-color:var(--text-3,#86837a)}.ds-btn-secondary:focus-visible{outline:2px solid var(--airbag,#f2c12e);outline-offset:2px}.ds-btn-secondary:active{transform:translateY(1px) scale(.99)}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Quiet inline actions such as Pause.",
+      "html": "<button class=\"ds-btn-ghost\">Pause</button>",
+      "css": ".ds-btn-ghost{font:500 15px var(--ui,'Instrument Sans',sans-serif);min-height:44px;padding:0 20px;border:1px solid transparent;border-radius:6px;cursor:pointer;transition:background-color 120ms cubic-bezier(.2,0,0,1),border-color 120ms cubic-bezier(.2,0,0,1),color 120ms cubic-bezier(.2,0,0,1),transform 120ms cubic-bezier(.2,0,0,1);padding:0 14px;background:transparent;color:var(--text-2,#a5a298)}.ds-btn-ghost:hover{background:var(--panel,#181815);color:var(--bone,#ece9e0)}.ds-btn-ghost:focus-visible{outline:2px solid var(--airbag,#f2c12e);outline-offset:2px}"
+    },
+    {
+      "name": "Annunciator lamps",
+      "kind": "chip",
+      "refersTo": "lamp-on",
+      "description": "Lit tiles for status, in all six states; the boxed one just changed.",
+      "html": "<div class=\"ds-row\"><span class=\"ds-ann\" data-state=\"off\">Paused</span><span class=\"ds-ann\" data-state=\"on\">Armed</span><span class=\"ds-ann\" data-state=\"airbag\">Deploying</span><span class=\"ds-ann\" data-state=\"airbag-line\" data-fresh>Re-armed</span><span class=\"ds-ann\" data-state=\"alert\">Key rejected</span><span class=\"ds-ann\" data-state=\"liq\">Whole position</span></div>",
+      "css": ".ds-ann{display:inline-flex;align-items:center;min-height:26px;padding:0 9px;border-radius:3px;background:var(--lit,rgba(236,233,224,.12));color:var(--bone,#ece9e0);font:600 11px/1 var(--mono,'Martian Mono',monospace);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;position:relative}.ds-ann[data-state=off]{background:var(--unlit,rgba(236,233,224,.04));color:var(--text-3,#86837a)}.ds-ann[data-state=airbag]{background:var(--airbag,#f2c12e);color:var(--ground,#11110f)}.ds-ann[data-state=airbag-line]{background:var(--airbag-tint,rgba(242,193,46,.12));color:var(--airbag,#f2c12e)}.ds-ann[data-state=alert]{background:var(--bone,#ece9e0);color:var(--ground,#11110f)}.ds-ann[data-state=liq]{background:var(--liq-tint,rgba(255,106,85,.1));color:var(--liq,#ff6a55)}.ds-ann[data-fresh]::after{content:'';position:absolute;inset:-4px;border:1px solid currentColor;border-radius:5px}.ds-row{display:flex;gap:12px;padding:12px;background:#11110f}"
+    },
+    {
+      "name": "Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Glass-black mono field; invalid is dashed bone, never red.",
+      "html": "<label class=\"ds-field\">Key secret<input class=\"ds-input\" placeholder=\"0x…\"></label>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:6px;font:13px var(--ui,'Instrument Sans',sans-serif);color:var(--text-2,#a5a298)}.ds-input{height:44px;padding:0 12px;background:var(--well,#0c0c0b);border:1px solid var(--line-strong,#3a3932);border-radius:6px;color:var(--bone,#ece9e0);font:13px var(--mono,'Martian Mono',monospace)}.ds-input:hover{border-color:var(--text-3,#86837a)}.ds-input:focus-visible{outline:2px solid var(--airbag,#f2c12e);outline-offset:2px}.ds-input::placeholder{color:var(--text-3,#86837a)}"
+    },
+    {
+      "name": "Segmented choice",
+      "kind": "chip",
+      "refersTo": "segment-selected",
+      "description": "The trader's choice is bone, never yellow.",
+      "html": "<div class=\"ds-segs\"><button class=\"ds-seg\">Early</button><button class=\"ds-seg\" aria-pressed=\"true\">Balanced</button><button class=\"ds-seg\">Late</button></div>",
+      "css": ".ds-segs{display:flex;gap:8px}.ds-seg{padding:10px 16px;border:1px solid var(--line-strong,#3a3932);border-radius:6px;background:transparent;color:var(--bone,#ece9e0);font:14px var(--ui,'Instrument Sans',sans-serif);cursor:pointer}.ds-seg:hover{border-color:var(--text-3,#86837a)}.ds-seg:focus-visible{outline:2px solid var(--airbag,#f2c12e);outline-offset:2px}.ds-seg[aria-pressed=true]{border-color:var(--bone,#ece9e0);background:var(--lit,rgba(236,233,224,.12));box-shadow:inset 0 0 0 1px var(--bone,#ece9e0)}"
+    },
+    {
+      "name": "Annunciator strip",
+      "kind": "nav",
+      "refersTo": "annunciator-strip",
+      "description": "Protection, mode, key and feed under the masthead, at every width.",
+      "html": "<div class=\"ds-strip\"><span class=\"ds-cell\"><span class=\"ds-lbl\">Protection</span><span class=\"ds-ann\" data-state=\"on\">Armed</span></span><span class=\"ds-cell\"><span class=\"ds-lbl\">Mode</span><span class=\"ds-ann\" data-state=\"on\">Balanced · 10%</span></span><span class=\"ds-cell\"><span class=\"ds-lbl\">Key</span><span class=\"ds-ann\" data-state=\"on\">OK</span></span><span class=\"ds-cell\"><span class=\"ds-lbl\">Feed</span><span class=\"ds-ann\" data-state=\"on\">Live</span></span></div>",
+      "css": ".ds-ann{display:inline-flex;align-items:center;min-height:26px;padding:0 9px;border-radius:3px;background:var(--lit,rgba(236,233,224,.12));color:var(--bone,#ece9e0);font:600 11px/1 var(--mono,'Martian Mono',monospace);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;position:relative}.ds-ann[data-state=off]{background:var(--unlit,rgba(236,233,224,.04));color:var(--text-3,#86837a)}.ds-ann[data-state=airbag]{background:var(--airbag,#f2c12e);color:var(--ground,#11110f)}.ds-ann[data-state=airbag-line]{background:var(--airbag-tint,rgba(242,193,46,.12));color:var(--airbag,#f2c12e)}.ds-ann[data-state=alert]{background:var(--bone,#ece9e0);color:var(--ground,#11110f)}.ds-ann[data-state=liq]{background:var(--liq-tint,rgba(255,106,85,.1));color:var(--liq,#ff6a55)}.ds-ann[data-fresh]::after{content:'';position:absolute;inset:-4px;border:1px solid currentColor;border-radius:5px}.ds-row{display:flex;gap:12px;padding:12px;background:#11110f}.ds-strip{display:flex;flex-wrap:wrap;align-items:center;gap:8px 28px;min-height:48px;padding:10px 24px;border-block:1px solid var(--line,#2b2a25);background:var(--well,#0c0c0b)}.ds-cell{display:flex;align-items:center;gap:10px}.ds-lbl{font:500 11px var(--mono,'Martian Mono',monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--text-3,#86837a)}"
+    },
+    {
+      "name": "Glass well with runway",
+      "kind": "card",
+      "refersTo": "well",
+      "description": "An instrument sunk into the panel: a runway with red cliff, hatched zone, yellow bug and bone mark.",
+      "html": "<div class=\"ds-well\"><div class=\"ds-track\"><div class=\"ds-danger\"></div><div class=\"ds-zone\"></div><div class=\"ds-tick ds-liq\"></div><div class=\"ds-tick ds-bug\"></div><div class=\"ds-dot\"></div></div></div>",
+      "css": ".ds-well{padding:24px;background:var(--well,#0c0c0b);border:1px solid var(--line,#2b2a25);border-radius:8px;box-shadow:inset 0 1px 3px rgba(0,0,0,.45)}.ds-track{position:relative;height:32px;background:linear-gradient(#2b2a25,#2b2a25) 0 50%/100% 2px no-repeat}.ds-danger{position:absolute;left:0;width:15%;top:calc(50% - 3px);height:6px;background:var(--liq,#ff6a55)}.ds-zone{position:absolute;left:15%;width:30%;top:calc(50% - 6px);height:12px;background:repeating-linear-gradient(135deg,#3a3932 0 1.5px,transparent 1.5px 6px)}.ds-tick{position:absolute;top:calc(50% - 12px);width:2px;height:24px}.ds-liq{left:15%;background:var(--liq,#ff6a55)}.ds-bug{left:45%;background:var(--airbag,#f2c12e)}.ds-dot{position:absolute;left:75%;top:calc(50% - 7px);width:14px;height:14px;margin-left:-7px;border-radius:50%;background:var(--bone,#ece9e0);box-shadow:0 0 0 3px var(--well,#0c0c0b)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Envelope Protection Panel",
+    "overview": "Airbag is flight-envelope protection for a leveraged position, and the interface is the cockpit panel that shows it. The page is the panel face, graphite and bone, cut into bays by 1px rules. Instruments are dark glass wells set into that face behind a thin bezel: a vertical price tape for the position closest to liquidation, horizontal runways for the rest, a per-block strip. Status is carried by annunciator lamps, lit tiles in a strip under the masthead, never by pills or stat cards.\n\nThe panel is quiet while the trader is safe: bone and grey only, numbers in tabular mono, motion limited to readouts rolling their digits each block. Colour appears only when it carries one of two meanings. Yellow is Airbag (the line it acts at, and anything it did). Red is liquidation and nothing else. When Airbag acts, the display's bezel lights yellow, the hazard stripe wipes across its top, and the bug and bands slide with damped instrument motion to their new places, the old ones left as dashed, struck-through ghosts.\n\nDensity is instrument density: small mono labels naming values, big mono readouts, sentence-case prose in Instrument Sans kept short and to the point. The rejected alternative is explicit: a card grid of stat tiles and status pills, and a paper-stock light theme (built once and rejected by the owner).",
+    "keyCharacteristics": [
+      "One continuous panel face; bays and sections separated by 1px rules, never by floating cards.",
+      "Instruments sunk into darker glass wells with an inset shadow; nothing is lifted.",
+      "Two meaning colours only: yellow for Airbag, red for liquidation.",
+      "Annunciator lamps as lit tiles: unlit, lit bone, yellow, yellow line, inverted bone, liquidation red.",
+      "Every number in Martian Mono, tabular; Archivo Expanded only for the few words that must land.",
+      "Damped motion for things that move on a scale; lamps and readouts switch at once."
+    ],
+    "rules": [
+      {
+        "name": "The Two Meanings Rule",
+        "body": "Yellow means Airbag; red means liquidation. No other hue exists in the system, and neither colour is ever used for emphasis, error, success or decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The Bone Choice Rule",
+        "body": "Anything the trader chose or must do is bone: selected segments, the on switch, the current tab, the alert lamp and alert notice, invalid inputs (dashed bone border). Never yellow, which is Airbag's, and never red, which is liquidation's.",
+        "section": "colors"
+      },
+      {
+        "name": "The Unlit Face Rule",
+        "body": "A disabled primary button is an unlit face (unlit background, text-3 legend), never a dimmed yellow. Yellow at half opacity would still say \"Airbag\".",
+        "section": "colors"
+      },
+      {
+        "name": "The Mono Numbers Rule",
+        "body": "Every number is Martian Mono with tabular figures, so digits hold still while a block changes them.",
+        "section": "typography"
+      },
+      {
+        "name": "The Label Names a Value Rule",
+        "body": "An uppercase mono label sits over or beside the readout it names. It never introduces a heading and never floats above a title as a kicker.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Panel Rule",
+        "body": "The page is the panel face, cut by 1px rules. There are no cards: never a raised, rounded, bordered box floating on the face to hold content. Content that is not an instrument sits directly on the face.",
+        "section": "layout"
+      },
+      {
+        "name": "The Four Lamps Rule",
+        "body": "The annunciator strip keeps protection, mode, key and feed at every width. It wraps to a second row, and shortens legends on phones, before it drops a lamp.",
+        "section": "layout"
+      },
+      {
+        "name": "The Room Beyond Liquidation Rule",
+        "body": "The tape and the runway reserve at least two graduations beyond liquidation, so the red band always reads as a band, not an edge.",
+        "section": "layout"
+      },
+      {
+        "name": "The Glass Well Rule",
+        "body": "Instruments are sunk, never lifted: well background, 1px line bezel, inset shadow, 8px corners. No drop shadows anywhere in the system.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Hazard Only When Airbag Acts Rule",
+        "body": "The hazard stripe appears only on a deploy (the flight display's top edge, wiping in over 320ms, and the deploy detail) and on the save report and its share image. Never as decoration or a section divider.",
+        "section": "shapes"
+      },
+      {
+        "name": "The Knockout Flag Rule",
+        "body": "A tape flag carries a well background with 4px side padding, so a dashed ghost line never runs through its text. Superseded flags stay, struck through.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do put every instrument in a glass well (well background, 1px line bezel, inset 0 1px 3px rgba(0, 0, 0, 0.45), 8px corners).",
+      "Do separate bays and sections with 1px line rules on the panel face.",
+      "Do show status as annunciator lamps in their six states, and box a lamp for ten seconds after it changes.",
+      "Do set every number in Martian Mono with tabular figures.",
+      "Do make selection, the on state and \"the trader must act\" bone.",
+      "Do reserve at least two graduations beyond liquidation on the tape and the runway.",
+      "Do keep protection, mode, key and feed in the annunciator strip at every width.",
+      "Do knock the glass out behind tape flags.",
+      "Do move scale markers on the damped curve and set `animation: none` under reduced motion.",
+      "Do write in sentence case, plain and precise, numbers over adjectives."
+    ],
+    "donts": [
+      "Don't build cards: no raised, rounded, bordered boxes floating on the panel to hold content, and no grid of stat tiles.",
+      "Don't use outlined or rounded pills for status; use a lamp tile.",
+      "Don't use yellow for selection, emphasis or a dimmed disabled state; yellow only means Airbag.",
+      "Don't use red for errors, warnings or losses that are not liquidation.",
+      "Don't introduce any hue beyond yellow and red, any glow, or any colour gradient. Repeating-gradient patterns are for the two hatches, the hazard stripe and drawn graduations only.",
+      "Don't cast drop shadows; depth is inset only.",
+      "Don't show the hazard stripe unless Airbag acted (a deploy, a save).",
+      "Don't put an uppercase label above a heading as a kicker.",
+      "Don't use exclamation marks, \"seamless\", \"unlock\", or \"leverage\" as a verb."
+    ]
+  }
+}

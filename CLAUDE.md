@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Working notes for Claude Code on Airbag. Read `docs/BRIEF.md` (the source of truth), `docs/STATUS.md` (where we are) and `docs/RESEARCH.md` (verified Perpl facts) before changing anything.
+Working notes for Claude Code on Airbag. Read `docs/BRIEF.md` (the source of truth), `docs/STATUS.md` (where we are) and `docs/RESEARCH.md` (verified Perpl facts) before changing anything. Before touching the web UI, also read `apps/web/DESIGN.md` (the design system, derived from the shipped build).
 
 ## Commands
 

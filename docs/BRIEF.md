@@ -228,15 +228,16 @@ Deploy it to testnet (and mainnet if time allows). Index it with Envio. Put the 
 
 ## 8. Design system (summary; exact values are in `/design`, the web build in `apps/web/DESIGN.md`)
 
-Direction: **"crash-test instrument"**. Quiet until it matters. Since 24 Sep the screens are built as an instrument panel ("envelope protection"): the identity below is unchanged; composition, components and motion are new.
+Direction: **"crash-test instrument"**. Quiet until it matters. Since 24 Sep the screens are built as one instrument panel ("envelope protection"): the identity below is unchanged; composition, components and motion are new. The page is the panel face, cut into bays and sections by 1 px rules; every instrument is dark glass set into it. There are no cards.
 
 - **Color rule:** graphite and bone while safe. **Yellow = Airbag** (the line it acts at, and anything it did). **Red = liquidation only.** Nothing else gets color.
 
 | Token | Value | Use |
 |---|---|---|
-| ground | `#11110F` | page |
-| panel | `#181815` | cards |
-| raised | `#1F1F1B` | active nav, selected rows |
+| ground | `#11110F` | page: the panel face |
+| well | `#0C0C0B` | instrument glass |
+| panel | `#181815` | hover fills, the simulation banner |
+| raised | `#1F1F1B` | active nav, hovered controls, alert notices |
 | line | `#2B2A25` | hairlines |
 | line-strong | `#3A3932` | control borders |
 | bone | `#ECE9E0` | primary text |
@@ -247,11 +248,11 @@ Direction: **"crash-test instrument"**. Quiet until it matters. Since 24 Sep the
 | liquidation | `#FF6A55` | liquidation only |
 
 - **Type:** Archivo at `font-stretch: 125%`, 700–800, for display (h1/h2 and the wordmark only). Instrument Sans for UI and body. Martian Mono at 75–87.5% width with `font-variant-numeric: tabular-nums` for **every number**. Load via `next/font/google` (or equivalent) with the `wdth` axis.
-- **Shape:** 6 px controls, 8 px instrument wells, 12 px panels. 1 px borders and bezels. Instruments sit in darker glass wells (`#0C0C0B`) set into the panel; no floating card grid, no drop shadows, no gradients. The **only** patterned fill is the hazard stripe (`repeating-linear-gradient(-45deg, #F2C12E 0 10px, #11110F 10px 20px)`), shown only when Airbag deploys and on the save card.
+- **Shape:** 6 px controls, 8 px instrument wells, 3 px lamps. 1 px rules, borders and bezels. Instruments sit in darker glass wells (`#0C0C0B`) set into the panel; no cards, no drop shadows, no gradients. The only patterned fills are the hatch of the protection band and the hazard stripe (`repeating-linear-gradient(-45deg, #F2C12E 0 10px, #11110F 10px 20px)`), which shows only when Airbag deploys (on the display's bezel) and on the save report.
 - **Logo:** crash-test target (inline SVG in every design file). Wordmark "AIRBAG" in Archivo 125% 800, letter-spacing 0.06em.
-- **Signature component, the Runway:** horizontal track; red tick = liquidation, yellow tick = Airbag line, hatched zone between them (neutral when safe, yellow-tinted when near the line), bone dot = mark, dashed tick = entry or old liquidation ghost. Labels in mono caps (`LIQ $94,000`, `AIRBAG $97,000`, `MARK $99,420`).
-- **Instrument grammar (24 Sep):** each position is a tape, vertical for the primary display and horizontal (the Runway) in lists: a red band beyond liquidation, a hatched protection band, a yellow bug at the Airbag line, a bone readout for the mark whose digits roll each block. Annunciators replace pills: dark when off, bone when on, yellow when Airbag acts, inverted bone when the trader must act (red stays liquidation-only); a lamp that changes is boxed for ten seconds. An annunciator strip under the masthead carries protection, mode, feed and key.
-- **Components to build:** Button (primary yellow / secondary outline / ghost), Annunciator (Armed, Deploying, Deployed · re-armed, Paused, Key rejected · relink), Tape and Runway, Readout, before→after cell, PositionsTable, block log, BlockTape, SaveCard (also rendered as an OG image), HazardStripe, Stepper, Segmented, Switch.
+- **Signature component, the Runway:** horizontal track; a red band from liquidation to the losing end, a yellow bug (tick and notch) at the Airbag line, hatched zone between them (neutral when safe, yellow-tinted when near the line), bone dot = mark with a boxed readout, dashed tick = entry or old liquidation ghost. Labels in mono caps (`LIQ $94,000`, `AIRBAG $97,000`, `MARK $99,420`). It shares the tape's scale: at least two graduations of room beyond liquidation.
+- **Instrument grammar (24 Sep):** each position is a tape, vertical for the primary display and horizontal (the Runway) in lists: a red band beyond liquidation, a hatched protection band, a yellow bug at the Airbag line, a bone readout for the mark whose digits roll each block. Annunciators replace pills. They are lamp tiles, not outlines: unlit when off, a lit bone face when on, filled yellow when Airbag acts, inverted bone when the trader must act (red stays liquidation-only); a lamp that changes is boxed for ten seconds. An annunciator strip under the masthead carries protection, mode, key and feed at every width; it wraps rather than drop a lamp. Selected controls are bone, never yellow.
+- **Components to build:** Button (primary yellow / secondary outline / ghost), Annunciator (Armed, Deploying, Deployed · re-armed, Paused, Key rejected · relink), Tape and Runway, Readout, the flight display (tape and readouts in one pane, and its deploy state with the old line and liquidation as ghosts), a runway row per position, before→after readout, block log, block strip, SaveCard (also rendered as an OG image), HazardStripe, Stepper, Segmented, Switch.
 - **Motion:** instrument physics. Bugs, bands and the mark move with a damped ease-out (240 ms); lamps switch at once; readout digits roll (120 ms); arriving panels and pages redraw top to bottom under a fixed masthead. Reduced motion changes values without movement.
 - **Voice:** plain, precise, trader-literate. Sentence case. Numbers over adjectives. Honest about limits. No "seamless", "unlock", "leverage" (as a verb), and no exclamation marks.
 - **Accessibility:** real buttons and links, labels on inputs, `aria-pressed`/`role="switch"` where used, focus-visible outline in yellow, 44 px targets, 4.5:1 text contrast, reduced-motion support. Run axe in CI.
