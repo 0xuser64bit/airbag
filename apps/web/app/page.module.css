@@ -126,26 +126,22 @@
   font-size: 13px;
 }
 
-/* Two paths, side by side. */
+/* Two paths, side by side, split by a rule; each lamp says how it ends. */
 .paths {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--s-4);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 .path {
   display: flex;
   flex-direction: column;
   gap: var(--s-5);
-  padding: var(--s-6);
-  border: 1px solid var(--line);
-  border-radius: var(--r-panel);
-  background: var(--panel);
+  padding: var(--s-6) var(--s-6) var(--s-6) 0;
 }
-.path[data-tone="liq"] {
-  border-color: var(--liq-edge);
-}
-.path[data-tone="airbag"] {
-  border-color: var(--airbag-edge);
+.path + .path {
+  padding-left: var(--s-6);
+  border-left: 1px solid var(--line);
 }
 .pathHead {
   display: flex;
@@ -338,9 +334,8 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: var(--s-6);
-  border: 1px dashed var(--line-strong);
-  border-radius: var(--r-panel);
+  padding-top: var(--s-6);
+  border-top: 1px solid var(--line);
 }
 .cantGrid {
   display: grid;
@@ -502,6 +497,14 @@
   .cantGrid {
     grid-template-columns: minmax(0, 1fr);
   }
+  .path,
+  .path + .path {
+    padding: var(--s-5) 0;
+    border-left: 0;
+  }
+  .path + .path {
+    border-top: 1px solid var(--line);
+  }
   .safetyRow {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--s-3);
@@ -520,10 +523,6 @@
   }
   .lede {
     font-size: 17px;
-  }
-  .path,
-  .cant {
-    padding: var(--s-5);
   }
   .step {
     grid-template-columns: minmax(0, 1fr);

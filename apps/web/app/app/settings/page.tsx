@@ -79,7 +79,7 @@ export default function SettingsPage() {
           the key can never be used again, also revoke it on Perpl’s API keys page.
         </p>
         {guardUp ? (
-          <div className={s.guard}>
+          <div className={`redraw ${s.guard}`}>
             <p>
               <strong>Protection stops the moment you confirm.</strong> Open positions stay open,
               with nothing watching them.

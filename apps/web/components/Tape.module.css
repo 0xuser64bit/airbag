@@ -6,9 +6,9 @@
   --move: top var(--t-move) var(--ease);
   position: relative;
   display: grid;
-  grid-template-columns: 72px 14px minmax(0, 1fr);
+  grid-template-columns: 76px 20px minmax(0, 1fr);
   min-width: 0;
-  font-size: 11px;
+  font-size: 12px;
 }
 .scale,
 .bands,
@@ -35,12 +35,12 @@
   position: absolute;
   right: 0;
   top: 0;
-  width: 12px;
+  width: 14px;
   border-top: 1px solid var(--scale);
 }
 .major > span {
   position: absolute;
-  right: 18px;
+  right: 20px;
   top: -8px;
   line-height: 16px;
   color: var(--text-3);
@@ -74,13 +74,14 @@
 
 /* Markers: short ticks across the rail, flags beside them, the mark's readout box. */
 .liqLine,
-.ghostLine,
+.ghostLiq,
+.ghostBug,
 .afterLine,
 .entryLine,
 .bug {
   position: absolute;
-  left: -14px;
-  width: 24px;
+  left: -20px;
+  width: 32px;
   height: 0;
   transition: var(--move);
 }
@@ -88,10 +89,17 @@
   border-top: 2px solid var(--liq);
   margin-top: -1px;
 }
-.ghostLine {
-  border-top: 1px dashed var(--liq);
-  width: 100%;
+/* Where liquidation and the line were before a deploy. */
+.ghostLiq,
+.ghostBug {
+  width: calc(100% + 20px);
   opacity: 0.6;
+}
+.ghostLiq {
+  border-top: 1px dashed var(--liq);
+}
+.ghostBug {
+  border-top: 1px dashed var(--airbag);
 }
 .entryLine {
   border-top: 1px dashed var(--text-3);
@@ -108,9 +116,9 @@
 /* The bug: a notch pointing at the scale. */
 .bugHead {
   position: absolute;
-  left: 14px;
+  left: 20px;
   top: -8px;
-  width: 9px;
+  width: 10px;
   height: 14px;
   background: var(--airbag);
   clip-path: polygon(100% 0, 100% 100%, 0 50%);
@@ -134,7 +142,6 @@
   color: var(--text-3);
 }
 .ghostFlag {
-  color: var(--text-3);
   text-decoration: line-through;
 }
 .afterFlag {
@@ -144,22 +151,22 @@
 .markBox {
   position: absolute;
   z-index: 1;
-  left: 6px;
-  height: 30px;
+  left: 8px;
+  height: 34px;
   display: flex;
   align-items: center;
-  padding: 0 10px;
+  padding: 0 11px;
   border: 1px solid var(--bone);
   border-radius: 4px;
   background: var(--well);
-  font-size: 15px;
+  font-size: 17px;
   color: var(--bone);
   white-space: nowrap;
   transition: var(--move);
 }
 .pointer {
   position: absolute;
-  left: -9px;
+  left: -10px;
   top: 50%;
   margin-top: -6px;
   width: 8px;

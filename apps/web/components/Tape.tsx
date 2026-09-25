@@ -3,8 +3,8 @@
 // The primary flight display's tape: a vertical price scale for one position. Price rises up the
 // tape. A red band runs beyond liquidation, a hatched band lies between liquidation and the
 // Airbag line, a yellow bug marks the line, and a bone readout box points at the mark. After a
-// deploy the old liquidation price stays as a dashed ghost. Every part slides with damped
-// instrument motion when a block, a setting or a deploy moves it.
+// deploy the old liquidation price and the old line stay as dashed ghosts. Every part slides
+// with damped instrument motion when a block, a setting or a deploy moves it.
 
 import { fmt, type Side } from '@airbag/risk';
 import { Readout } from './instruments.tsx';
@@ -18,6 +18,8 @@ export interface TapeProps {
   entry?: number | undefined;
   /** The pre-deploy liquidation price, left on the tape as a dashed ghost. */
   ghost?: number | undefined;
+  /** The line Airbag deployed at, left as a dashed ghost once it re-arms elsewhere. */
+  ghostLine?: number | undefined;
   /** Where liquidation would sit after Airbag acts at the line (the settings preview). */
   projected?: number | null | undefined;
   /** The mark is near the line: the protection band warms. */
@@ -26,13 +28,19 @@ export interface TapeProps {
   height?: number;
 }
 
-/** Domain: every fixed landmark plus the mark, padded by a sixth of the span each side. The line
- *  is left out so moving it (a setting, a re-arm) slides the bug without rescaling the tape. */
-export function domain(points: number[]): [number, number] {
+/**
+ * Domain: every fixed landmark plus the mark, padded by a sixth of the span each side, and at
+ * least two graduations beyond liquidation so the red band reads as a band. The line is left
+ * out so moving it (a setting, a re-arm) slides the bug without rescaling the tape.
+ */
+export function domain(points: number[], side: Side, liquidation: number): [number, number] {
   const lo = Math.min(...points);
   const hi = Math.max(...points);
   const pad = (hi - lo) / 6 || Math.abs(hi) * 0.01 || 1;
-  return [lo - pad, hi + pad];
+  const room = 2 * niceStep(hi - lo + 2 * pad);
+  return side === 'long'
+    ? [Math.min(lo - pad, liquidation - room), hi + pad]
+    : [lo - pad, Math.max(hi + pad, liquidation + room)];
 }
 
 /** A 1, 2, 2.5 or 5 × 10^k step giving about `count` labelled graduations. */
@@ -117,17 +125,23 @@ export function Tape({
   mark,
   entry,
   ghost,
+  ghostLine,
   projected,
   near = false,
   height = 400,
 }: TapeProps) {
-  const [lo, hi] = domain([
+  const [lo, hi] = domain(
+    [
+      liquidation,
+      mark,
+      ...(entry === undefined ? [] : [entry]),
+      ...(ghost === undefined ? [] : [ghost]),
+      ...(ghostLine === undefined ? [] : [ghostLine]),
+      ...(projected == null ? [] : [projected]),
+    ],
+    side,
     liquidation,
-    mark,
-    ...(entry === undefined ? [] : [entry]),
-    ...(ghost === undefined ? [] : [ghost]),
-    ...(projected == null ? [] : [projected]),
-  ]);
+  );
   const y = (p: number) => ((hi - p) / (hi - lo)) * height;
   const pct = (p: number) => `${((hi - p) / (hi - lo)) * 100}%`;
   const step = niceStep(hi - lo);
@@ -183,8 +197,19 @@ export function Tape({
             id: 'ghost',
             y: y(ghost),
             h: 18,
-            className: s.ghostFlag,
+            className: `${s.ghostFlag} ${s.liqFlag}`,
             node: <>WAS {fmt.usd(ghost)}</>,
+          },
+        ]),
+    ...(ghostLine === undefined
+      ? []
+      : [
+          {
+            id: 'ghostLine',
+            y: y(ghostLine),
+            h: 18,
+            className: `${s.ghostFlag} ${s.lineFlag}`,
+            node: <>WAS {fmt.usd(ghostLine)}</>,
           },
         ]),
     ...(projected == null
@@ -199,8 +224,8 @@ export function Tape({
           },
         ]),
   ];
-  const tops = stack(flags, { y: y(mark), h: 30 }, height);
-  const summary = `Liquidation ${fmt.usd(liquidation)}${line === undefined ? '' : `, Airbag line ${fmt.usd(line)}`}, mark ${fmt.usd(mark)}${ghost === undefined ? '' : `, liquidation was ${fmt.usd(ghost)}`}${projected == null ? '' : `, liquidation after Airbag acts ${fmt.usd(projected)}`}`;
+  const tops = stack(flags, { y: y(mark), h: 34 }, height);
+  const summary = `Liquidation ${fmt.usd(liquidation)}${line === undefined ? '' : `, Airbag line ${fmt.usd(line)}`}, mark ${fmt.usd(mark)}${ghost === undefined ? '' : `, liquidation was ${fmt.usd(ghost)}`}${ghostLine === undefined ? '' : `, Airbag deployed at ${fmt.usd(ghostLine)}`}${projected == null ? '' : `, liquidation after Airbag acts ${fmt.usd(projected)}`}`;
 
   return (
     <div className={s.tape} style={{ height }} role="img" aria-label={summary}>
@@ -219,7 +244,8 @@ export function Tape({
         {band && <div className={`${s.band} ${near ? s.near : ''}`} style={band} />}
       </div>
       <div className={s.markers} aria-hidden="true">
-        {ghost !== undefined && <div className={s.ghostLine} style={{ top: pct(ghost) }} />}
+        {ghost !== undefined && <div className={s.ghostLiq} style={{ top: pct(ghost) }} />}
+        {ghostLine !== undefined && <div className={s.ghostBug} style={{ top: pct(ghostLine) }} />}
         {projected != null && <div className={s.afterLine} style={{ top: pct(projected) }} />}
         {entry !== undefined && <div className={s.entryLine} style={{ top: pct(entry) }} />}
         <div className={s.liqLine} style={{ top: pct(liquidation) }} />
@@ -237,7 +263,7 @@ export function Tape({
             {f.node}
           </span>
         ))}
-        <div className={s.markBox} style={{ top: y(mark) - 15 }}>
+        <div className={s.markBox} style={{ top: y(mark) - 17 }}>
           <span className={s.pointer} />
           <Readout className="num" value={fmt.usd(mark)} />
         </div>

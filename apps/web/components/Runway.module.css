@@ -1,6 +1,9 @@
 .runway {
   position: relative;
   min-width: 0;
+  /* Labels are placed inside the track once measured; before that (server HTML, first paint)
+     one centred on a tick near the end mustn't widen the page. */
+  overflow-x: clip;
 }
 
 .track {
@@ -12,6 +15,16 @@
   height: 18px;
 }
 
+/* Red from liquidation to the losing end: the cliff, drawn thinner than the zone. */
+.danger {
+  position: absolute;
+  top: calc(50% - 3px);
+  height: 6px;
+  background: var(--liq);
+  transition:
+    left var(--t-move) var(--ease),
+    width var(--t-move) var(--ease);
+}
 .zone {
   position: absolute;
   top: calc(50% - 6px);
@@ -47,6 +60,20 @@
 .lineTick {
   background: var(--airbag);
 }
+/* The bug's notch, pointing down at the track. */
+.lineTick::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: -5px;
+  width: 12px;
+  height: 8px;
+  background: var(--airbag);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+.sm .lineTick::before {
+  display: none;
+}
 
 .ghost {
   position: absolute;
@@ -70,7 +97,7 @@
   margin-left: -7px;
   border-radius: 50%;
   background: var(--bone);
-  box-shadow: 0 0 0 3px var(--ground);
+  box-shadow: 0 0 0 3px var(--well);
   transition: left var(--t-move) var(--ease);
 }
 .sm .dot {
@@ -78,21 +105,20 @@
   width: 12px;
   height: 12px;
   margin-left: -6px;
-  box-shadow: 0 0 0 3px var(--panel);
 }
 .ringed {
   box-shadow:
-    0 0 0 3px var(--ground),
+    0 0 0 3px var(--well),
     0 0 0 5px var(--airbag);
 }
 
 .labels {
   position: relative;
-  height: 18px;
+  height: 22px;
   margin-top: 4px;
 }
 .twoRows {
-  height: 38px;
+  height: 46px;
 }
 .label {
   position: absolute;
@@ -105,6 +131,13 @@
   transition:
     left var(--t-move) var(--ease),
     top var(--t-move) var(--ease);
+}
+/* The mark's readout: a bone box, as on the tape. */
+.markText {
+  padding: 0 6px;
+  border: 1px solid var(--bone);
+  border-radius: 3px;
+  line-height: 20px;
 }
 .liqText {
   color: var(--liq);

@@ -27,12 +27,10 @@
   font-size: 13px;
 }
 
+/* The log is one pane of glass, a row per deploy. */
 .log {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--line);
-  border-radius: var(--r-panel);
-  background: var(--panel);
   overflow: hidden;
 }
 .log > li + li,
@@ -51,7 +49,7 @@
 }
 .row:hover {
   color: var(--bone);
-  background: var(--raised);
+  background: var(--unlit);
 }
 .row:hover .chev {
   transform: translateX(2px);
@@ -89,7 +87,7 @@
 .skeleton span {
   height: 12px;
   border-radius: 3px;
-  background: var(--raised);
+  background: var(--lit);
   animation: idle 1.4s var(--ease) infinite alternate;
 }
 @keyframes idle {
@@ -102,10 +100,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
-  max-width: 560px;
   padding: var(--s-5);
-  border: 1px dashed var(--line-strong);
-  border-radius: var(--r-panel);
+}
+.empty > p {
+  max-width: 62ch;
 }
 .none {
   padding: var(--s-4) 0;
@@ -147,13 +145,16 @@
   line-height: 1.55;
   color: var(--soft-bone);
 }
-.detailGrid {
-  display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-  gap: var(--s-7);
-  align-items: start;
+/* Beside the frozen tape, in the same glass: what changed. */
+.facts {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--s-4);
+  min-width: 0;
+  padding: var(--s-6) clamp(20px, 3vw, 40px);
 }
-.detailGrid > section {
+.logSection {
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
@@ -164,12 +165,6 @@
   gap: var(--s-3);
 }
 
-@media (max-width: 960px) {
-  .detailGrid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--s-5);
-  }
-}
 @media (max-width: 760px) {
   .row {
     grid-template-columns: minmax(0, 1fr) auto;
@@ -186,5 +181,8 @@
   }
   .detailActions {
     flex-direction: column;
+  }
+  .facts {
+    padding: var(--s-5) var(--s-4);
   }
 }

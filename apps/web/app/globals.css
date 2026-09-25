@@ -1,5 +1,6 @@
-/* Airbag design system (apps/web/DESIGN.md): the original crash-test instrument, rebuilt as a
-   panel of instruments. Graphite and bone while safe. Yellow is Airbag. Red is only ever
+/* Airbag design system (apps/web/DESIGN.md): the original crash-test identity, rebuilt as one
+   instrument panel. The page is the panel face; instruments are dark glass set into it, never
+   cards floating on it. Graphite and bone while safe. Yellow is Airbag. Red is only ever
    liquidation. Nothing else gets colour. */
 
 :root {
@@ -11,6 +12,8 @@
   --line: #2b2a25;
   --line-strong: #3a3932;
   --scale: #57554c; /* tape graduations */
+  --lit: rgba(236, 233, 224, 0.12); /* a lamp's lit face, a chosen control */
+  --unlit: rgba(236, 233, 224, 0.04); /* a lamp that's off */
 
   /* Ink */
   --bone: #ece9e0;
@@ -21,7 +24,7 @@
   /* Meaning */
   --airbag: #f2c12e;
   --airbag-hover: #f5cc4f;
-  --airbag-tint: rgba(242, 193, 46, 0.08);
+  --airbag-tint: rgba(242, 193, 46, 0.12);
   --airbag-edge: rgba(242, 193, 46, 0.5);
   --liq: #ff6a55;
   --liq-tint: rgba(255, 106, 85, 0.1);
@@ -44,7 +47,6 @@
   /* Shape */
   --r-control: 6px;
   --r-well: 8px;
-  --r-panel: 12px;
 
   /* Space: 4px steps */
   --s-1: 4px;
@@ -146,6 +148,8 @@ legend {
   border-radius: 999px;
 }
 
+/* Reduced motion: nothing moves. Every keyframe here only animates in from a resting state, so
+   dropping the animation leaves each part where it belongs, with no one-frame flash. */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -153,10 +157,8 @@ legend {
   *,
   *::before,
   *::after {
-    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must beat inline transitions */
-    animation-duration: 0.01ms !important;
-    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must beat inline transitions */
-    animation-iteration-count: 1 !important;
+    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must beat every animation */
+    animation: none !important;
     /* biome-ignore lint/complexity/noImportantStyles: reduced motion must beat inline transitions */
     transition-duration: 0.01ms !important;
   }
@@ -343,7 +345,8 @@ legend {
   color: var(--text-2);
 }
 
-/* Segmented choices: real buttons with aria-pressed. Choosing sets Airbag's line, so yellow. */
+/* Segmented choices: real buttons with aria-pressed. A choice is the trader's, so bone: yellow
+   stays Airbag's own. */
 .seg {
   border: 1px solid var(--line-strong);
   border-radius: var(--r-control);
@@ -359,9 +362,9 @@ legend {
   border-color: var(--text-3);
 }
 .seg[aria-pressed="true"] {
-  border-color: var(--airbag);
-  background: var(--airbag-tint);
-  box-shadow: inset 0 0 0 1px var(--airbag);
+  border-color: var(--bone);
+  background: var(--lit);
+  box-shadow: inset 0 0 0 1px var(--bone);
 }
 
 /* Switch: role="switch" with aria-checked. */
@@ -390,8 +393,8 @@ legend {
     background-color var(--t-fast) var(--ease);
 }
 .switch[aria-checked="true"] {
-  background: var(--airbag);
-  border-color: var(--airbag);
+  background: var(--bone);
+  border-color: var(--bone);
 }
 .switch[aria-checked="true"] > span {
   background: var(--ground);
@@ -412,17 +415,18 @@ legend {
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
-/* An annunciator: dark when off, bone when on, yellow when Airbag acts, inverted bone when
-   the trader has to act. It boxes itself for ten seconds after it changes. */
+/* An annunciator: a lamp tile, not a pill. Unlit when off, a lit bone legend when on, yellow when
+   Airbag acts, inverted bone when the trader has to act. It boxes itself for ten seconds after it
+   changes, the way a flight-mode annunciator marks a new mode. */
 .ann {
   position: relative;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--line-strong);
-  border-radius: 4px;
+  min-height: 26px;
+  padding: 0 9px;
+  border-radius: 3px;
+  background: var(--lit);
   font-family: var(--mono);
   font-stretch: 87.5%;
   font-size: 11px;
@@ -433,25 +437,23 @@ legend {
   color: var(--bone);
 }
 .ann[data-state="off"] {
-  border-color: var(--line);
+  background: var(--unlit);
   color: var(--text-3);
 }
 .ann[data-state="airbag"] {
-  border-color: var(--airbag);
   background: var(--airbag);
   color: var(--ground);
 }
 .ann[data-state="airbag-line"] {
-  border-color: var(--airbag-edge);
+  background: var(--airbag-tint);
   color: var(--airbag);
 }
 .ann[data-state="alert"] {
-  border-color: var(--bone);
   background: var(--bone);
   color: var(--ground);
 }
 .ann[data-state="liq"] {
-  border-color: var(--liq-edge);
+  background: var(--liq-tint);
   color: var(--liq);
 }
 .ann[data-size="sm"] {
@@ -462,9 +464,9 @@ legend {
 .ann[data-fresh="true"]::after {
   content: "";
   position: absolute;
-  inset: -5px;
+  inset: -4px;
   border: 1px solid currentColor;
-  border-radius: 6px;
+  border-radius: 5px;
   animation: box-on var(--t-fast) steps(2, jump-none);
 }
 .ann[data-state="airbag"][data-fresh="true"]::after {

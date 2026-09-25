@@ -1,7 +1,7 @@
 'use client';
 
-// Dashboard parts: the primary flight display for the closest position, the positions ledger,
-// the per-block strip, the side panel, and the deploy card.
+// Dashboard parts: the primary flight display for the closest position (and its deploy state),
+// a runway per position, the per-block strip, and the side bay: mode, key, deploys.
 
 import { equity, fmt, SENSITIVITY } from '@airbag/risk';
 import Link from 'next/link';
@@ -26,10 +26,6 @@ const sideWord = (side: 'long' | 'short') => (side === 'long' ? 'falling' : 'ris
 /** The share of the cushion used when Airbag deploys; demo mode deploys on a move instead. */
 const trigger = (st: Settings) => (st.demo ? undefined : SENSITIVITY[st.sensitivity]);
 
-/** "BTC long · 10x". */
-export const label = (p: Pick<PositionView, 'symbol' | 'side' | 'nominalLeverage'>) =>
-  `${p.symbol} ${p.side} · ${Math.round(p.nominalLeverage)}x`;
-
 function atLineSentence(p: PositionView, st: Settings): string {
   if (!p.covered)
     return `Airbag doesn’t cover ${p.symbol} yet. It’s shown so you can see its distance.`;
@@ -51,13 +47,13 @@ function atLineSentence(p: PositionView, st: Settings): string {
 }
 
 /**
- * The primary flight display: the closest position's tape, the distance to liquidation, how
- * much of the margin cushion is used against the share where Airbag acts, and what it does there.
+ * The primary flight display: one pane of glass holding the closest position's tape and, beside
+ * it, the distance to liquidation, how much of the margin cushion is used against the share
+ * where Airbag acts, and what it does there.
  */
 export function FlightDisplay({ p, settings }: { p: PositionView; settings: Settings }) {
   const at = trigger(settings);
   const used = Math.max(0, p.cushionUsed ?? 0);
-  const near = at !== undefined && used >= 0.8 * at;
   return (
     <section className={s.pfd} aria-labelledby="closest">
       <header className={s.pfdHead}>
@@ -73,16 +69,16 @@ export function FlightDisplay({ p, settings }: { p: PositionView; settings: Sett
         </p>
         <RowAnnunciator status={p.status} />
       </header>
-      <div className={s.pfdBody}>
-        <div className={`well ${s.tapeWell}`}>
+      <div className={`well ${s.display}`}>
+        <div className={s.tapeCol}>
           <Tape
             side={p.side}
             liquidation={p.liquidation}
             line={p.line}
             mark={p.mark}
             entry={p.entry}
-            near={near}
-            height={380}
+            near={isNear(p, settings)}
+            height={400}
           />
         </div>
         <div className={s.readouts}>
@@ -94,15 +90,18 @@ export function FlightDisplay({ p, settings }: { p: PositionView; settings: Sett
             </span>
           </div>
           {p.cushionUsed !== undefined && <CushionGauge used={used} at={at} />}
-          <div className={s.memo}>
-            <span className="label">At the line</span>
-            <p>{atLineSentence(p, settings)}</p>
-          </div>
+          <p className={s.memo}>{atLineSentence(p, settings)}</p>
         </div>
       </div>
     </section>
   );
 }
+
+/** The mark is closing on the line: four fifths of the way there. */
+const isNear = (p: PositionView, st: Settings) => {
+  const at = trigger(st);
+  return at !== undefined && Math.max(0, p.cushionUsed ?? 0) >= 0.8 * at;
+};
 
 /** Cushion used: 0 at the reference price, 100% at liquidation, Airbag's share marked. */
 function CushionGauge({ used, at }: { used: number; at: number | undefined }) {
@@ -138,12 +137,12 @@ function CushionGauge({ used, at }: { used: number; at: number | undefined }) {
   );
 }
 
-export function PositionsLedger({ data, exclude }: { data: Dashboard; exclude?: number }) {
+/** Every open position as a runway: its red band, zone, bug and mark, with its distance. */
+export function Positions({ data }: { data: Dashboard }) {
   const account = data.account;
-  const others = data.positions.filter((p) => p.marketId !== exclude);
   return (
-    <section className={s.ledger} aria-labelledby="open-positions">
-      <div className={s.ledgerHead}>
+    <section aria-labelledby="open-positions">
+      <div className={s.sectionHead}>
         <h2 id="open-positions" className="title">
           Open positions
         </h2>
@@ -161,83 +160,38 @@ export function PositionsLedger({ data, exclude }: { data: Dashboard; exclude?: 
         )}
       </div>
       {data.positions.length === 0 ? (
-        <p className={s.empty}>
+        <p className={`well ${s.empty}`}>
           No open positions. Airbag checks every block and arms on anything you open in a covered
           market.
         </p>
       ) : (
-        <>
-          <div className={s.tableWrap}>
-            <table className={s.table}>
-              <thead>
-                <tr>
-                  <th scope="col">Market</th>
-                  <th scope="col">Size</th>
-                  <th scope="col">Entry</th>
-                  <th scope="col">Mark</th>
-                  <th scope="col">Liquidation</th>
-                  <th scope="col">Airbag line</th>
-                  <th scope="col" className={s.runwayCol}>
-                    <span className="visually-hidden">Runway</span>
-                  </th>
-                  <th scope="col">To liq</th>
-                  <th scope="col">Airbag</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.positions.map((p) => (
-                  <tr key={p.marketId}>
-                    <th scope="row">
-                      <span className={s.symbol}>{p.symbol}</span>{' '}
-                      <span className="muted">
-                        {p.side} · {Math.round(p.nominalLeverage)}x
-                      </span>
-                    </th>
-                    <td className="num">{fmt.size(p.size, p.sizeDecimals)}</td>
-                    <td className="num">{fmt.usd(p.entry)}</td>
-                    <td className="num">{fmt.usd(p.mark)}</td>
-                    <td className="num liq">{fmt.usd(p.liquidation)}</td>
-                    <td className="num airbag">{p.line === undefined ? '—' : fmt.usd(p.line)}</td>
-                    <td className={s.runwayCol}>
-                      <Runway liquidation={p.liquidation} line={p.line} mark={p.mark} size="sm" />
-                    </td>
-                    <td className="num">{fmt.pct(p.distance)}</td>
-                    <td>
-                      <RowAnnunciator status={p.status} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {others.length > 0 && (
-            <ul className={s.cards}>
-              {others.map((p) => (
-                <li key={p.marketId} className={s.miniCard} aria-label={label(p)}>
-                  <div className={s.miniHead}>
-                    <span>
-                      <span className={s.symbol}>{p.symbol}</span>{' '}
-                      <span className="muted">
-                        {p.side} · {Math.round(p.nominalLeverage)}x
-                      </span>
-                    </span>
-                    <span className="num">{fmt.pct(p.distance)}</span>
-                  </div>
-                  <Runway liquidation={p.liquidation} line={p.line} mark={p.mark} size="sm" />
-                  <div className={`num ${s.miniLabels}`}>
-                    <span className="liq">Liq {fmt.usd(p.liquidation)}</span>
-                    {p.line !== undefined ? (
-                      <span className="airbag">Airbag {fmt.usd(p.line)}</span>
-                    ) : (
-                      <span className="faint">Not covered</span>
-                    )}
-                    <span>Mark {fmt.usd(p.mark)}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
+        <ul className={`well ${s.runways}`}>
+          {data.positions.map((p) => (
+            <li key={p.marketId} className={s.runwayRow}>
+              <div className={s.runwayHead}>
+                <h3 className={s.posName}>
+                  <span className={s.symbol}>{p.symbol}</span> {p.side} ·{' '}
+                  <span className="num">{Math.round(p.nominalLeverage)}x</span>
+                </h3>
+                <span className="num muted">
+                  {fmt.size(p.size, p.sizeDecimals)} {p.symbol}
+                </span>
+                <RowAnnunciator status={p.status} />
+                <p className={s.posDistance}>
+                  <Readout className={`num ${s.posPct}`} value={fmt.pct(p.distance)} />
+                  <span className="faint">to liquidation</span>
+                </p>
+              </div>
+              <Runway
+                liquidation={p.liquidation}
+                line={p.line}
+                mark={p.mark}
+                entry={p.entry}
+                near={isNear(p, data.settings)}
+              />
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );
@@ -250,8 +204,8 @@ export function BlockStrip({ tape }: { tape: Dashboard['tape'] }) {
   const head = tape.at(-1)?.block ?? 0;
   const first = tape[0]?.block;
   return (
-    <section className={s.strip} aria-labelledby="tape-title">
-      <div className={s.stripHead}>
+    <section aria-labelledby="tape-title">
+      <div className={s.sectionHead}>
         <h2 id="tape-title" className="title">
           Every block, checked
         </h2>
@@ -307,9 +261,9 @@ export function deployTitle(d: DeployDetail): string {
 }
 
 /**
- * The intervention: the deploy card that replaces the flight display while Airbag acts and for
- * ten minutes after. The tape shows the envelope moving (the old liquidation stays as a dashed
- * ghost), the readouts show before and after, and the block log prints each step as it lands.
+ * The intervention: the flight display in its deploy state, shown while Airbag acts and for ten
+ * minutes after. The bezel takes the hazard stripe; on the tape the envelope moves, with the old
+ * liquidation and the old line left as dashed ghosts. The block log prints each step as it lands.
  */
 export function InterventionDisplay({ d, p }: { d: DeployDetail; p: PositionView | undefined }) {
   const t = d.data.timeline;
@@ -319,9 +273,11 @@ export function InterventionDisplay({ d, p }: { d: DeployDetail; p: PositionView
   const b = d.data.before;
   const after = d.data.after;
   const moved = p !== undefined && Math.abs(p.liquidation - b.liquidation) > 1e-9;
+  const was = d.data.trigger.line;
+  const rearmed = p?.line !== undefined && Math.abs(p.line - was) > 1e-9;
+  const distance = after ? after.distance : b.distance;
   return (
-    <section className={`${s.pfd} ${s.intervention} redraw`} aria-labelledby="deploy-title">
-      <div className={`hazard ${s.hazardEdge}`} aria-hidden="true" />
+    <section className={`${s.pfd} redraw`} aria-labelledby="deploy-title">
       <header className={s.interHead}>
         <div className={s.interTitle}>
           <h2 id="deploy-title" className={`display ${s.interH}`}>
@@ -336,38 +292,39 @@ export function InterventionDisplay({ d, p }: { d: DeployDetail; p: PositionView
           </p>
         )}
       </header>
-      <div className={s.pfdBody}>
+      <div className={`well ${s.display} ${s.deployed} ${p ? '' : s.noTape}`}>
+        <div className={`hazard ${s.hazardEdge}`} aria-hidden="true" />
         {p && (
-          <div className={`well ${s.tapeWell}`}>
+          <div className={s.tapeCol}>
             <Tape
               side={p.side}
               liquidation={p.liquidation}
               line={p.line}
               mark={p.mark}
               ghost={moved ? b.liquidation : undefined}
-              height={340}
+              ghostLine={rearmed ? was : undefined}
+              height={360}
             />
           </div>
         )}
         <div className={s.readouts}>
-          <dl className={s.beforeAfter}>
-            <BeforeAfter
-              k="Liquidation"
-              before={fmt.usd(b.liquidation)}
-              after={
-                after
-                  ? after.liquidation === null
-                    ? 'Closed'
-                    : fmt.usd(after.liquidation)
-                  : undefined
-              }
-              tone="liq"
-            />
-            <BeforeAfter
-              k="To liquidation"
-              before={fmt.pct(b.distance)}
-              after={after ? fmt.pct(after.distance) : undefined}
-            />
+          <div className={s.distance}>
+            <span className="label">To liquidation</span>
+            <span className={`big ${s.bigNum}`}>
+              {distance === null ? (
+                'Closed'
+              ) : (
+                <>
+                  <Readout value={(distance * 100).toFixed(2)} />
+                  <span className={s.pctSign}>%</span>
+                </>
+              )}
+            </span>
+            <span className={`num ${s.was}`}>
+              {after ? <>was {fmt.pct(b.distance)}</> : 'Deploying'}
+            </span>
+          </div>
+          <dl className={s.changes}>
             <BeforeAfter
               k="Size"
               before={fmt.size(b.size, d.sizeDecimals)}
@@ -403,24 +360,22 @@ export function InterventionDisplay({ d, p }: { d: DeployDetail; p: PositionView
         </div>
       </div>
       <div className={s.logWrap}>
-        <span className="label">Block log</span>
+        <h3 className="title">Block log</h3>
         <BlockLog entries={t} explorerUrl={d.explorerUrl} simulated={d.simulated} />
       </div>
     </section>
   );
 }
 
-/** A readout that changed: the old value faint, the new one lit. Pending shows a lamp. */
+/** A value that changed: the old one faint, the new one lit. Pending until the fill lands. */
 function BeforeAfter({
   k,
   before,
   after,
-  tone,
 }: {
   k: string;
   before: string;
   after: string | undefined;
-  tone?: 'liq';
 }) {
   return (
     <div>
@@ -431,11 +386,7 @@ function BeforeAfter({
           →
         </span>
         <span className="visually-hidden"> to </span>
-        {after === undefined ? (
-          <span className={`faint ${s.pending}`}>pending</span>
-        ) : (
-          <span className={tone === 'liq' ? 'liq' : undefined}>{after}</span>
-        )}
+        {after === undefined ? <span className="faint">pending</span> : <span>{after}</span>}
       </dd>
     </div>
   );
@@ -447,7 +398,7 @@ export function KeepsFalling({ d, p }: { d: DeployDetail; p: PositionView | unde
   const old = d.data.before.liquidation;
   const withAirbag = equity(p.position, old);
   return (
-    <section className={s.keeps} aria-labelledby="keeps-falling">
+    <section className={s.section} aria-labelledby="keeps-falling">
       <h2 id="keeps-falling" className="title">
         If {d.symbol} keeps {sideWord(d.side)}
       </h2>
@@ -781,7 +732,7 @@ export function SimControls({ symbols }: { symbols: string[] }) {
     }
   };
   return (
-    <section className={s.sim} aria-labelledby="sim-controls">
+    <section className={s.section} aria-labelledby="sim-controls">
       <div className={s.sectionHead}>
         <h2 id="sim-controls" className="title">
           Simulation controls

@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { EIP1193Provider } from 'viem';
-import { Check, Chevron } from '@/components/icons.tsx';
+import { Check, Chevron, Wallet } from '@/components/icons.tsx';
 import { Annunciator } from '@/components/instruments.tsx';
 import { Runway } from '@/components/Runway.tsx';
 import { ApiError, api, useEngineConfig } from '@/lib/api.ts';
@@ -136,7 +136,7 @@ export default function ConnectPage() {
       )}
 
       {data && !data.account && (
-        <div className={s.panel}>
+        <div className={`well ${s.panel}`}>
           <div className={s.panelBody}>
             <h2 className="title">No Perpl account for this wallet</h2>
             <p className="muted">
@@ -153,7 +153,7 @@ export default function ConnectPage() {
       )}
 
       {data?.account && (
-        <section className={s.panel} aria-labelledby="found">
+        <section className={`well ${s.panel}`} aria-labelledby="found">
           <div className={s.panelHead}>
             <h2 id="found" className="title">
               Found your Perpl account <span className="num faint">#{data.account.id}</span>
@@ -250,7 +250,7 @@ function WalletPicker({
     );
   if (wallets.length === 0) {
     return (
-      <div className={s.panel}>
+      <div className={`well ${s.panel}`}>
         <div className={s.panelBody}>
           <h2 className="title">No browser wallet found</h2>
           <p className="muted">
@@ -272,7 +272,7 @@ function WalletPicker({
             disabled={busy !== undefined}
           >
             {/* biome-ignore lint/performance/noImgElement: EIP-6963 icons are data URIs from the wallet */}
-            {w.icon ? <img src={w.icon} alt="" /> : <span className={s.walletBlank} />}
+            {w.icon ? <img src={w.icon} alt="" /> : <Wallet className={s.walletBlank} />}
             <span>{busy === w.id ? 'Check your wallet…' : `Connect ${w.name}`}</span>
             <Chevron className={s.walletChev} />
           </button>

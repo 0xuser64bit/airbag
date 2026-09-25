@@ -20,16 +20,16 @@
   color: var(--text-2);
 }
 
-/* Key and session, with a guarded unlink. */
+/* Key and session, under a rule, with a guarded unlink. */
 .key {
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
+  padding-top: var(--s-6);
+  border-top: 1px solid var(--line);
+}
+.key > * {
   max-width: 720px;
-  padding: var(--s-5);
-  border: 1px solid var(--line);
-  border-radius: var(--r-panel);
-  background: var(--panel);
 }
 .keyHead {
   display: flex;
@@ -62,12 +62,6 @@
   background: var(--raised);
   font-size: 14px;
   line-height: 1.5;
-  animation: redraw var(--t-panel) var(--ease) both;
-}
-@keyframes redraw {
-  from {
-    clip-path: inset(0 0 100% 0);
-  }
 }
 .danger {
   border-color: var(--bone);

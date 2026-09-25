@@ -10,15 +10,13 @@ export function BlockLog({
   entries,
   explorerUrl,
   simulated,
-  compact = false,
 }: {
   entries: TimelineEntry[];
   explorerUrl: string;
   simulated: boolean;
-  compact?: boolean;
 }) {
   return (
-    <ol className={`${s.log} ${compact ? s.compact : ''}`}>
+    <ol className={s.log}>
       {entries.map((e, i) => (
         <li
           key={`${e.at}-${e.text}`}

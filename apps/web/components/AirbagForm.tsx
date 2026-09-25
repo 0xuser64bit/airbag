@@ -321,7 +321,7 @@ export function AirbagForm(props: AirbagFormProps) {
         </div>
       </form>
 
-      <aside className={s.preview} aria-live="polite">
+      <aside className={`well ${s.preview}`} aria-live="polite">
         <div className={s.previewHead}>
           <h2 className="title">
             {sample ? 'Preview on a sample position' : `Preview on your ${symbol} ${pos.side}`}
@@ -331,7 +331,7 @@ export function AirbagForm(props: AirbagFormProps) {
             {Math.round(view?.nominalLeverage ?? SAMPLE.nominalLeverage)}x · mark {fmt.usd(mark)}
           </p>
         </div>
-        <div className={`well ${s.tapeWell}`}>
+        <div className={s.tapeWell}>
           <Tape
             side={pos.side}
             liquidation={liq}

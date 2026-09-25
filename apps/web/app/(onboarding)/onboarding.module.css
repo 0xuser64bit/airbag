@@ -175,12 +175,10 @@
   }
 }
 
+/* What the chain says about this wallet, read out on glass. */
 .panel {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--line);
-  border-radius: var(--r-panel);
-  background: var(--panel);
 }
 .panelHead {
   display: flex;
@@ -224,8 +222,6 @@
 }
 .risk {
   max-width: 600px;
-  padding-left: var(--s-4);
-  border-left: 1px solid var(--liq);
   font-size: 17px;
   line-height: 1.55;
   text-wrap: pretty;
@@ -236,10 +232,9 @@
   justify-content: space-between;
   align-items: center;
   gap: var(--s-4);
-  padding: 10px 10px 10px 18px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-panel);
-  background: var(--panel);
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
   flex-wrap: wrap;
 }
 .connectedWho {
@@ -249,13 +244,12 @@
   font-size: 14px;
 }
 
+/* Wallets to choose from: rows cut by rules on the face. */
 .walletList {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--line);
-  border-radius: var(--r-panel);
-  background: var(--panel);
-  overflow: hidden;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 .walletList li + li {
   border-top: 1px solid var(--line);
@@ -277,7 +271,7 @@
   transition: background-color var(--t-fast) var(--ease);
 }
 .walletBtn:hover:not(:disabled) {
-  background: var(--raised);
+  background: var(--unlit);
 }
 .walletBtn:disabled {
   opacity: 0.5;
@@ -291,7 +285,7 @@
   flex-shrink: 0;
 }
 .walletBlank {
-  border: 1px solid var(--line-strong);
+  color: var(--text-2);
 }
 .walletChev {
   margin-left: auto;
@@ -401,14 +395,13 @@
   font-size: 13px;
 }
 
+/* What the key can and can't do: a side bay behind a rule. */
 .sideCard {
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
-  padding: var(--s-5);
-  border: 1px solid var(--line);
-  border-radius: var(--r-panel);
-  background: var(--panel);
+  padding-left: var(--s-6);
+  border-left: 1px solid var(--line);
 }
 .can,
 .cant {
@@ -464,6 +457,10 @@
   }
   .sideCard {
     max-width: 720px;
+    padding-left: 0;
+    padding-top: var(--s-6);
+    border-left: 0;
+    border-top: 1px solid var(--line);
   }
 }
 @media (max-width: 640px) {

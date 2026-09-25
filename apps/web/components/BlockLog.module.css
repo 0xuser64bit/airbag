@@ -58,17 +58,6 @@
 }
 
 /* Compact: time, then the text; the block number goes. */
-.compact .row {
-  grid-template-columns: 84px minmax(0, 1fr);
-  gap: var(--s-3);
-}
-.compact .block {
-  display: none;
-}
-.compact .tx {
-  grid-column: 2;
-}
-
 @media (max-width: 760px) {
   .row {
     grid-template-columns: 84px minmax(0, 1fr);

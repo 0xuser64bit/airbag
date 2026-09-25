@@ -63,9 +63,11 @@ test('onboarding to a deploy and a save, as a trader would', async ({ page, wall
   await expect(page.getByText('Saved', { exact: true }).first()).toBeVisible({ timeout: 15_000 });
   await checkA11y(page, 'dashboard after a deploy');
   // The wick ends back at $100,000 (entry and mark), where the design measures the save.
-  await expect(page.getByRole('row', { name: /BTC long/ })).toContainText(/\$100,000\s*\$100,000/, {
-    timeout: 20_000,
-  });
+  const btc = page
+    .getByRole('listitem')
+    .filter({ has: page.getByRole('heading', { name: /BTC long/ }) });
+  await expect(btc).toContainText('MARK $100,000', { timeout: 20_000 });
+  await expect(btc).toContainText('ENTRY $100,000');
 
   // 6. The deploy's page and its public save report.
   await page

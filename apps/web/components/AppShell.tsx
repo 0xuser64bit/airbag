@@ -1,7 +1,7 @@
 'use client';
 
-// The signed-in app's frame: the masthead, an annunciator strip (protection, mode, feed), the
-// page, and a tab bar on phones. It owns the live stream so every page shares one connection
+// The signed-in app's frame: the masthead, an annunciator strip (protection, mode, key, feed),
+// the page, and a tab bar on phones. It owns the live stream so every page shares one connection
 // to the engine.
 
 import { fmt } from '@airbag/risk';
@@ -9,11 +9,11 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useSession } from '@/lib/session.ts';
-import type { Settings } from '@/lib/types.ts';
+import type { Dashboard, Settings } from '@/lib/types.ts';
 import { type Live, useDashboard } from '@/lib/useDashboard.ts';
 import s from './AppShell.module.css';
 import { DeploysIcon, ListIcon, Sliders } from './icons.tsx';
-import { Annunciator, Readout, StatusAnnunciator, useFresh } from './instruments.tsx';
+import { Annunciator, type Lamp, Readout, StatusAnnunciator, useFresh } from './instruments.tsx';
 import { Page } from './Page.tsx';
 import { Brand, SimBanner } from './ui.tsx';
 
@@ -36,11 +36,22 @@ const NAV = [
   { href: '/app/settings', label: 'Settings', icon: Sliders, exact: false },
 ] as const;
 
-/** "Balanced · 10% · max 50%": the mode Airbag is flying in. */
-export function modeText(st: Settings): string {
+/** "Balanced · 10% · max 50%": the mode Airbag is flying in. Short drops the cap, for phones. */
+export function modeText(st: Settings, short = false): string {
   if (!st.armed) return 'Paused';
-  if (st.demo) return 'Demo · 0.3% move';
-  return `${st.sensitivity} · ${st.targetPct}% · max ${st.maxTrimPct}%`;
+  if (st.demo) return short ? 'Demo' : 'Demo · 0.3% move';
+  return `${st.sensitivity} · ${st.targetPct}%${short ? '' : ` · max ${st.maxTrimPct}%`}`;
+}
+
+/** The key lamp: OK while Perpl accepts it, inverted when the trader has to fix something. */
+function keyLamp(data: Dashboard): [Lamp, string] {
+  const key = data.key;
+  if (!key) return ['off', 'None'];
+  if (key.state === 'rejected') return ['alert', 'Rejected'];
+  if (key.state === 'limited') return ['alert', 'Conn. limit'];
+  if (data.account && !data.account.forwarding) return ['alert', 'One-Click off'];
+  if (key.state === 'live') return ['on', 'OK'];
+  return ['off', 'Connecting'];
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -61,6 +72,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const reconnecting = !!data && !live.connected;
   const mode = data ? modeText(data.settings) : '';
   const modeFresh = useFresh(mode);
+  const [keyState, keyText]: [Lamp, string] = data ? keyLamp(data) : ['off', ''];
+  const keyFresh = useFresh(data ? keyText : undefined);
   const feedFresh = useFresh(reconnecting || data?.block.stale);
 
   return (
@@ -110,10 +123,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             )}
           </div>
           {data && (
-            <div className={`${s.cell} ${s.modeCell}`}>
+            <div className={s.cell}>
               <span className="label">Mode</span>
               <Annunciator state={data.settings.armed ? 'on' : 'off'} fresh={modeFresh}>
-                {mode}
+                <span className={s.long}>{mode}</span>
+                <span className={s.short}>{modeText(data.settings, true)}</span>
+              </Annunciator>
+            </div>
+          )}
+          {data && (
+            <div className={s.cell}>
+              <span className="label">Key</span>
+              <Annunciator state={keyState} fresh={keyFresh}>
+                {keyText}
               </Annunciator>
             </div>
           )}

@@ -70,7 +70,7 @@ export default function DeploysPage() {
       )}
 
       {loading && !data && (
-        <div className={s.log} aria-busy="true">
+        <div className={`well ${s.log}`} aria-busy="true">
           <p className="visually-hidden" role="status">
             Loading the deploy log
           </p>
@@ -94,7 +94,7 @@ export default function DeploysPage() {
       )}
 
       {data && data.length === 0 && (
-        <div className={s.empty}>
+        <div className={`well ${s.empty}`}>
           <h2 className="title">No deploys yet</h2>
           <p className="muted">
             When Airbag acts, each deploy is logged here: what it trimmed or added, the fill, the
@@ -108,7 +108,7 @@ export default function DeploysPage() {
       )}
 
       {rows && rows.length > 0 && (
-        <ol className={s.log}>
+        <ol className={`well ${s.log}`}>
           {rows.map((d) => (
             <li key={d.id}>
               <Link href={`/app/deploys/${d.id}`} className={s.row}>

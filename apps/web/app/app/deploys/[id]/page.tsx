@@ -1,14 +1,17 @@
 'use client';
 
-// One deploy: what it did, before and after, and the block log.
+// One deploy: the display frozen at the moment it finished (the tape with the old line and the
+// old liquidation left as ghosts, what changed beside it), then the block log.
 
 import { fmt } from '@airbag/risk';
 import Link from 'next/link';
 import { use, useEffect } from 'react';
 import { BlockLog } from '@/components/BlockLog.tsx';
+import ds from '@/components/dashboard.module.css';
 import { deployTitle } from '@/components/dashboard.tsx';
 import { Back, External } from '@/components/icons.tsx';
 import { OutcomeAnnunciator } from '@/components/instruments.tsx';
+import { Tape } from '@/components/Tape.tsx';
 import { TxLink } from '@/components/ui.tsx';
 import { useApi } from '@/lib/api.ts';
 import type { DeployDetail } from '@/lib/types.ts';
@@ -54,6 +57,7 @@ export default function DeployPage({ params }: { params: Promise<{ id: string }>
   const t = d.data.timeline;
   const first = t[0];
   const last = t.at(-1);
+  const closed = after?.liquidation === null;
   return (
     <article className={s.detail}>
       <div className={s.detailTop}>
@@ -63,7 +67,6 @@ export default function DeployPage({ params }: { params: Promise<{ id: string }>
         </Link>
         <OutcomeAnnunciator d={d} />
       </div>
-      <div className="hazard" aria-hidden="true" />
       <header className={s.detailHead}>
         <h1 className={`display ${s.detailH1}`}>{deployTitle(d)}</h1>
         <p className={`num ${s.meta}`}>
@@ -81,8 +84,25 @@ export default function DeployPage({ params }: { params: Promise<{ id: string }>
         )}
       </header>
 
-      <div className={s.detailGrid}>
-        <section aria-labelledby="changed">
+      <section
+        className={`well ${ds.display} ${ds.deployed} ${closed ? ds.noTape : ''}`}
+        aria-labelledby="changed"
+      >
+        <div className={`hazard ${ds.hazardEdge}`} aria-hidden="true" />
+        {!closed && (
+          <div className={ds.tapeCol}>
+            <Tape
+              side={d.side}
+              liquidation={after?.liquidation ?? b.liquidation}
+              line={after?.line ?? undefined}
+              mark={d.data.trigger.mark}
+              ghost={after ? b.liquidation : undefined}
+              ghostLine={after?.line != null ? d.data.trigger.line : undefined}
+              height={340}
+            />
+          </div>
+        )}
+        <div className={s.facts}>
           <h2 id="changed" className="title">
             Before and after
           </h2>
@@ -154,14 +174,15 @@ export default function DeployPage({ params }: { params: Promise<{ id: string }>
               </div>
             )}
           </dl>
-        </section>
-        <section aria-labelledby="log">
-          <h2 id="log" className="title">
-            Block log
-          </h2>
-          <BlockLog entries={t} explorerUrl={d.explorerUrl} simulated={d.simulated} compact />
-        </section>
-      </div>
+        </div>
+      </section>
+
+      <section className={s.logSection} aria-labelledby="log">
+        <h2 id="log" className="title">
+          Block log
+        </h2>
+        <BlockLog entries={t} explorerUrl={d.explorerUrl} simulated={d.simulated} />
+      </section>
 
       <div className={s.detailActions}>
         {d.outcome === 'save' && (

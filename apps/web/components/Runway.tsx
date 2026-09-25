@@ -1,13 +1,15 @@
 'use client';
 
-// The Runway: the tape laid flat, for lists and small screens. A red tick at liquidation, a
-// yellow tick at the Airbag line, the hatched zone between them, a bone dot for the mark, dashed
-// ticks for entry and for the old liquidation price after a deploy. Labels are measured and kept
-// apart, so they never print over each other however close the prices get.
+// The Runway: the tape laid flat, one per position. Price rises to the right. A red band runs
+// from liquidation to the losing end, the hatched zone lies between liquidation and the Airbag
+// line, a yellow bug marks the line, and a bone box reads the mark. Dashed ticks mark entry and,
+// after a deploy, the old liquidation price. Labels are measured and kept apart, so they never
+// print over each other however close the prices get.
 
 import { fmt } from '@airbag/risk';
 import { useLayoutEffect, useRef, useState } from 'react';
 import s from './Runway.module.css';
+import { domain } from './Tape.tsx';
 
 export interface RunwayProps {
   liquidation: number;
@@ -23,14 +25,14 @@ export interface RunwayProps {
 }
 
 /**
- * Track domain: liquidation, mark, entry and the ghost, padded by a sixth of their span each
- * side. With the worked example that's $93,000–$101,000, and moving the line doesn't rescale.
+ * Track position in percent, on the tape's domain: liquidation, mark, entry and the ghost, with
+ * room for the red band beyond liquidation. With the worked example that's $90,000–$101,000,
+ * and moving the line doesn't rescale. An open position's liquidation is always on its losing
+ * side of the mark, so the side needs no prop.
  */
-function scale(points: number[]) {
-  const lo = Math.min(...points);
-  const hi = Math.max(...points);
-  const pad = (hi - lo) / 6 || Math.abs(hi) * 0.01 || 1;
-  return (p: number) => Math.min(100, Math.max(0, ((p - lo + pad) / (hi - lo + 2 * pad)) * 100));
+function scale(points: number[], liquidation: number, mark: number) {
+  const [lo, hi] = domain(points, liquidation < mark ? 'long' : 'short', liquidation);
+  return (p: number) => Math.min(100, Math.max(0, ((p - lo) / (hi - lo)) * 100));
 }
 
 interface Label {
@@ -99,18 +101,24 @@ export function Runway({
   const els = useRef(new Map<string, HTMLSpanElement>());
   const [measure, setMeasure] = useState<{ width: number; w: Record<string, number> }>();
 
-  const x = scale([
+  const x = scale(
+    [
+      liquidation,
+      mark,
+      ...(entry === undefined ? [] : [entry]),
+      ...(ghost === undefined ? [] : [ghost]),
+    ],
     liquidation,
     mark,
-    ...(entry === undefined ? [] : [entry]),
-    ...(ghost === undefined ? [] : [ghost]),
-  ]);
+  );
   const liq = x(liquidation);
+  const danger =
+    liquidation < mark ? { left: '0%', width: `${liq}%` } : { left: `${liq}%`, right: '0%' };
   const ln = line === undefined ? undefined : x(line);
   const mk = x(mark);
   const zone =
     ln === undefined ? undefined : { left: Math.min(liq, ln), width: Math.abs(ln - liq) };
-  const summary = `Liquidation ${fmt.usd(liquidation)}${line === undefined ? '' : `, Airbag line ${fmt.usd(line)}`}, mark ${fmt.usd(mark)}${ghost === undefined ? '' : `, liquidation was ${fmt.usd(ghost)}`}`;
+  const summary = `Liquidation ${fmt.usd(liquidation)}${line === undefined ? '' : `, Airbag line ${fmt.usd(line)}`}, mark ${fmt.usd(mark)}${entry === undefined ? '' : `, entry ${fmt.usd(entry)}`}${ghost === undefined ? '' : `, liquidation was ${fmt.usd(ghost)}`}`;
 
   const labels: Label[] =
     size === 'sm'
@@ -128,7 +136,7 @@ export function Runway({
                 },
               ]
             : []),
-          { id: 'mark', text: `MARK ${fmt.usd(mark)}`, x: mk, pri: 3 },
+          { id: 'mark', text: `MARK ${fmt.usd(mark)}`, x: mk, pri: 3, className: s.markText },
           ...(ghost !== undefined
             ? [
                 {
@@ -181,6 +189,7 @@ export function Runway({
   return (
     <div className={`${s.runway} ${s[size]}`}>
       <div ref={track} className={s.track} role="img" aria-label={summary}>
+        <div className={s.danger} style={danger} />
         {zone && (
           <div
             className={`${s.zone} ${near ? s.warm : ''}`}
@@ -209,7 +218,7 @@ export function Runway({
                 className={`num ${s.label} ${l.className ?? ''}`}
                 style={
                   p
-                    ? { left: p.left, top: p.row ? 20 : 0 }
+                    ? { left: p.left, top: p.row ? 24 : 0 }
                     : placed
                       ? { visibility: 'hidden' }
                       : { left: `${l.x}%`, transform: 'translateX(-50%)' }

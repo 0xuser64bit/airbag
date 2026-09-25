@@ -173,7 +173,7 @@
   flex-wrap: wrap;
 }
 
-/* The preview: the same instrument as the dashboard, drawn from the draft. */
+/* The preview: a display unit, the same tape as the dashboard, drawn from the draft. */
 .preview {
   grid-area: preview;
   position: sticky;
@@ -182,9 +182,6 @@
   flex-direction: column;
   gap: var(--s-4);
   padding: var(--s-5);
-  border: 1px solid var(--line);
-  border-radius: var(--r-panel);
-  background: var(--panel);
 }
 .previewHead {
   display: flex;
@@ -195,7 +192,10 @@
   font-size: 13px;
 }
 .tapeWell {
-  padding: 14px 12px 14px 0;
+  margin: 0 calc(-1 * var(--s-5));
+  padding: var(--s-4) var(--s-4) var(--s-4) var(--s-2);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 .dl {
   display: flex;
@@ -209,6 +209,9 @@
   padding: 9px 0;
   border-top: 1px solid var(--line);
   font-size: 14px;
+}
+.dl > div:first-child {
+  border-top: 0;
 }
 .dl dt {
   color: var(--text-2);
@@ -251,5 +254,8 @@
   }
   .preview {
     padding: var(--s-4);
+  }
+  .tapeWell {
+    margin: 0 calc(-1 * var(--s-4));
   }
 }

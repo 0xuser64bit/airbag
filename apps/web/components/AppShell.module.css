@@ -53,18 +53,18 @@
   font-size: 12px;
 }
 
-/* The annunciator strip: a darker rail of lamps under the masthead. */
+/* The annunciator strip: a darker rail of lamps under the masthead. Every lamp stays at every
+   width; the rail wraps to a second row before it drops one. */
 .strip {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 28px;
+  gap: 8px 28px;
   min-height: 48px;
-  padding: 8px var(--gutter);
+  padding: 10px var(--gutter);
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   background: var(--well);
-  overflow-x: auto;
-  scrollbar-width: none;
 }
 .cell {
   display: flex;
@@ -74,6 +74,9 @@
 }
 .cell > :global(.label) {
   color: var(--text-3);
+}
+.short {
+  display: none;
 }
 .block {
   font-size: 12px;
@@ -136,12 +139,6 @@
   display: none;
 }
 
-@media (max-width: 1100px) {
-  .modeCell {
-    display: none;
-  }
-}
-
 /* Phone: the masthead keeps the brand; the strip keeps protection and feed; tabs move down. */
 @media (max-width: 760px) {
   .masthead {
@@ -152,11 +149,15 @@
     display: none;
   }
   .strip {
-    gap: var(--s-4);
+    gap: 8px 18px;
     min-height: 44px;
   }
-  .age {
+  .age,
+  .long {
     display: none;
+  }
+  .short {
+    display: inline;
   }
   .body {
     padding: 16px 16px calc(96px + env(safe-area-inset-bottom));
@@ -196,11 +197,5 @@
     color: var(--bone);
     font-weight: 600;
     box-shadow: inset 0 2px 0 var(--bone);
-  }
-}
-
-@media (max-width: 480px) {
-  .cell > :global(.label) {
-    display: none;
   }
 }

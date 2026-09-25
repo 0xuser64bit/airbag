@@ -130,3 +130,17 @@ export const Sliders = ({ size = 22, color = 'currentColor', className }: P) =>
     </>,
     className,
   );
+
+/** A wallet that announced no icon of its own. */
+export const Wallet = ({ size = 28, color = 'currentColor', className }: P) =>
+  svg(
+    size,
+    color,
+    1.6,
+    <>
+      <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H17a1 1 0 0 1 1 1v2" />
+      <path d="M4 7.5V17a2 2 0 0 0 2 2h13a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H6.5A2.5 2.5 0 0 1 4 7.5Z" />
+      <path d="M16 13.5h.01" />
+    </>,
+    className,
+  );

@@ -1,7 +1,8 @@
 'use client';
 
-// The dashboard: the primary flight display for the closest position (the deploy card for ten
-// minutes after Airbag acts), the positions ledger, the per-block strip, and the side panel.
+// The dashboard, one panel: the primary flight display for the closest position (in its deploy
+// state for ten minutes after Airbag acts), a runway per position and the per-block strip in the
+// main bay; mode, key and deploys in the side bay.
 
 import { useEffect, useState } from 'react';
 import { useLive } from '@/components/AppShell.tsx';
@@ -14,7 +15,7 @@ import {
   KeepsFalling,
   KeyHealth,
   PausedBanner,
-  PositionsLedger,
+  Positions,
   RecentDeploys,
   SimControls,
   StatusBanner,
@@ -44,7 +45,6 @@ export default function DashboardPage() {
 
   const [first] = data.positions;
   const deployed = detail ? data.positions.find((p) => p.marketId === detail.marketId) : undefined;
-  const lead = detail ? deployed : first;
 
   return (
     <div className={s.grid}>
@@ -57,18 +57,16 @@ export default function DashboardPage() {
         ) : (
           first && <FlightDisplay p={first} settings={data.settings} />
         )}
-        <PositionsLedger data={data} {...(lead ? { exclude: lead.marketId } : {})} />
+        <Positions data={data} />
         <BlockStrip tape={data.tape} />
       </div>
       <aside className={s.aside} aria-label="Airbag, key and deploys">
         {detail?.phase === 'done' && detail.kind === 'trim' && (
           <KeepsFalling d={detail} p={deployed} />
         )}
-        <div className={s.sidePanel}>
-          <AirbagSummary settings={data.settings} slippageBps={config.data?.slippageBps} />
-          <KeyHealth data={data} now={now} perplUrl={config.data?.perplUrl} />
-          <RecentDeploys deploys={data.deploys} />
-        </div>
+        <AirbagSummary settings={data.settings} slippageBps={config.data?.slippageBps} />
+        <KeyHealth data={data} now={now} perplUrl={config.data?.perplUrl} />
+        <RecentDeploys deploys={data.deploys} />
         {data.mode === 'simulation' && (
           <SimControls symbols={config.data?.markets.map((m) => m.symbol) ?? []} />
         )}

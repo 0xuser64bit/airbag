@@ -51,7 +51,7 @@ export default async function SavePage({ params }: Props) {
             <span className="ann" data-state="airbag">
               Saved
             </span>
-            <p className={`big airbag ${s.kept}`}>{fmt.usd(save.kept)}</p>
+            <p className={`big airbag redraw ${s.kept}`}>{fmt.usd(save.kept)}</p>
             <h1 className={`display ${s.claim}`}>kept versus a liquidation</h1>
             <p className={s.story}>
               {save.symbol} hit the old liquidation price,{' '}
