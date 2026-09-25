@@ -114,6 +114,10 @@
   max-width: 720px;
   min-width: 0;
 }
+/* A one-column step (connect) sits in the middle of the page. */
+main > .content {
+  margin-inline: auto;
+}
 .withAside {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;

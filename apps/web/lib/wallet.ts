@@ -39,10 +39,10 @@ export function discoverWallets(onChange: (wallets: WalletOption[]) => void): ()
   window.dispatchEvent(new Event('eip6963:requestProvider'));
   const fallback = setTimeout(() => {
     const injected = (window as unknown as { ethereum?: EIP1193Provider }).ethereum;
-    if (found.size === 0 && injected) {
+    if (found.size === 0 && injected)
       found.set('injected', { id: 'injected', name: 'Browser wallet', provider: injected });
-      onChange([...found.values()]);
-    }
+    // Always answer, so a browser with no wallet hears "none found" instead of waiting forever.
+    onChange([...found.values()]);
   }, 300);
   return () => {
     clearTimeout(fallback);
