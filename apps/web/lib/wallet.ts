@@ -4,6 +4,7 @@
 // requests, and Sign-In with Ethereum (EIP-4361). No wallet SDK, no project id.
 
 import { createWalletClient, custom, type EIP1193Provider, getAddress } from 'viem';
+import type { PrivateKeyAccount } from 'viem/accounts';
 import { createSiweMessage } from 'viem/siwe';
 import { api } from './api.ts';
 import { type Session, saveSession } from './session.ts';
@@ -49,6 +50,31 @@ export function discoverWallets(onChange: (wallets: WalletOption[]) => void): ()
     window.removeEventListener('eip6963:announceProvider', onAnnounce);
   };
 }
+
+let testAccount: PrivateKeyAccount | undefined;
+
+/**
+ * Simulation only: a throwaway key held by this page, so connect and Sign-In with Ethereum run
+ * for real in a browser without a wallet extension. A reload makes a new one.
+ */
+export const testWallet: WalletOption = {
+  id: 'test',
+  name: 'a test wallet',
+  provider: {
+    async request({ method, params }: { method: string; params?: unknown[] }) {
+      // Loaded on first use, so a live-mode browser never downloads a signer.
+      const { generatePrivateKey, privateKeyToAccount } = await import('viem/accounts');
+      testAccount ??= privateKeyToAccount(generatePrivateKey());
+      if (method === 'eth_requestAccounts' || method === 'eth_accounts')
+        return [testAccount.address];
+      if (method === 'personal_sign')
+        return testAccount.signMessage({ message: { raw: params?.[0] as `0x${string}` } });
+      throw Object.assign(new Error(`The test wallet can’t do ${method}.`), { code: 4200 });
+    },
+    on() {},
+    removeListener() {},
+  } as unknown as EIP1193Provider,
+};
 
 export async function requestAddress(provider: EIP1193Provider): Promise<`0x${string}`> {
   const accounts = (await provider.request({ method: 'eth_requestAccounts' })) as string[];

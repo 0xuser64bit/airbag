@@ -46,7 +46,7 @@ pnpm dev:engine    # the engine in simulation mode on :8787
 pnpm dev:web       # the app on :3000
 ```
 
-Open http://localhost:3000. With an injected wallet (Rabby, MetaMask), connect, sign in, use "Use a test key", arm, and press "Play a wick on BTC" on the dashboard: the engine trims, re-adds, re-arms and records a save, and the save report has a share card. Everything is labelled as simulated.
+Open http://localhost:3000/connect. Pick "Connect a test wallet" (a throwaway key in the page, simulation only; any injected wallet such as Rabby or MetaMask works too), sign in, use "Use a test key", arm, and press "Play a wick on BTC" on the dashboard: the engine trims, re-adds, re-arms and records a save, and the save report has a share card. Everything is labelled as simulated. The simulated prices are shared by every account on the engine; "Reset account" on the dashboard puts them back to the start.
 
 To run against Perpl testnet, set `ENGINE_MODE=live` and a `MASTER_KEY` (see `.env.example`), and link a Trade key whose allow-list includes your IP.
 

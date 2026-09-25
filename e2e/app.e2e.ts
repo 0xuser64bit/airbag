@@ -106,6 +106,17 @@ test('a phone gets the tab bar and no sideways scrolling', async ({ page, wallet
   expect(wallet).toMatch(/^0x/);
 });
 
+test('without a wallet extension, simulation offers a test wallet that signs in', async ({
+  page,
+}) => {
+  // No injected wallet here: the list only shows once discovery gives up on finding one.
+  await page.goto('/connect');
+  await page.getByRole('button', { name: 'Connect a test wallet' }).click();
+  await expect(page.getByText(/Found your Perpl account/)).toBeVisible();
+  await page.getByRole('button', { name: 'Link a Perpl key' }).click();
+  await expect(page).toHaveURL(/\/link-key$/);
+});
+
 test('private pages send a signed-out visitor to connect; unknown saves 404', async ({ page }) => {
   await page.goto('/app');
   await expect(page).toHaveURL(/\/connect$/);

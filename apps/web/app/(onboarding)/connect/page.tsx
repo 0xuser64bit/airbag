@@ -18,6 +18,7 @@ import {
   discoverWallets,
   requestAddress,
   signIn,
+  testWallet,
   type WalletOption,
   walletError,
 } from '@/lib/wallet.ts';
@@ -108,7 +109,13 @@ export default function ConnectPage() {
       </div>
 
       {!address ? (
-        <WalletPicker wallets={wallets} busy={busy} onPick={connect} />
+        <WalletPicker
+          wallets={
+            config.data?.mode === 'simulation' && wallets ? [...wallets, testWallet] : wallets
+          }
+          busy={busy}
+          onPick={connect}
+        />
       ) : (
         <div className={s.connected}>
           <div className={s.connectedWho}>
