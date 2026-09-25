@@ -21,8 +21,6 @@ test('onboarding to a deploy and a save, as a trader would', async ({ page, wall
     page.getByText(`${wallet.slice(0, 6)}…${wallet.slice(-4)}`, { exact: false }),
   ).toBeVisible();
   await expect(page.getByText(/Found your Perpl account/)).toBeVisible();
-  await expect(page.getByText('5.45%', { exact: false }).first()).toBeVisible();
-  await checkA11y(page, 'connect');
 
   // 2. Sign in with Ethereum on the way to linking a key.
   await page.getByRole('button', { name: 'Link a Perpl key' }).click();
@@ -33,8 +31,30 @@ test('onboarding to a deploy and a save, as a trader would', async ({ page, wall
   await page.getByRole('button', { name: 'Verify key' }).click();
   await expect(page.getByText(/Key verified/)).toBeVisible();
 
+  // 2b. Reset the shared simulation to its baseline. A wick from an earlier run (or a
+  // retry of this journey) leaves BTC at $100,000; only a fresh engine sits at $99,420.
+  // A signed-in wallet counts as connected, so connect shows the baseline right away.
+  await page.evaluate(async () => {
+    const s = JSON.parse(localStorage.getItem('airbag.session') ?? '{}') as { token?: string };
+    const res = await fetch('http://localhost:8787/v1/sim/reset', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${s.token ?? ''}` },
+    });
+    if (!res.ok) throw new Error(`sim reset failed: ${res.status}`);
+  });
+  await page.goto('/connect');
+  await expect(page.getByText('5.45%', { exact: false }).first()).toBeVisible();
+  // The key button is disabled until the engine config loads; axe would grade its
+  // deliberately unlit disabled face, so check the settled, enabled page instead.
+  await expect(page.getByRole('button', { name: 'Link a Perpl key' })).toBeEnabled();
+  // The enabled flip animates the button's colors for 120 ms; wait it out so axe
+  // grades the settled yellow, not a mid-transition blend.
+  await page.waitForTimeout(250);
+  await checkA11y(page, 'connect');
+
   // 3. Settings: the preview runs the risk math on the account's BTC long.
-  await page.getByRole('link', { name: 'Set your airbag' }).click();
+  // (The key is already linked above; the setup page is the next step.)
+  await page.goto('/setup');
   await expect(page).toHaveURL(/\/setup$/);
   const preview = page.locator('aside[aria-live]');
   await expect(preview).toContainText('Preview on your BTC long');
