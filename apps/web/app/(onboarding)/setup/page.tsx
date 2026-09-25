@@ -1,6 +1,6 @@
 'use client';
 
-// Step 3 (design/Settings.dc.html): choose the airbag and arm it.
+// Step 3: choose the airbag, watch it on the tape, arm it.
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -24,9 +24,10 @@ export default function SetupPage() {
   }, [session, me.data, router]);
 
   if (!me.data || !config.data) {
+    const problem = me.error?.message ?? config.error?.message;
     return (
-      <p className="muted">
-        {me.error?.message ?? config.error?.message ?? 'Loading your settings…'}
+      <p className={problem ? undefined : 'muted'} role={problem ? 'alert' : 'status'}>
+        {problem ?? 'Loading your settings'}
       </p>
     );
   }
@@ -52,13 +53,11 @@ export default function SetupPage() {
         </Link>
       }
       heading={
-        <div className={s.head} style={{ gap: 14 }}>
-          <span className="eyebrow" style={{ fontSize: 12 }}>
-            Step 3 of 3
-          </span>
+        <div className={s.head}>
           <h1 className={`display ${s.h1}`}>Set your airbag</h1>
-          <p className={s.lede} style={{ fontSize: 16 }}>
-            These apply to every position. You can change them any time.
+          <p className={s.lede}>
+            These apply to every position. Watch the preview: it runs the engine’s own math on your
+            riskiest position.
           </p>
         </div>
       }

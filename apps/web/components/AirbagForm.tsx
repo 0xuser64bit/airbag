@@ -1,8 +1,9 @@
 'use client';
 
-// The airbag settings with a live preview (design/Settings.dc.html). The preview runs
-// @airbag/risk in the browser on the user's riskiest covered position, the same math the engine
-// runs, so what it shows is what the engine will do. Used by /setup and /app/settings.
+// The airbag settings with a live preview. The preview runs @airbag/risk in the browser on the
+// user's riskiest covered position, the same math the engine runs, and draws it on the tape:
+// choosing a sensitivity slides the Airbag bug, the target and the cap slide where liquidation
+// would sit after the trim. Used by /setup and /app/settings.
 
 import {
   airbagLine,
@@ -20,7 +21,8 @@ import { disablePush, enablePush, pushSupported, subscribed } from '@/lib/push.t
 import type { PositionView, Sensitivity, Settings } from '@/lib/types.ts';
 import s from './AirbagForm.module.css';
 import { Minus, Plus } from './icons.tsx';
-import { Runway } from './Runway.tsx';
+import { Annunciator } from './instruments.tsx';
+import { Tape } from './Tape.tsx';
 
 const PRESETS: { id: Sensitivity; name: string; caption: string }[] = [
   { id: 'early', name: 'Early', caption: 'A third of the cushion gone' },
@@ -30,7 +32,7 @@ const PRESETS: { id: Sensitivity; name: string; caption: string }[] = [
 const CAPS = [25, 50, 75, 100] as const;
 const DEMO_MOVE = 0.003;
 
-/** The design's example, used (and labelled) when there's no open position to preview on. */
+/** The worked example, used (and labelled) when there's no open position to preview on. */
 const SAMPLE = {
   symbol: 'BTC',
   sizeDecimals: 5,
@@ -62,9 +64,13 @@ export interface AirbagFormProps {
   onSubmit: (draft: SettingsDraft) => Promise<void>;
   submitLabel: string;
   busyLabel: string;
+  /** Settings: nothing to save until something changed. Setup arms whatever is chosen. */
+  requireChange?: boolean;
   secondary?: React.ReactNode;
   heading: React.ReactNode;
 }
+
+const KEYS = ['sensitivity', 'targetPct', 'maxTrimPct', 'useSpare', 'push', 'demo'] as const;
 
 export function AirbagForm(props: AirbagFormProps) {
   const { initial, view, spare } = props;
@@ -84,6 +90,7 @@ export function AirbagForm(props: AirbagFormProps) {
   const [error, setError] = useState<string | undefined>();
   const set = <K extends keyof SettingsDraft>(k: K, v: SettingsDraft[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
+  const dirty = KEYS.some((k) => draft[k] !== initial[k]);
 
   useEffect(() => {
     setCanPush(pushSupported());
@@ -147,12 +154,13 @@ export function AirbagForm(props: AirbagFormProps) {
   const down = (dir * (mark - line.price)) / mark;
   const worst = `${fmt.pct(props.slippageBps / 10_000, 1).replace('.0%', '%')} ${pos.side === 'long' ? 'below' : 'above'} mark`;
   const r = pos.maintenance;
+  const canSubmit = !busy && (!props.requireChange || dirty);
 
   return (
     <div className={s.layout}>
-      <form className={s.form} onSubmit={submit}>
-        {props.heading}
+      <div className={s.heading}>{props.heading}</div>
 
+      <form className={s.form} onSubmit={submit}>
         <fieldset className={s.group}>
           <legend className={s.groupLabel}>When it deploys</legend>
           <div className={s.presets}>
@@ -164,9 +172,11 @@ export function AirbagForm(props: AirbagFormProps) {
                 aria-pressed={!draft.demo && draft.sensitivity === p.id}
                 onClick={() => setDraft((d) => ({ ...d, sensitivity: p.id, demo: false }))}
               >
-                <span style={{ fontSize: 15, fontWeight: 600 }}>{p.name}</span>
-                <span className="muted" style={{ fontSize: 12, lineHeight: 1.4 }}>
-                  {p.caption}
+                <span className={s.presetName}>{p.name}</span>
+                <span className={s.presetCaption}>{p.caption}</span>
+                {/* Where on the cushion this preset acts: the reference at 0, liquidation at the end. */}
+                <span className={s.presetGauge} aria-hidden="true">
+                  <span style={{ width: `${SENSITIVITY[p.id] * 100}%` }} />
                 </span>
               </button>
             ))}
@@ -197,7 +207,7 @@ export function AirbagForm(props: AirbagFormProps) {
                 <Plus />
               </button>
             </div>
-            <span className="muted" style={{ fontSize: 14, lineHeight: 1.45 }}>
+            <span className={s.help}>
               Trims the smallest amount that puts liquidation at least this far from the price.
             </span>
           </div>
@@ -210,8 +220,7 @@ export function AirbagForm(props: AirbagFormProps) {
               <button
                 key={c}
                 type="button"
-                className="seg num"
-                style={{ height: 44, fontSize: 14 }}
+                className={`seg num ${s.cap}`}
                 aria-pressed={draft.maxTrimPct === c}
                 onClick={() => set('maxTrimPct', c)}
               >
@@ -222,11 +231,11 @@ export function AirbagForm(props: AirbagFormProps) {
         </fieldset>
 
         <div className={s.switchRow}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div className={s.switchText}>
             <span id="l-spare" className={s.groupLabel}>
               Use spare margin first
             </span>
-            <span className="muted" style={{ fontSize: 13, lineHeight: 1.45 }}>
+            <span className={s.help}>
               Only when it’s enough to reach your target. If not, Airbag keeps it and trims.
             </span>
           </div>
@@ -244,11 +253,10 @@ export function AirbagForm(props: AirbagFormProps) {
 
         <fieldset className={s.group}>
           <legend className={s.groupLabel}>Alerts</legend>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div className={s.alertRow}>
             <button
               type="button"
-              className="seg"
-              style={{ height: 44, padding: '0 16px', fontSize: 14, fontWeight: 500 }}
+              className={`seg ${s.pushBtn}`}
               aria-pressed={pushHere && draft.push}
               disabled={!canPush}
               onClick={togglePush}
@@ -256,7 +264,7 @@ export function AirbagForm(props: AirbagFormProps) {
               Push to this browser
             </button>
           </div>
-          <span className="faint" style={{ fontSize: 13 }}>
+          <span className={s.help}>
             {pushNote ??
               (canPush
                 ? 'Deploys, saves and key problems. Turn it on in each browser you want alerts in.'
@@ -266,11 +274,11 @@ export function AirbagForm(props: AirbagFormProps) {
 
         {props.demoAllowed && (
           <div className={s.switchRow}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div className={s.switchText}>
               <span id="l-demo" className={s.groupLabel}>
                 Demo mode
               </span>
-              <span className="muted" style={{ fontSize: 13, lineHeight: 1.45 }}>
+              <span className={s.help}>
                 Deploys after a {fmt.pct(DEMO_MOVE, 1)} move against you, to record a real deploy.
                 Not for real protection.
               </span>
@@ -289,41 +297,56 @@ export function AirbagForm(props: AirbagFormProps) {
         )}
 
         {past && (
-          <div className="notice notice-airbag" role="status">
+          <div className="notice" data-tone="airbag" role="status">
             Your {symbol} {pos.side} is already past this line. Once armed, Airbag deploys on the
             next block.
           </div>
         )}
         {error && (
-          <div className="notice notice-liq" role="alert">
+          <div className="notice" data-tone="alert" role="alert">
             {error}
           </div>
         )}
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <button type="submit" className="btn btn-primary btn-lg" disabled={busy}>
+        <div className={s.actions}>
+          <button type="submit" className="btn btn-primary btn-lg" disabled={!canSubmit}>
             {busy && <span className="spinner" aria-hidden="true" />}
             {busy ? props.busyLabel : props.submitLabel}
           </button>
+          {props.requireChange && dirty && !busy && (
+            <Annunciator state="on" size="sm">
+              Unsaved changes
+            </Annunciator>
+          )}
           {props.secondary}
         </div>
       </form>
 
-      <aside className={`card ${s.preview}`} aria-live="polite">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span className="eyebrow">
+      <aside className={s.preview} aria-live="polite">
+        <div className={s.previewHead}>
+          <h2 className="title">
             {sample ? 'Preview on a sample position' : `Preview on your ${symbol} ${pos.side}`}
-          </span>
-          <span className="muted" style={{ fontSize: 14 }}>
+          </h2>
+          <p className="num muted">
             {fmt.size(pos.size, sd)} {symbol} ·{' '}
             {Math.round(view?.nominalLeverage ?? SAMPLE.nominalLeverage)}x · mark {fmt.usd(mark)}
-          </span>
+          </p>
         </div>
-        <Runway liquidation={liq} line={line.price} mark={mark} size="md" near={past} />
+        <div className={`well ${s.tapeWell}`}>
+          <Tape
+            side={pos.side}
+            liquidation={liq}
+            line={line.price}
+            mark={mark}
+            projected={plan.kind === 'none' ? undefined : liqAfter}
+            near={past}
+            height={280}
+          />
+        </div>
         <dl className={s.dl}>
           <div>
             <dt>Deploys at</dt>
             <dd className="num">
-              {fmt.usd(line.price)}{' '}
+              <span className="airbag">{fmt.usd(line.price)}</span>{' '}
               <span className="muted">
                 ({fmt.pct(Math.abs(down))}{' '}
                 {down >= 0 ? (pos.side === 'long' ? 'down' : 'up') : 'past'})
@@ -372,12 +395,12 @@ export function AirbagForm(props: AirbagFormProps) {
           </div>
         </dl>
         {plan.kind === 'trim' && plan.capped && (
-          <p className={s.capped}>
+          <p className="notice" data-tone="airbag">
             Capped at {draft.maxTrimPct}%. Liquidation ends up {fmt.pct(away)} away, short of your{' '}
             {draft.targetPct}% target.
           </p>
         )}
-        <p className="faint" style={{ fontSize: 12, lineHeight: 1.5 }}>
+        <p className={s.rules}>
           Uses Perpl’s {symbol} rules: {fmt.pct(r, Number.isInteger(r * 100) ? 0 : 2)} maintenance
           margin, fee-free closes.
           {sample ? ' Sample position: no open position to preview on yet.' : ''}

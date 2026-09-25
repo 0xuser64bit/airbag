@@ -18,6 +18,8 @@ export interface TapeProps {
   entry?: number | undefined;
   /** The pre-deploy liquidation price, left on the tape as a dashed ghost. */
   ghost?: number | undefined;
+  /** Where liquidation would sit after Airbag acts at the line (the settings preview). */
+  projected?: number | null | undefined;
   /** The mark is near the line: the protection band warms. */
   near?: boolean;
   /** Tape height in px. */
@@ -115,6 +117,7 @@ export function Tape({
   mark,
   entry,
   ghost,
+  projected,
   near = false,
   height = 400,
 }: TapeProps) {
@@ -123,6 +126,7 @@ export function Tape({
     mark,
     ...(entry === undefined ? [] : [entry]),
     ...(ghost === undefined ? [] : [ghost]),
+    ...(projected == null ? [] : [projected]),
   ]);
   const y = (p: number) => ((hi - p) / (hi - lo)) * height;
   const pct = (p: number) => `${((hi - p) / (hi - lo)) * 100}%`;
@@ -183,9 +187,20 @@ export function Tape({
             node: <>WAS {fmt.usd(ghost)}</>,
           },
         ]),
+    ...(projected == null
+      ? []
+      : [
+          {
+            id: 'after',
+            y: y(projected),
+            h: 18,
+            className: s.afterFlag,
+            node: <>AFTER {fmt.usd(projected)}</>,
+          },
+        ]),
   ];
   const tops = stack(flags, { y: y(mark), h: 30 }, height);
-  const summary = `Liquidation ${fmt.usd(liquidation)}${line === undefined ? '' : `, Airbag line ${fmt.usd(line)}`}, mark ${fmt.usd(mark)}${ghost === undefined ? '' : `, liquidation was ${fmt.usd(ghost)}`}`;
+  const summary = `Liquidation ${fmt.usd(liquidation)}${line === undefined ? '' : `, Airbag line ${fmt.usd(line)}`}, mark ${fmt.usd(mark)}${ghost === undefined ? '' : `, liquidation was ${fmt.usd(ghost)}`}${projected == null ? '' : `, liquidation after Airbag acts ${fmt.usd(projected)}`}`;
 
   return (
     <div className={s.tape} style={{ height }} role="img" aria-label={summary}>
@@ -205,6 +220,7 @@ export function Tape({
       </div>
       <div className={s.markers} aria-hidden="true">
         {ghost !== undefined && <div className={s.ghostLine} style={{ top: pct(ghost) }} />}
+        {projected != null && <div className={s.afterLine} style={{ top: pct(projected) }} />}
         {entry !== undefined && <div className={s.entryLine} style={{ top: pct(entry) }} />}
         <div className={s.liqLine} style={{ top: pct(liquidation) }} />
         {line !== undefined && (

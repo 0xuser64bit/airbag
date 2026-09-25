@@ -1,49 +1,106 @@
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 40px;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  grid-template-areas:
+    "heading heading"
+    "form preview";
+  column-gap: var(--s-7);
+  row-gap: var(--s-6);
   align-items: start;
 }
+.heading {
+  grid-area: heading;
+}
 .form {
+  grid-area: form;
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: 28px;
   min-width: 0;
+  max-width: 720px;
 }
 .group {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--s-3);
+}
+.group > legend {
+  margin-bottom: var(--s-3);
 }
 .groupLabel {
   font-size: 15px;
   font-weight: 600;
 }
+.help {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+
+/* Presets: each shows where on the cushion it acts. */
 .presets {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--s-2);
 }
 .preset {
-  min-height: 80px;
-  padding: 12px 14px;
-  text-align: left;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
   gap: 6px;
+  min-height: 96px;
+  padding: 14px;
+  text-align: left;
 }
+.presetName {
+  font-size: 15px;
+  font-weight: 600;
+}
+.presetCaption {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-2);
+}
+.presetGauge {
+  position: relative;
+  display: block;
+  height: 6px;
+  margin-top: auto;
+  border-radius: 2px;
+  background: var(--well);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.presetGauge::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  right: 0;
+  width: 2px;
+  background: var(--liq);
+}
+.presetGauge > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-right: 2px solid var(--airbag);
+  border-radius: 2px 0 0 2px;
+  background: var(--line-strong);
+}
+.preset[aria-pressed="true"] .presetGauge > span {
+  background: var(--airbag-edge);
+}
+
 .stepperRow {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--s-4);
 }
 .stepper {
   display: flex;
   align-items: center;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-small);
   flex-shrink: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-control);
+  background: var(--well);
 }
 .stepper button {
   width: 44px;
@@ -55,6 +112,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background-color var(--t-fast) var(--ease);
+}
+.stepper button:hover:not(:disabled) {
+  background: var(--raised);
 }
 .stepper button:disabled {
   color: var(--text-3);
@@ -68,33 +129,76 @@
 .caps {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--s-2);
+}
+.cap {
+  height: 44px;
+  font-size: 14px;
 }
 .switchRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
+  gap: var(--s-5);
 }
-
-.preview {
-  padding: 24px;
+.switchText {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 4px;
+}
+.alertRow {
+  display: flex;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+.pushBtn {
+  height: 44px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.actions {
+  display: flex;
+  gap: var(--s-3);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* The preview: the same instrument as the dashboard, drawn from the draft. */
+.preview {
+  grid-area: preview;
   position: sticky;
   top: 24px;
-  margin-top: 108px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: var(--s-5);
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+  background: var(--panel);
+}
+.previewHead {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.previewHead p {
+  font-size: 13px;
+}
+.tapeWell {
+  padding: 14px 12px 14px 0;
 }
 .dl {
   display: flex;
   flex-direction: column;
-  gap: 12px;
 }
 .dl > div {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
   font-size: 14px;
 }
 .dl dt {
@@ -104,28 +208,30 @@
   text-align: right;
   font-size: 13px;
 }
-.capped {
-  padding: 12px 14px;
-  border: 1px solid var(--airbag-edge);
-  border-radius: var(--r-small);
-  font-size: 13px;
+.rules {
+  font-size: 12px;
   line-height: 1.5;
-  color: var(--airbag);
+  color: var(--text-3);
 }
 
 @media (max-width: 1100px) {
   .layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "heading"
+      "preview"
+      "form";
   }
   .preview {
     position: static;
-    margin-top: 0;
-    order: -1;
+  }
+  .form {
+    max-width: none;
   }
 }
-@media (max-width: 520px) {
+@media (max-width: 560px) {
   .presets {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .preset {
     min-height: 0;
@@ -134,15 +240,7 @@
     flex-direction: column;
     align-items: flex-start;
   }
-}
-
-fieldset.group {
-  margin: 0;
-  padding: 0;
-  border: 0;
-  min-width: 0;
-}
-fieldset.group > legend {
-  padding: 0;
-  margin-bottom: 10px;
+  .preview {
+    padding: var(--s-4);
+  }
 }

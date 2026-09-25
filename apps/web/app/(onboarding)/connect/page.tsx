@@ -8,7 +8,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { EIP1193Provider } from 'viem';
-import { Check } from '@/components/icons.tsx';
+import { Check, Chevron } from '@/components/icons.tsx';
+import { Annunciator } from '@/components/instruments.tsx';
+import { Runway } from '@/components/Runway.tsx';
 import { ApiError, api, useEngineConfig } from '@/lib/api.ts';
 import { clearSession, useSession } from '@/lib/session.ts';
 import type { Lookup } from '@/lib/types.ts';
@@ -98,9 +100,6 @@ export default function ConnectPage() {
   return (
     <div className={s.content}>
       <div className={s.head}>
-        <span className="eyebrow" style={{ fontSize: 12 }}>
-          Step 1 of 3
-        </span>
         <h1 className={`display ${s.h1}`}>Connect the wallet you trade on Perpl</h1>
         <p className={s.lede}>
           Airbag reads your Perpl account from this address. Connecting doesn’t approve anything or
@@ -111,92 +110,85 @@ export default function ConnectPage() {
       {!address ? (
         <WalletPicker wallets={wallets} busy={busy} onPick={connect} />
       ) : (
-        <div className={`card ${s.connected}`} style={{ borderRadius: 'var(--r-medium)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Check size={18} color="#F2C12E" />
-            <span className="num" style={{ fontSize: 14 }}>
-              {fmt.short(address)}
-            </span>
-            <span className="muted" style={{ fontSize: 14 }}>
+        <div className={s.connected}>
+          <div className={s.connectedWho}>
+            <Check size={18} />
+            <span className="num">{fmt.short(address)}</span>
+            <Annunciator state="on" size="sm">
               {session ? 'Signed in' : 'Connected'}
-            </span>
+            </Annunciator>
           </div>
-          <button type="button" className="btn btn-ghost" onClick={change}>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={change}>
             Change wallet
           </button>
         </div>
       )}
 
       {address && lookup.loading && (
-        <p className="muted" aria-live="polite">
-          Looking up your Perpl account…
+        <p className={s.looking} role="status">
+          Looking up your Perpl account onchain
         </p>
       )}
       {address && lookup.error && (
-        <div className="notice notice-liq" role="alert">
+        <div className="notice" data-tone="alert" role="alert">
           <span>{lookup.error}</span>
         </div>
       )}
 
       {data && !data.account && (
-        <div
-          className="card"
-          style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 12 }}
-        >
-          <h2 style={{ fontSize: 16, fontWeight: 600 }}>No Perpl account for this wallet</h2>
-          <p className="muted" style={{ fontSize: 15 }}>
-            Airbag protects positions on Perpl. Deposit on Perpl to open an account, then come back.
-            If you trade from another wallet, connect that one.
-          </p>
-          {config.data && (
-            <a
-              className="btn btn-secondary"
-              style={{ alignSelf: 'flex-start' }}
-              href={config.data.perplUrl}
-            >
-              Open Perpl
-            </a>
-          )}
+        <div className={s.panel}>
+          <div className={s.panelBody}>
+            <h2 className="title">No Perpl account for this wallet</h2>
+            <p className="muted">
+              Airbag protects positions on Perpl. Deposit on Perpl to open an account, then come
+              back. If you trade from another wallet, connect that one.
+            </p>
+            {config.data && (
+              <a className="btn btn-secondary btn-sm" href={config.data.perplUrl}>
+                Open Perpl
+              </a>
+            )}
+          </div>
         </div>
       )}
 
       {data?.account && (
-        <section className={`card ${s.panel}`} aria-labelledby="found">
+        <section className={s.panel} aria-labelledby="found">
           <div className={s.panelHead}>
-            <h2 id="found" style={{ fontSize: 16, fontWeight: 600 }}>
-              Found your Perpl account{' '}
-              <span className="num muted" style={{ fontWeight: 400 }}>
-                #{data.account.id}
-              </span>
+            <h2 id="found" className="title">
+              Found your Perpl account <span className="num faint">#{data.account.id}</span>
             </h2>
-            <span className="muted" style={{ fontSize: 13 }}>
-              {data.positions.length} open position{data.positions.length === 1 ? '' : 's'} ·{' '}
-              <span className="num" style={{ color: 'var(--bone)' }}>
-                {fmt.usd(data.account.spare)}
-              </span>{' '}
-              spare margin
-            </span>
+            <p className="muted">
+              <span className="num">{data.positions.length}</span> open position
+              {data.positions.length === 1 ? '' : 's'} ·{' '}
+              <span className="num">{fmt.usd(data.account.spare)}</span> spare margin
+            </p>
           </div>
           {data.positions.length === 0 && (
-            <p className="muted" style={{ padding: '18px 24px', fontSize: 15 }}>
+            <p className={`muted ${s.panelBody}`}>
               No open positions right now. Once armed, Airbag covers anything you open in{' '}
               {config.data?.markets.map((m) => m.symbol).join(' or ') ?? 'covered markets'}.
             </p>
           )}
           {data.positions.map((p) => (
             <div key={p.marketId} className={s.row}>
-              <span style={{ fontSize: 15 }}>
-                <span style={{ fontWeight: 600 }}>{p.symbol}</span>{' '}
+              <span className={s.rowName}>
+                <span className={s.symbol}>{p.symbol}</span>{' '}
                 <span className="muted">
-                  {p.side} · {fmt.size(p.size, p.sizeDecimals)} {p.symbol} ·{' '}
-                  {Math.round(p.nominalLeverage)}x
+                  {p.side} · <span className="num">{fmt.size(p.size, p.sizeDecimals)}</span> ·{' '}
+                  <span className="num">{Math.round(p.nominalLeverage)}x</span>
                 </span>
               </span>
-              <span className="num" style={{ fontSize: 14, textAlign: 'right' }}>
-                {fmt.pct(p.distance)} <span className="muted">to liq</span>
+              <span className={s.rowTrack}>
+                <Runway liquidation={p.liquidation} mark={p.mark} size="sm" />
               </span>
-              <span className="pill pill-sm pill-muted" style={{ justifySelf: 'end' }}>
-                {p.covered ? 'No airbag' : 'Not covered yet'}
+              <span className={`num ${s.rowDistance}`}>
+                {fmt.pct(p.distance)} <span className="faint">to liq</span>
+              </span>
+              <span className={s.rowLamp}>
+                <Annunciator state="off" size="sm">
+                  {p.covered ? 'No airbag' : 'Not covered yet'}
+                </Annunciator>
               </span>
             </div>
           ))}
@@ -204,7 +196,7 @@ export default function ConnectPage() {
       )}
 
       {riskiest && (
-        <p style={{ maxWidth: 600, fontSize: 17, lineHeight: 1.55, textWrap: 'pretty' }}>
+        <p className={s.risk}>
           Your {riskiest.symbol} {riskiest.side} is{' '}
           <span className="num">{fmt.pct(riskiest.distance)}</span> from liquidation. A wick that
           size closes all of it and keeps a fifth of what’s left.
@@ -212,7 +204,7 @@ export default function ConnectPage() {
       )}
 
       {error && (
-        <div className="notice notice-liq" role="alert">
+        <div className="notice" data-tone="alert" role="alert">
           {error}
         </div>
       )}
@@ -232,7 +224,7 @@ export default function ConnectPage() {
         </Link>
       </div>
       {address && !session && data?.account && (
-        <p className="faint" style={{ fontSize: 13, marginTop: -16 }}>
+        <p className={s.note}>
           Next, your wallet asks you to sign a message so Airbag knows it’s you. It doesn’t move
           funds.
         </p>
@@ -250,18 +242,22 @@ function WalletPicker({
   busy: string | undefined;
   onPick: (w: WalletOption) => void;
 }) {
-  if (wallets === undefined) return <p className="muted">Looking for wallets…</p>;
+  if (wallets === undefined)
+    return (
+      <p className={s.looking} role="status">
+        Looking for wallets in this browser
+      </p>
+    );
   if (wallets.length === 0) {
     return (
-      <div
-        className="card"
-        style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 10 }}
-      >
-        <h2 style={{ fontSize: 16, fontWeight: 600 }}>No browser wallet found</h2>
-        <p className="muted" style={{ fontSize: 15 }}>
-          Install a wallet extension such as Rabby or MetaMask, or open this page in your wallet
-          app’s browser.
-        </p>
+      <div className={s.panel}>
+        <div className={s.panelBody}>
+          <h2 className="title">No browser wallet found</h2>
+          <p className="muted">
+            Install a wallet extension such as Rabby or MetaMask, or open this page in your wallet
+            app’s browser.
+          </p>
+        </div>
       </div>
     );
   }
@@ -271,13 +267,14 @@ function WalletPicker({
         <li key={w.id}>
           <button
             type="button"
-            className={`btn btn-secondary ${s.walletBtn}`}
+            className={s.walletBtn}
             onClick={() => onPick(w)}
             disabled={busy !== undefined}
           >
             {/* biome-ignore lint/performance/noImgElement: EIP-6963 icons are data URIs from the wallet */}
-            {w.icon ? <img src={w.icon} alt="" /> : null}
-            {busy === w.id ? 'Check your wallet…' : `Connect ${w.name}`}
+            {w.icon ? <img src={w.icon} alt="" /> : <span className={s.walletBlank} />}
+            <span>{busy === w.id ? 'Check your wallet…' : `Connect ${w.name}`}</span>
+            <Chevron className={s.walletChev} />
           </button>
         </li>
       ))}

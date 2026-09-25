@@ -75,6 +75,7 @@
 /* Markers: short ticks across the rail, flags beside them, the mark's readout box. */
 .liqLine,
 .ghostLine,
+.afterLine,
 .entryLine,
 .bug {
   position: absolute;
@@ -94,6 +95,11 @@
 }
 .entryLine {
   border-top: 1px dashed var(--text-3);
+}
+/* Where liquidation would sit after Airbag acts: a dashed bone line across the tape. */
+.afterLine {
+  width: 100%;
+  border-top: 1px dashed var(--soft-bone);
 }
 .bug {
   border-top: 2px solid var(--airbag);
@@ -131,6 +137,9 @@
 .ghostFlag {
   color: var(--text-3);
   text-decoration: line-through;
+}
+.afterFlag {
+  color: var(--soft-bone);
 }
 
 .markBox {

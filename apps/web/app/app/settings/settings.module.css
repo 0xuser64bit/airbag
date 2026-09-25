@@ -1,0 +1,81 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-7);
+  max-width: 1200px;
+}
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.h1 {
+  font-size: 30px;
+}
+.saved {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: 14px;
+  color: var(--text-2);
+}
+
+/* Key and session, with a guarded unlink. */
+.key {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  max-width: 720px;
+  padding: var(--s-5);
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+  background: var(--panel);
+}
+.keyHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+.keyHead p {
+  font-size: 12px;
+}
+.keyText {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+.row {
+  display: flex;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+/* The guard lifted: one inverted action, and a way back. */
+.guard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border: 1px solid var(--bone);
+  border-radius: var(--r-control);
+  background: var(--raised);
+  font-size: 14px;
+  line-height: 1.5;
+  animation: redraw var(--t-panel) var(--ease) both;
+}
+@keyframes redraw {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+}
+.danger {
+  border-color: var(--bone);
+  background: var(--bone);
+  color: var(--ground);
+  font-weight: 600;
+}
+.danger:hover {
+  background: var(--soft-bone);
+  color: var(--ground);
+}

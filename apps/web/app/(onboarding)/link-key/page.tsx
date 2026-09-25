@@ -73,27 +73,23 @@ export default function LinkKeyPage() {
 
   return (
     <div className={s.withAside}>
-      <div className={s.content} style={{ gap: 30 }}>
+      <div className={s.content}>
         <div className={s.head}>
-          <span className="eyebrow" style={{ fontSize: 12 }}>
-            Step 2 of 3
-          </span>
           <h1 className={`display ${s.h1}`}>Link a key that can’t withdraw</h1>
-          <p className={s.lede} style={{ fontSize: 16 }}>
+          <p className={s.lede}>
             Airbag signs its trims with a Perpl API key. Three steps, about two minutes.
           </p>
         </div>
 
         {showForm && (
-          <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-            <ol style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+          <form onSubmit={submit} className={s.keyForm}>
+            <ol className={s.keySteps}>
               <Step n="01" title="Create a Trade key on Perpl">
-                <span className="muted" style={{ fontSize: 15, lineHeight: 1.5 }}>
+                <p className="muted">
                   On Perpl’s API keys page, create a key with the Trade scope.
-                </span>
+                </p>
                 <a
-                  className="btn btn-secondary"
-                  style={{ alignSelf: 'flex-start', fontSize: 14 }}
+                  className="btn btn-secondary btn-sm"
                   href={cfg ? `${cfg.perplUrl}/apikeys` : 'https://app.perpl.xyz/apikeys'}
                   target="_blank"
                   rel="noreferrer"
@@ -105,36 +101,29 @@ export default function LinkKeyPage() {
               <Step n="02" title="Lock it to Airbag’s servers">
                 {cfg && cfg.egressIps.length > 0 ? (
                   <>
-                    <span className="muted" style={{ fontSize: 15, lineHeight: 1.5 }}>
+                    <p className="muted">
                       Add{' '}
                       {cfg.egressIps.length === 1
                         ? 'this range'
                         : `all ${cfg.egressIps.length} ranges`}{' '}
                       to the key’s IP allow-list, so it only works from our engine.
-                    </span>
-                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    </p>
+                    <div className={s.chips}>
                       {cfg.egressIps.map((ip) => (
                         <CopyChip key={ip} value={ip} />
                       ))}
                     </div>
                   </>
                 ) : (
-                  <span className="muted" style={{ fontSize: 15, lineHeight: 1.5 }}>
+                  <p className="muted">
                     {sim
                       ? 'In simulation there’s no allow-list to set: nothing is sent to Perpl.'
                       : 'This server hasn’t published fixed addresses, so the key can’t be IP-locked to it yet. Leave the allow-list empty, or wait until the addresses are published.'}
-                  </span>
+                  </p>
                 )}
               </Step>
               <Step n="03" title="Paste it here">
-                <div
-                  className="paste"
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                    gap: 12,
-                  }}
-                >
+                <div className={s.fields}>
                   <div className="field">
                     <label htmlFor="apikey">API key</label>
                     <input
@@ -164,21 +153,12 @@ export default function LinkKeyPage() {
                     />
                   </div>
                 </div>
-                <label
-                  style={{
-                    display: 'flex',
-                    gap: 10,
-                    alignItems: 'flex-start',
-                    fontSize: 14,
-                    cursor: 'pointer',
-                  }}
-                >
+                <label className={s.confirm}>
                   <input
                     type="checkbox"
                     checked={ipLocked}
                     onChange={(e) => setIpLocked(e.target.checked)}
                     required
-                    style={{ width: 18, height: 18, marginTop: 2, accentColor: 'var(--airbag)' }}
                   />
                   <span>
                     {sim || (cfg && cfg.egressIps.length === 0)
@@ -189,15 +169,14 @@ export default function LinkKeyPage() {
                     </span>
                   </span>
                 </label>
-                <span className="faint" style={{ fontSize: 13, lineHeight: 1.5 }}>
+                <p className={s.note}>
                   Encrypted at rest. Used only to sign Airbag’s reduce-only orders.
-                </span>
+                </p>
               </Step>
             </ol>
 
             {error && (
-              <div className="notice notice-liq" role="alert">
-                <Cross size={18} color="#FF6A55" />
+              <div className="notice" data-tone="alert" role="alert">
                 <span>{error}</span>
               </div>
             )}
@@ -227,22 +206,21 @@ export default function LinkKeyPage() {
 
         {done && (
           <>
-            <div className="notice notice-airbag" role="status">
-              <Check size={18} color="#F2C12E" />
-              <span>
-                {linked ? 'Key verified' : 'Key linked'}{' '}
-                <span className="muted">
-                  {done.tradeScope && '· Trade scope '}· account{' '}
+            <div className={`notice ${s.verified}`} data-tone="airbag" role="status">
+              <Check size={18} />
+              <div className={s.verifiedText}>
+                <p>
+                  <strong>{linked ? 'Key verified' : 'Key linked'}</strong>
+                  {done.tradeScope && ' · Trade scope'} · account{' '}
                   <span className="num">#{done.accountId}</span> · key …
                   <span className="num">{done.keyHint}</span>
-                </span>
-                <br />
-                <span className="faint" style={{ fontSize: 13 }}>
+                </p>
+                <p className="muted">
                   {done.simulated
                     ? 'Simulated: nothing was sent to Perpl.'
                     : 'IP lock confirmed by you. Perpl doesn’t expose it, so it isn’t something Airbag verified.'}
-                </span>
-              </span>
+                </p>
+              </div>
             </div>
             {done.tradeScope === false && (
               <div className="notice" role="status">
@@ -253,7 +231,7 @@ export default function LinkKeyPage() {
               </div>
             )}
             {done.forwarding === false && (
-              <div className="notice notice-liq" role="alert">
+              <div className="notice" data-tone="alert" role="alert">
                 <span>
                   One-Click Trading is off on your Perpl account, so every order Airbag sent would
                   fail. Turn it on in Perpl’s settings; Airbag picks it up on its own.
@@ -277,56 +255,45 @@ export default function LinkKeyPage() {
           </>
         )}
         {!done && (
-          <Link href="/connect" className="btn btn-ghost" style={{ alignSelf: 'flex-start' }}>
+          <Link href="/connect" className={`btn btn-ghost ${s.back}`}>
             Back
           </Link>
         )}
       </div>
 
-      <aside className={`card ${s.sideCard}`} style={{ marginTop: 118 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 600 }}>What this key can do</h2>
-        <ul className="check-list">
+      <aside className={s.sideCard} aria-labelledby="can-do">
+        <h2 id="can-do" className="title">
+          What this key can do
+        </h2>
+        <ul className={s.can}>
           {[
             'Read your positions and orders',
             'Close or reduce a position',
             'Add spare margin to a position',
           ].map((t) => (
             <li key={t}>
-              <Check color="#ECE9E0" />
+              <Check />
               {t}
             </li>
           ))}
         </ul>
-        <div style={{ height: 1, background: 'var(--line)' }} />
-        <h2 style={{ fontSize: 16, fontWeight: 600 }}>What it can’t do</h2>
-        <ul className="check-list" style={{ gap: 14 }}>
+        <h2 className="title">What it can’t do</h2>
+        <ul className={s.cant}>
           {[
             ['Withdraw or transfer funds', 'Blocked by Perpl for every API key'],
             ['Open, add to or flip a position', 'Airbag’s engine only sends reduce-only orders'],
             ['Work from any other server', 'Blocked by the IP allow-list'],
           ].map(([t, why]) => (
             <li key={t}>
-              <Cross color="#86837A" />
-              <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span>{t}</span>
-                <span className="faint" style={{ fontSize: 12 }}>
-                  {why}
-                </span>
+              <Cross />
+              <span>
+                {t}
+                <span className="faint">{why}</span>
               </span>
             </li>
           ))}
         </ul>
-        <a
-          href={`${SOURCE_URL}/tree/main/packages/perpl/src/orders.ts`}
-          className="muted"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            fontSize: 13,
-            textDecoration: 'none',
-          }}
-        >
+        <a href={`${SOURCE_URL}/tree/main/packages/perpl/src/orders.ts`} className={s.source}>
           Read the engine’s source
           <External size={13} />
         </a>
@@ -337,12 +304,10 @@ export default function LinkKeyPage() {
 
 function Step({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
   return (
-    <li style={{ display: 'grid', gridTemplateColumns: '32px minmax(0, 1fr)', gap: 14 }}>
-      <span className="num airbag" style={{ fontSize: 13, paddingTop: 2 }}>
-        {n}
-      </span>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <span style={{ fontSize: 17, fontWeight: 600 }}>{title}</span>
+    <li className={s.keyStep}>
+      <span className={`num ${s.keyStepNo}`}>{n}</span>
+      <div className={s.keyStepBody}>
+        <span className={s.keyStepTitle}>{title}</span>
         {children}
       </div>
     </li>
@@ -352,25 +317,12 @@ function Step({ n, title, children }: { n: string; title: string; children: Reac
 function CopyChip({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div
-      className="card"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '0 6px 0 14px',
-        height: 44,
-        borderRadius: 'var(--r-control)',
-      }}
-    >
-      <span className="num" style={{ fontSize: 13 }}>
-        {value}
-      </span>
+    <div className={s.chip}>
+      <span className="num">{value}</span>
       <button
         type="button"
-        className="btn btn-ghost"
+        className={s.chipBtn}
         aria-label={`Copy ${value}`}
-        style={{ minHeight: 34, width: 34, padding: 0 }}
         onClick={() => {
           void navigator.clipboard?.writeText(value).then(() => {
             setCopied(true);
@@ -378,7 +330,7 @@ function CopyChip({ value }: { value: string }) {
           });
         }}
       >
-        {copied ? <Check size={15} color="#F2C12E" /> : <Copy />}
+        {copied ? <Check size={15} /> : <Copy />}
       </button>
       <span className="visually-hidden" aria-live="polite">
         {copied ? 'Copied' : ''}
