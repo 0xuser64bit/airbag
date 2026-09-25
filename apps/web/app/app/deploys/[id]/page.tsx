@@ -1,16 +1,18 @@
 'use client';
 
-// One deploy (design/MobileDeploy.dc.html, which is also the reference for wider screens).
+// One deploy: what it did, before and after, and the block log.
 
 import { fmt } from '@airbag/risk';
 import Link from 'next/link';
 import { use, useEffect } from 'react';
+import { BlockLog } from '@/components/BlockLog.tsx';
 import { deployTitle } from '@/components/dashboard.tsx';
 import { Back, External } from '@/components/icons.tsx';
 import { OutcomeAnnunciator } from '@/components/instruments.tsx';
-import { Timeline, TxLink } from '@/components/ui.tsx';
+import { TxLink } from '@/components/ui.tsx';
 import { useApi } from '@/lib/api.ts';
 import type { DeployDetail } from '@/lib/types.ts';
+import s from '../deploys.module.css';
 
 export default function DeployPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -23,116 +25,145 @@ export default function DeployPage({ params }: { params: Promise<{ id: string }>
 
   if (error) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 560 }}>
-        <p>{error.status === 404 ? 'No deploy with that id on your account.' : error.message}</p>
-        <Link href="/app/deploys">All deploys</Link>
+      <div className={s.detail}>
+        <Link href="/app/deploys" className={`btn btn-ghost ${s.back}`}>
+          <Back />
+          Deploys
+        </Link>
+        <div className="notice" data-tone="alert" role="alert">
+          <span>
+            {error.status === 404 ? 'No deploy with that id on your account.' : error.message}
+          </span>
+        </div>
       </div>
     );
   }
-  if (!d) return <p className="muted">Loading…</p>;
+  if (!d) {
+    return (
+      <div className={s.detail} aria-busy="true">
+        <p className="muted" role="status">
+          Loading the deploy
+        </p>
+      </div>
+    );
+  }
 
   const tx = d.data.close?.tx ?? d.data.margin?.tx;
   const after = d.data.after;
   const b = d.data.before;
+  const t = d.data.timeline;
+  const first = t[0];
+  const last = t.at(-1);
   return (
-    <article style={{ maxWidth: 560, display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}
-      >
-        <Link href="/app/deploys" className="btn btn-ghost" style={{ paddingLeft: 4 }}>
+    <article className={s.detail}>
+      <div className={s.detailTop}>
+        <Link href="/app/deploys" className={`btn btn-ghost ${s.back}`}>
           <Back />
           Deploys
         </Link>
         <OutcomeAnnunciator d={d} />
       </div>
-      <div className="hazard" aria-hidden="true" style={{ height: 6, borderRadius: 2 }} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <span className="eyebrow airbag">
-          Deployed · {fmt.date(d.createdAt)} {fmt.clock(d.createdAt).slice(0, 8)}
-        </span>
-        <h1 className="display" style={{ fontSize: 26, lineHeight: 1.15 }}>
-          {deployTitle(d)}
-        </h1>
+      <div className="hazard" aria-hidden="true" />
+      <header className={s.detailHead}>
+        <h1 className={`display ${s.detailH1}`}>{deployTitle(d)}</h1>
+        <p className={`num ${s.meta}`}>
+          {fmt.date(d.createdAt)} · {fmt.clock(d.createdAt).slice(0, 8)}
+          {first && last
+            ? ` · blocks ${fmt.block(first.block)}–${last.block.toLocaleString('en-US')} · fee $0`
+            : ''}
+        </p>
         {after?.distance !== undefined && after.distance !== null && (
-          <p className="muted" style={{ fontSize: 15, lineHeight: 1.5 }}>
-            Your {d.symbol} {d.side} was{' '}
-            <span className="num" style={{ color: 'var(--bone)' }}>
-              {fmt.pct(b.distance)}
-            </span>{' '}
-            from liquidation. Now it’s{' '}
-            <span className="num" style={{ color: 'var(--bone)' }}>
-              {fmt.pct(after.distance)}
-            </span>
-            .{d.kind === 'trim' ? ' The trim was fee-free.' : ''}
+          <p className={s.lede}>
+            Your {d.symbol} {d.side} was <span className="num">{fmt.pct(b.distance)}</span> from
+            liquidation. Now it’s <span className="num">{fmt.pct(after.distance)}</span>.
+            {d.kind === 'trim' ? ' The trim was fee-free.' : ''}
           </p>
         )}
+      </header>
+
+      <div className={s.detailGrid}>
+        <section aria-labelledby="changed">
+          <h2 id="changed" className="title">
+            Before and after
+          </h2>
+          <dl className="rows">
+            <div>
+              <dt>Liquidation</dt>
+              <dd className="num">
+                <span className="faint">{fmt.usd(b.liquidation)} →</span>{' '}
+                {after ? (
+                  after.liquidation === null ? (
+                    'Closed'
+                  ) : (
+                    <span className="liq">{fmt.usd(after.liquidation)}</span>
+                  )
+                ) : (
+                  <span className="faint">pending</span>
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Size</dt>
+              <dd className="num">
+                <span className="faint">{fmt.size(b.size, d.sizeDecimals)} →</span>{' '}
+                {after ? `${fmt.size(after.size, d.sizeDecimals)} ${d.symbol}` : '…'}
+              </dd>
+            </div>
+            <div>
+              <dt>Leverage</dt>
+              <dd className="num">
+                <span className="faint">{fmt.lev(b.leverage)} →</span>{' '}
+                {after ? fmt.lev(after.leverage) : '…'}
+              </dd>
+            </div>
+            {d.data.close && (
+              <div>
+                <dt>Realized on the trim</dt>
+                <dd className="num">{fmt.usd(d.data.close.realizedPnl)}</dd>
+              </div>
+            )}
+            {d.data.spareAdded > 0 && (
+              <div>
+                <dt>Spare margin added</dt>
+                <dd className="num">{fmt.usd(d.data.spareAdded)}</dd>
+              </div>
+            )}
+            {d.data.onchain && (
+              <div>
+                <dt>Airbag log</dt>
+                <dd>
+                  <TxLink
+                    tx={d.data.onchain.tx}
+                    explorerUrl={d.explorerUrl}
+                    simulated={d.simulated}
+                  />
+                </dd>
+              </div>
+            )}
+            {d.data.latency && (
+              <div>
+                <dt>Line to re-armed</dt>
+                <dd className="num">
+                  {fmt.duration(
+                    d.data.latency.detectToSendMs +
+                      d.data.latency.sendToFillMs +
+                      d.data.latency.fillToReaddMs,
+                  )}{' '}
+                  · {d.data.latency.blocks} blocks
+                </dd>
+              </div>
+            )}
+          </dl>
+        </section>
+        <section aria-labelledby="log">
+          <h2 id="log" className="title">
+            Block log
+          </h2>
+          <BlockLog entries={t} explorerUrl={d.explorerUrl} simulated={d.simulated} compact />
+        </section>
       </div>
 
-      <dl className="rows">
-        <div>
-          <dt>Liquidation</dt>
-          <dd className="num">
-            <span className="faint">{fmt.usd(b.liquidation)} →</span>{' '}
-            {after ? (after.liquidation === null ? 'Closed' : fmt.usd(after.liquidation)) : '…'}
-          </dd>
-        </div>
-        <div>
-          <dt>Size</dt>
-          <dd className="num">
-            <span className="faint">{fmt.size(b.size, d.sizeDecimals)} →</span>{' '}
-            {after ? `${fmt.size(after.size, d.sizeDecimals)} ${d.symbol}` : '…'}
-          </dd>
-        </div>
-        <div>
-          <dt>Leverage</dt>
-          <dd className="num">
-            <span className="faint">{fmt.lev(b.leverage)} →</span>{' '}
-            {after ? fmt.lev(after.leverage) : '…'}
-          </dd>
-        </div>
-        {d.data.close && (
-          <div>
-            <dt>Realized on the trim</dt>
-            <dd className="num">{fmt.usd(d.data.close.realizedPnl)}</dd>
-          </div>
-        )}
-        {d.data.spareAdded > 0 && (
-          <div>
-            <dt>Spare margin added</dt>
-            <dd className="num">{fmt.usd(d.data.spareAdded)}</dd>
-          </div>
-        )}
-        {d.data.onchain && (
-          <div>
-            <dt>Airbag log</dt>
-            <dd>
-              <TxLink tx={d.data.onchain.tx} explorerUrl={d.explorerUrl} simulated={d.simulated} />
-            </dd>
-          </div>
-        )}
-        {d.data.latency && (
-          <div>
-            <dt>Line to re-armed</dt>
-            <dd className="num">
-              {fmt.duration(
-                d.data.latency.detectToSendMs +
-                  d.data.latency.sendToFillMs +
-                  d.data.latency.fillToReaddMs,
-              )}{' '}
-              · {d.data.latency.blocks} blocks
-            </dd>
-          </div>
-        )}
-      </dl>
-
-      <Timeline
-        entries={d.data.timeline}
-        explorerUrl={d.explorerUrl}
-        simulated={d.simulated}
-        compact
-      />
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className={s.detailActions}>
         {d.outcome === 'save' && (
           <Link href={`/s/${d.id}`} className="btn btn-primary btn-lg">
             See the save report

@@ -81,6 +81,9 @@ export const Replay = ({ size = 15, color = 'currentColor', className }: P) =>
 export const Back = ({ size = 18, color = 'currentColor', className }: P) =>
   svg(size, color, 2, <path d="M15 6l-6 6 6 6" />, className);
 
+export const Chevron = ({ size = 16, color = 'currentColor', className }: P) =>
+  svg(size, color, 2, <path d="M9 6l6 6-6 6" />, className);
+
 export const Minus = ({ size = 16, color = 'currentColor', className }: P) =>
   svg(size, color, 2, <path d="M5 12h14" />, className);
 

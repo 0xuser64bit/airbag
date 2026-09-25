@@ -198,3 +198,9 @@
     box-shadow: inset 0 2px 0 var(--bone);
   }
 }
+
+@media (max-width: 480px) {
+  .cell > :global(.label) {
+    display: none;
+  }
+}

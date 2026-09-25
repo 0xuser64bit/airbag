@@ -1,0 +1,83 @@
+.log {
+  display: flex;
+  flex-direction: column;
+}
+.row {
+  display: grid;
+  grid-template-columns: 108px 92px minmax(0, 1fr) auto;
+  gap: var(--s-4);
+  align-items: baseline;
+  padding: 9px 0 9px 16px;
+  border-top: 1px solid var(--line);
+  position: relative;
+  animation: print var(--t-panel) var(--ease) both;
+}
+@keyframes print {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+}
+.row:first-child {
+  border-top: 0;
+}
+/* A lamp at the start of the row: yellow for what Airbag did, red for liquidation. */
+.row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15px;
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: var(--line-strong);
+}
+.row[data-tone="airbag"]::before {
+  background: var(--airbag);
+}
+.row[data-tone="liquidation"]::before {
+  background: var(--liq);
+}
+.block,
+.time {
+  font-size: 12px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.row[data-tone="airbag"] .time {
+  color: var(--airbag);
+}
+.text {
+  font-size: 14px;
+  line-height: 1.45;
+}
+.row[data-tone="liquidation"] .text {
+  color: var(--liq);
+}
+.tx {
+  font-size: 12px;
+}
+
+/* Compact: time, then the text; the block number goes. */
+.compact .row {
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: var(--s-3);
+}
+.compact .block {
+  display: none;
+}
+.compact .tx {
+  grid-column: 2;
+}
+
+@media (max-width: 760px) {
+  .row {
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: var(--s-3);
+  }
+  .block {
+    display: none;
+  }
+  .tx {
+    grid-column: 2;
+  }
+}

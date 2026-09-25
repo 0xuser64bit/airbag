@@ -9,8 +9,8 @@ import s from '@/components/dashboard.module.css';
 import {
   AirbagSummary,
   BlockStrip,
-  DeployDetailCard,
   FlightDisplay,
+  InterventionDisplay,
   KeepsFalling,
   KeyHealth,
   PausedBanner,
@@ -48,11 +48,12 @@ export default function DashboardPage() {
 
   return (
     <div className={s.grid}>
+      <h1 className="visually-hidden">Positions</h1>
       <div className={s.main}>
         <StatusBanner data={data} />
         {data.status === 'paused' && <PausedBanner />}
         {detail ? (
-          <DeployDetailCard d={detail} />
+          <InterventionDisplay d={detail} p={deployed} />
         ) : (
           first && <FlightDisplay p={first} settings={data.settings} />
         )}

@@ -484,66 +484,121 @@
   flex-grow: 1;
 }
 
-/* ---- Deploy card (moves to the intervention display next) ------------------------------ */
+/* ---- The intervention ------------------------------------------------------------------- */
 
-.deploy {
-  border-color: var(--airbag);
+.intervention {
+  position: relative;
   overflow: hidden;
+  border-color: var(--airbag-edge);
+  padding-top: calc(var(--s-5) + 8px);
+}
+.hazardEdge {
+  position: absolute;
+  inset: 0 0 auto 0;
+  animation: wipe var(--t-panel) var(--ease) both;
+}
+@keyframes wipe {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+}
+.interHead {
   display: flex;
   flex-direction: column;
+  gap: var(--s-2);
 }
-.deployBody {
-  padding: 24px 32px 28px;
+.interTitle {
   display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-.deployHead {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 24px;
+  align-items: center;
+  gap: var(--s-3) var(--s-4);
   flex-wrap: wrap;
+}
+.interH {
+  font-size: clamp(24px, 2.4vw, 32px);
+  line-height: 1.1;
+}
+.interMeta {
+  font-size: 12px;
+  color: var(--text-2);
 }
 .beforeAfter {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
 }
 .beforeAfter > div {
-  padding: 16px 20px;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
 }
-.beforeAfter > div:first-child {
-  padding-left: 0;
-}
-.beforeAfter > div + div {
+.beforeAfter > div:nth-child(even) {
+  padding-left: var(--s-5);
   border-left: 1px solid var(--line);
 }
-.side {
-  padding: 22px 24px;
+.beforeAfter dd {
+  font-size: 20px;
+  white-space: nowrap;
+}
+.arrow {
+  margin: 0 0.4em;
+  color: var(--text-3);
+}
+.pending {
+  font-size: 13px;
+}
+.interActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.logWrap {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--s-2);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--line);
 }
-.cf {
+
+/* If it keeps falling: both paths priced at the old liquidation price. */
+.keeps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+  background: var(--panel);
+  font-size: 14px;
+}
+.paths > div {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 12px;
-  padding: 14px 16px;
-  border: 1px solid;
-  border-radius: var(--r-control);
-  font-size: 14px;
+  gap: var(--s-3);
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
 }
-.cfValue {
+.paths dt {
+  color: var(--text-2);
+}
+.paths dd {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 2px;
+}
+.paths .big {
+  font-size: 28px;
+}
+.paths .faint {
+  font-size: 12px;
+}
+.keepsNote {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-3);
 }
 
 @media (max-width: 1180px) {
@@ -602,22 +657,25 @@
       "ends";
     padding: var(--s-4);
   }
-  .deployBody {
-    padding: 20px;
-  }
+  /* Readouts stack as rows: label left, before and after right. */
   .beforeAfter {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
   }
-  .beforeAfter > div:nth-child(3) {
-    padding-left: 0;
+  .beforeAfter > div,
+  .beforeAfter > div:nth-child(even) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--s-3);
+    padding: 12px 0;
     border-left: 0;
-    border-top: 1px solid var(--line);
   }
-  .beforeAfter > div:nth-child(4) {
-    border-top: 1px solid var(--line);
+  .beforeAfter dd {
+    font-size: 15px;
   }
   .section,
-  .sim {
+  .sim,
+  .keeps {
     padding: 18px;
   }
 }

@@ -2,7 +2,7 @@
 
 import { fmt } from '@airbag/risk';
 import Link from 'next/link';
-import type { DeploySummary, TimelineEntry } from '@/lib/types.ts';
+import type { DeploySummary } from '@/lib/types.ts';
 import { Mark } from './icons.tsx';
 
 export function Brand({
@@ -61,52 +61,12 @@ export function TxLink({
   explorerUrl: string;
   simulated: boolean;
 }) {
-  if (!tx) return <span />;
-  if (simulated)
-    return (
-      <span className="num faint" style={{ fontSize: 12 }}>
-        simulated
-      </span>
-    );
+  if (!tx) return null;
+  if (simulated) return <span className="num faint">simulated</span>;
   return (
-    <a
-      className="num"
-      href={`${explorerUrl}/tx/${tx}`}
-      target="_blank"
-      rel="noreferrer"
-      style={{ fontSize: 12, color: 'var(--airbag)', textDecoration: 'none' }}
-    >
+    <a className="num txlink" href={`${explorerUrl}/tx/${tx}`} target="_blank" rel="noreferrer">
       {fmt.short(tx)}
     </a>
-  );
-}
-
-export function Timeline({
-  entries,
-  explorerUrl,
-  simulated,
-  compact = false,
-}: {
-  entries: TimelineEntry[];
-  explorerUrl: string;
-  simulated: boolean;
-  compact?: boolean;
-}) {
-  return (
-    <ol className={`timeline ${compact ? 'timeline-compact' : ''}`}>
-      {entries.map((e) => (
-        <li key={`${e.at}-${e.text}`}>
-          <span className="num tl-block">{fmt.block(e.block)}</span>
-          <span className={`num tl-time ${e.tone === 'airbag' ? 'tl-airbag' : ''}`}>
-            {fmt.clock(e.at)}
-          </span>
-          <span className={`tl-text ${e.tone === 'liquidation' ? 'liq' : ''}`}>{e.text}</span>
-          <span className="tl-tx">
-            <TxLink tx={e.tx} explorerUrl={explorerUrl} simulated={simulated} />
-          </span>
-        </li>
-      ))}
-    </ol>
   );
 }
 

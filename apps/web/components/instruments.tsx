@@ -6,16 +6,17 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DeploySummary, GuardStatus, PositionStatus } from '@/lib/types.ts';
 
-/** True for `ms` after `value` changes; never on the first render. */
+/**
+ * True for `ms` after `value` changes. The first real value (arriving after undefined or an
+ * empty string, as live data does) is a reading, not a change, so it doesn't count.
+ */
 export function useFresh(value: unknown, ms = 10_000): boolean {
   const [fresh, setFresh] = useState(false);
-  const first = useRef(true);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `value` is the trigger
+  const prev = useRef<unknown>(undefined);
   useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
+    const before = prev.current;
+    prev.current = value;
+    if (before === undefined || before === '' || before === value) return;
     setFresh(true);
     const t = setTimeout(() => setFresh(false), ms);
     return () => clearTimeout(t);

@@ -14,12 +14,13 @@ import type {
   PositionView,
   Settings,
 } from '@/lib/types.ts';
+import { BlockLog } from './BlockLog.tsx';
 import s from './dashboard.module.css';
 import { Check, Cross, External } from './icons.tsx';
 import { Annunciator, OutcomeAnnunciator, Readout, RowAnnunciator } from './instruments.tsx';
 import { Runway } from './Runway.tsx';
 import { Tape } from './Tape.tsx';
-import { deploySentence, Timeline } from './ui.tsx';
+import { deploySentence } from './ui.tsx';
 
 const sideWord = (side: 'long' | 'short') => (side === 'long' ? 'falling' : 'rising');
 /** The share of the cushion used when Airbag deploys; demo mode deploys on a move instead. */
@@ -302,132 +303,181 @@ export function deployTitle(d: DeployDetail): string {
   return 'The trim didn’t fill';
 }
 
-export function DeployDetailCard({ d }: { d: DeployDetail }) {
+/**
+ * The intervention: the deploy card that replaces the flight display while Airbag acts and for
+ * ten minutes after. The tape shows the envelope moving (the old liquidation stays as a dashed
+ * ghost), the readouts show before and after, and the block log prints each step as it lands.
+ */
+export function InterventionDisplay({ d, p }: { d: DeployDetail; p: PositionView | undefined }) {
   const t = d.data.timeline;
   const first = t[0];
   const last = t.at(-1);
   const tx = d.data.close?.tx ?? d.data.margin?.tx;
+  const b = d.data.before;
   const after = d.data.after;
+  const moved = p !== undefined && Math.abs(p.liquidation - b.liquidation) > 1e-9;
   return (
-    <section className={`card ${s.deploy}`} aria-labelledby="deploy-title">
-      <div className="hazard" aria-hidden="true" />
-      <div className={s.deployBody}>
-        <div className={s.deployHead}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <span className="eyebrow airbag">
-              Airbag deployed · {d.symbol} {d.side}
-            </span>
-            <h1
-              id="deploy-title"
-              className="display"
-              style={{ fontSize: 'clamp(24px, 2.4vw, 32px)', lineHeight: 1.1 }}
-            >
-              {deployTitle(d)}
-            </h1>
-            {first && last && (
-              <span className="num muted" style={{ fontSize: 12 }}>
-                {fmt.clock(first.at)} → {fmt.clock(last.at)} · blocks {fmt.block(first.block)}–
-                {last.block % 1000} · fee $0
-              </span>
+    <section className={`${s.pfd} ${s.intervention} redraw`} aria-labelledby="deploy-title">
+      <div className={`hazard ${s.hazardEdge}`} aria-hidden="true" />
+      <header className={s.interHead}>
+        <div className={s.interTitle}>
+          <h2 id="deploy-title" className={`display ${s.interH}`}>
+            {deployTitle(d)}
+          </h2>
+          <OutcomeAnnunciator d={d} />
+        </div>
+        {first && last && (
+          <p className={`num ${s.interMeta}`}>
+            {fmt.clock(first.at)} → {fmt.clock(last.at)} · blocks {fmt.block(first.block)}–
+            {last.block.toLocaleString('en-US')} · fee $0
+          </p>
+        )}
+      </header>
+      <div className={s.pfdBody}>
+        {p && (
+          <div className={`well ${s.tapeWell}`}>
+            <Tape
+              side={p.side}
+              liquidation={p.liquidation}
+              line={p.line}
+              mark={p.mark}
+              ghost={moved ? b.liquidation : undefined}
+              height={340}
+            />
+          </div>
+        )}
+        <div className={s.readouts}>
+          <dl className={s.beforeAfter}>
+            <BeforeAfter
+              k="Liquidation"
+              before={fmt.usd(b.liquidation)}
+              after={
+                after
+                  ? after.liquidation === null
+                    ? 'Closed'
+                    : fmt.usd(after.liquidation)
+                  : undefined
+              }
+              tone="liq"
+            />
+            <BeforeAfter
+              k="To liquidation"
+              before={fmt.pct(b.distance)}
+              after={after ? fmt.pct(after.distance) : undefined}
+            />
+            <BeforeAfter
+              k="Size"
+              before={fmt.size(b.size, d.sizeDecimals)}
+              after={after ? `${fmt.size(after.size, d.sizeDecimals)} ${d.symbol}` : undefined}
+            />
+            <BeforeAfter
+              k="Leverage"
+              before={fmt.lev(b.leverage)}
+              after={after ? fmt.lev(after.leverage) : undefined}
+            />
+          </dl>
+          <div className={s.interActions}>
+            {d.outcome === 'save' && (
+              <Link href={`/s/${d.id}`} className="btn btn-primary btn-sm">
+                See the save report
+              </Link>
+            )}
+            <Link href={`/app/deploys/${d.id}`} className="btn btn-secondary btn-sm">
+              Deploy details
+            </Link>
+            {tx && !d.simulated && (
+              <a
+                className="btn btn-ghost btn-sm"
+                href={`${d.explorerUrl}/tx/${tx}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                View transaction
+                <External />
+              </a>
             )}
           </div>
-          {tx && !d.simulated && (
-            <a
-              className="btn btn-secondary"
-              href={`${d.explorerUrl}/tx/${tx}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              View transaction
-              <External />
-            </a>
-          )}
         </div>
-        <dl className={s.beforeAfter}>
-          <BeforeAfter
-            k="Liquidation"
-            before={fmt.usd(d.data.before.liquidation)}
-            after={
-              after ? (after.liquidation === null ? 'Closed' : fmt.usd(after.liquidation)) : '…'
-            }
-          />
-          <BeforeAfter
-            k="To liquidation"
-            before={fmt.pct(d.data.before.distance)}
-            after={after ? fmt.pct(after.distance) : '…'}
-          />
-          <BeforeAfter
-            k="Size"
-            before={fmt.size(d.data.before.size, d.sizeDecimals)}
-            after={after ? `${fmt.size(after.size, d.sizeDecimals)} ${d.symbol}` : '…'}
-          />
-          <BeforeAfter
-            k="Leverage"
-            before={fmt.lev(d.data.before.leverage)}
-            after={after ? fmt.lev(after.leverage) : '…'}
-          />
-        </dl>
-        <Timeline entries={t} explorerUrl={d.explorerUrl} simulated={d.simulated} />
+      </div>
+      <div className={s.logWrap}>
+        <span className="label">Block log</span>
+        <BlockLog entries={t} explorerUrl={d.explorerUrl} simulated={d.simulated} />
       </div>
     </section>
   );
 }
 
-function BeforeAfter({ k, before, after }: { k: string; before: string; after: string }) {
+/** A readout that changed: the old value faint, the new one lit. Pending shows a lamp. */
+function BeforeAfter({
+  k,
+  before,
+  after,
+  tone,
+}: {
+  k: string;
+  before: string;
+  after: string | undefined;
+  tone?: 'liq';
+}) {
   return (
     <div>
-      <dt className="eyebrow" style={{ letterSpacing: '0.08em' }}>
-        {k}
-      </dt>
-      <dd className="num" style={{ fontSize: 16 }}>
-        <span className="faint">{before}</span> <span className="faint">→</span> {after}
+      <dt className="label">{k}</dt>
+      <dd className="num">
+        <span className="faint">{before}</span>
+        <span className={s.arrow} aria-hidden="true">
+          →
+        </span>
+        <span className="visually-hidden"> to </span>
+        {after === undefined ? (
+          <span className={`faint ${s.pending}`}>pending</span>
+        ) : (
+          <span className={tone === 'liq' ? 'liq' : undefined}>{after}</span>
+        )}
       </dd>
     </div>
   );
 }
 
-/** "If BTC keeps falling": the counterfactual at the old liquidation price. */
+/** "If BTC keeps falling": both paths priced at the old liquidation price. */
 export function KeepsFalling({ d, p }: { d: DeployDetail; p: PositionView | undefined }) {
   if (!p) return null;
   const old = d.data.before.liquidation;
   const withAirbag = equity(p.position, old);
   return (
-    <section className={`card ${s.side}`} aria-labelledby="keeps-falling">
-      <h2 id="keeps-falling" style={{ fontSize: 16, fontWeight: 600 }}>
+    <section className={s.keeps} aria-labelledby="keeps-falling">
+      <h2 id="keeps-falling" className="title">
         If {d.symbol} keeps {sideWord(d.side)}
       </h2>
-      <p className="muted" style={{ fontSize: 14 }}>
-        At your old liquidation price,{' '}
-        <span className="num" style={{ color: 'var(--bone)' }}>
-          {fmt.usd(old)}
-        </span>
-        :
+      <p className="muted">
+        At your old liquidation price, <span className="num">{fmt.usd(old)}</span>:
       </p>
-      <div className={s.cf} style={{ borderColor: 'var(--liq-edge)' }}>
-        <span className="muted">Without Airbag</span>
-        <span className={s.cfValue}>
-          <span className="big liq" style={{ fontSize: 22 }}>
-            {fmt.usd(d.data.counterfactual)}
-          </span>
-          <span className="muted" style={{ fontSize: 12 }}>
-            liquidated, position gone
-          </span>
-        </span>
-      </div>
-      <div className={s.cf} style={{ borderColor: 'rgba(242,193,46,0.55)' }}>
-        <span className="muted">With Airbag</span>
-        <span className={s.cfValue}>
-          <span className="big airbag" style={{ fontSize: 22 }}>
-            {fmt.usd(withAirbag)}
-          </span>
-          <span className="muted" style={{ fontSize: 12 }}>
-            still open, {fmt.size(p.size, p.sizeDecimals)} {p.symbol}
-          </span>
-        </span>
-      </div>
-      <p className="faint" style={{ fontSize: 13, lineHeight: 1.5 }}>
-        Now liquidates at {fmt.usd(p.liquidation)}.
-        {p.line !== undefined && ` If it gets close, Airbag deploys again at ${fmt.usd(p.line)}.`}{' '}
+      <dl className={s.paths}>
+        <div>
+          <dt>Without Airbag</dt>
+          <dd>
+            <span className="big liq">{fmt.usd(d.data.counterfactual)}</span>
+            <span className="faint">liquidated, position gone</span>
+          </dd>
+        </div>
+        <div>
+          <dt>With Airbag</dt>
+          <dd>
+            <span className="big airbag">{fmt.usd(withAirbag)}</span>
+            <span className="faint">
+              still open, {fmt.size(p.size, p.sizeDecimals)} {p.symbol}
+            </span>
+          </dd>
+        </div>
+      </dl>
+      <p className={s.keepsNote}>
+        Now liquidates at <span className="num">{fmt.usd(p.liquidation)}</span>.
+        {p.line !== undefined && (
+          <>
+            {' '}
+            If it gets close, Airbag deploys again at <span className="num">{fmt.usd(p.line)}</span>
+            .
+          </>
+        )}{' '}
         The liquidation figure is an estimate: 80% of what’s left at that price.
       </p>
     </section>
