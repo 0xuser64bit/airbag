@@ -33,7 +33,9 @@ liqPrice = E − s · (M + F − MMR) / n
 
 `C_MMR = P_entry · L / MMF`, so maintenance is charged on entry notional, not mark notional. The
 liquidation split Perpl applies on liquidation is 80% trader / 10% insurance fund / 10% protocol;
-the engine reads it from `getLiquidationInfo` rather than hard-coding 0.8.
+the engine reads `getLiquidationInfo` for the first covered market and falls back to 0.8 if that
+read fails. This shared default is an estimate; differing per-market distributions need separate
+reads before expanding coverage or interpreting save values as exact proceeds.
 
 ## Cushion and the Airbag line
 

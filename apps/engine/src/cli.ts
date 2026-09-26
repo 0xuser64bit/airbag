@@ -40,10 +40,11 @@ export function keyVersions(store: Store, master: MasterKeys): Record<string, nu
 if (import.meta.main) {
   const command = process.argv[2];
   const network = networkFromEnv();
-  const store = openStore(
+  const databasePath =
     process.env.DATABASE_PATH ??
-      `./data/airbag-${process.env.ENGINE_MODE ?? 'live'}-${network.network}.db`,
-  );
+    `./data/airbag-${process.env.ENGINE_MODE ?? 'live'}-${network.network}.db`;
+  if (!existsSync(databasePath)) throw new Error(`Database does not exist: ${databasePath}`);
+  const store = openStore(databasePath);
   try {
     if (command === 'backup') {
       const destination = process.argv[3];

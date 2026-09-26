@@ -14,18 +14,20 @@ A user's Perpl API key. It can't withdraw or transfer (Perpl refuses that for ev
 
 | Threat | Control | Where |
 |---|---|---|
-| Airbag itself opens, grows or flips a position | Only order types 3, 4 (reduce-only closes, clamped by Perpl to the position), 6 (add the user's own margin) and 5 leave the engine. Builders can only produce those, `assertAllowed` runs right before `send`, tests cover both, and the paper exchange asserts every frame too. The one cancel is a link-time scope probe aimed at an order id that isn't one of the account's, so it can't cancel anything. | `packages/perpl/src/orders.ts`, [ADR 0003](adr/0003-engine-runtime.md) |
+| Airbag itself opens, grows or flips a position | Only order types 3, 4 (reduce-only closes, clamped by Perpl), 6 (add the user's own margin) and 5 leave the engine. The runtime allowlist checks immediately before send. The one cancel is a link-time scope probe with a high safe uint64 id outside the open-order snapshot. Its live acceptance remains a testnet gate. | `packages/perpl/src/orders.ts`, [ADR 0003](adr/0003-engine-runtime.md) |
 | A stored secret leaks from the database | Envelope encryption: a random AES-256-GCM data key per secret, wrapped by a versioned master key from the host's secret store; the wallet and account are associated data, so a ciphertext can't be moved to another row. The web tier has no database access at all. | `apps/engine/src/vault.ts`, [ADR 0006](adr/0006-api-key-custody.md), [0010](adr/0010-engine-owns-state-in-sqlite.md) |
 | A secret leaks through logs | JSON logs redact any field whose name looks like a secret, at any depth. The secret is never returned by any endpoint. | `apps/engine/src/log.ts` |
 | A key works from somewhere else | The user sets the key's IP allow-list to the engine's static egress IPs. Perpl doesn't let anyone read an allow-list back, so Airbag can't verify it; the UI says exactly that and asks the user to confirm. | `/link-key` |
 | Someone links a key to a wallet that isn't theirs | Linking needs a SIWE session, and the engine checks that Perpl's wallet snapshot for the key is that same wallet. | `apps/engine/src/accounts.ts` |
-| A Read key is linked and silently can't act | The scope probe at link time: Perpl refuses a Read key's order frame with 403. | `checkKey` |
-| Phishing a sign-in for another site | SIWE domain must be one of `WEB_ORIGIN`'s hosts; the chain id must match; nonces are single-use and expire in 10 minutes. | `apps/engine/src/auth.ts` |
+| A Read key is linked and silently can't act | The scope probe at link time: Perpl refuses a Read key's order frame with 403. Lost, timed-out or otherwise unproved scope is refused; no key is stored. Key changes serialize per wallet and independently check pending deploy locks before and after verification. | `checkKey`, `Accounts` |
+| Phishing or replaying a sign-in | SIWE version, URI host, issued date, validity window, domain and chain are checked. Nonces expire in 10 minutes and are consumed synchronously before asynchronous signature recovery, including concurrent requests. | `apps/engine/src/auth.ts` |
 | Session theft | Random 32-byte bearer tokens, stored as SHA-256 hashes, 7-day expiry, logout deletes them. A session can change its own wallet's settings and link or unlink its key; it can never read a secret. Demo mode (deploys after a 0.3% move) is refused for wallets not on `DEMO_WALLETS`, so a stolen session can't turn Airbag into a position closer. | [ADR 0011](adr/0011-bearer-sessions.md) |
 | A script injected into the web app steals a pasted key or the session | Content-Security-Policy: the page can only connect to itself and the engine, can't be framed, loads no third-party scripts; no `dangerouslySetInnerHTML` anywhere. The key is sent once over TLS and never stored in the browser. | `apps/web/next.config.ts` |
 | API abuse | CORS only for `WEB_ORIGIN`, JSON bodies capped at 16 KB, per-IP token buckets per route (tighter on sign-in, lookup and key linking), wallet lookups cached for 15 s. | `apps/engine/src/api.ts` |
-| Acting on bad data | Nothing is sent on stale data (feed silent, or Perpl's head behind Monad's by more than `STALE_BLOCKS`). Closes carry a worst-price limit (0.5% by default). Re-adds are capped by the risk model and the free balance. | `packages/perpl/src/market.ts`, `apps/engine/src/guard.ts` |
-| Supply chain | Exact dependency pins, pnpm's release-age policy (no exceptions), install scripts denied unless approved, `pnpm audit` and gitleaks over the full history in CI, GitHub Actions pinned by commit SHA, the Foundry image pinned by digest. | `.github/workflows/ci.yml`, `pnpm-workspace.yaml` |
+| Acting on bad data | Every order rechecks pause, feed/account freshness, frozen/forwarding state, account and position identity after the request-budget wait. Explicit execution deadlines are persisted before send. Recovery waits beyond a lost order's deadline and holds while unsafe; the original policy and lot cap survive restart. Live funding and fee schedules must be known. | `packages/perpl/src/market.ts`, `apps/engine/src/guard.ts` |
+| Arbitrary outbound requests through push | Only known HTTPS browser push providers and valid P-256/auth keys are accepted. Stored subscriptions are revalidated before delivery, with a request timeout. | `apps/engine/src/notify.ts` |
+| Simulation and real accounts sharing state | SQLite binds mode and chain id and refuses mismatches or silent adoption of populated legacy files. Simulation cannot use a real-chain log writer. | `apps/engine/src/db.ts`, `config.ts` |
+| Supply chain | Frozen lockfile installs, restricted install scripts, `pnpm audit` and gitleaks over full history in CI, Actions pinned by commit SHA, Foundry image pinned by digest. Runtime dependencies are pinned; some development ranges resolve through the lockfile. | `.github/workflows/ci.yml`, `pnpm-workspace.yaml` |
 
 ## What Airbag can't promise
 
@@ -44,8 +46,8 @@ Generate with `openssl rand -base64 32` and keep it only in the host's secret st
 ### Rotating the master key
 
 1. Generate a new key. Set `MASTER_KEY` to it, `MASTER_KEY_VERSION` to the next version, and keep the old one as `MASTER_KEY_<old version>`. Deploy.
-2. On the engine machine, run `node apps/engine/src/cli.ts rotate-master-key --env-file-if-exists=.env`. It re-wraps each stored key's data key under the new master key, proving each new envelope opens before replacing the old one. The ciphertexts don't change.
-3. Run `node apps/engine/src/cli.ts check-keys --env-file-if-exists=.env`: every key should report the new version.
+2. Take a SQLite backup (see DEPLOY), then run `node --env-file-if-exists=.env apps/engine/src/cli.ts rotate-master-key`. It re-wraps each stored key's data key under the new master key, proving each new envelope opens before replacing the old one. The ciphertexts don't change.
+3. Run `node --env-file-if-exists=.env apps/engine/src/cli.ts check-keys`: every key should report the new version. Set `DATABASE_PATH` to the existing target file for both commands.
 4. Remove `MASTER_KEY_<old version>` and deploy.
 
 ### If the database or a key may have leaked

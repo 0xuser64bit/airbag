@@ -47,6 +47,7 @@ restart rejection, pause between orders, simultaneous nonce use or key replaceme
 | P1 — Environment and service lifecycle | Bind SQLite mode/network; validate config; make health/readiness distinct; stop guards before closing resources. | Store migration, `config.ts`, `app.ts`, `main.ts`, deploy docs | Cross-environment reuse refused; shutdown cannot submit late orders; migration/reopen and HTTP tests. |
 | P1 — Live dashboard and browser state | Publish staleness without blocks; bound SSE buffering; detect a hung stream; handle storage expiration and cross-tab sign-out; expose config-load failures. | HTTP/engine lifecycle; web libraries and existing UI | UI stops claiming live protection when updates stop; runtime and regression checks. |
 | P1 — Public record integrity | Check transaction receipts and events; make repeated saves idempotent in contract/indexer. | `onchain.ts`, Solidity, handler/tests | Reverts never become logged success; one save per deploy; contract/indexer tests. |
+| P0 — Protocol fee drift, found in second audit | Replace the obsolete free-close assumption with current taker-tier estimates, net released collateral and observed fees; correct public claims. | Risk/perpl/engine/web, RISK-MODEL and PERPL references | Fee-bearing long/short and generated vectors reach the target; an engine deploy preserves original spare balance; unknown costs stay unconfirmed. |
 | P2 — Operational handoff and final audit | Correct stale docs/claims, backup/recovery steps, reproducible commands, record actual results and remaining launch gates. | All implementation units | Full check/build/e2e, contracts/indexer, dependency/secret audit, image smoke if available; honest final report. |
 
 ## Deliberate boundaries
@@ -60,4 +61,147 @@ restart rejection, pause between orders, simultaneous nonce use or key replaceme
 - Preserve the existing visual identity; fix failure behavior and accessibility rather than
   replace a developed product surface for novelty.
 
-Completion and validation results will be recorded here after the second audit.
+## Implementation and second audit
+
+All repository hardening units above are complete. External launch gates below remain open.
+The second pass revisited protocol documentation, dispatch continuations, restart phases,
+browser state, deployment readiness, backup behavior and product claims. It found additional
+issues and produced these corrections:
+
+- A lost spare-margin add could be replanned as a trim. Recovery now preserves the action.
+- A successful retried re-add could end a partly filled deploy prematurely. The target is checked
+  again and the remaining trim retries within the original cap and attempt budget.
+- Interrupted later partial fills could undercount cumulative lots. New pre-close state records
+  the prior filled count. Recovery restores it; unattributable fees remain unconfirmed.
+- Recovery could send another add after the retry budget was already exhausted. It now stops and
+  alerts instead. Failed paths use one common terminal alert; incomplete partial protection also
+  alerts even if some work succeeded.
+- A same-position size/collateral change during the request-budget wait could invalidate a plan.
+  Dispatch checks those captured values and side before sending; a change stops the deploy for
+  inspection. Position identity checks still apply between every continuation.
+- Concurrent token-bucket callers could all wake and spend the same token. The native promise
+  queue serializes waits, and shutdown aborts them. Socket startup also has a bounded timeout.
+- The scope probe used a low missing order id that a concurrent first order could take. It now
+  selects a high safe uint64 id outside the snapshot. Official types accept uint64 ids, but actual
+  gateway acceptance of the probe must still be verified on the disposable account.
+- Current official Perpl docs charge trading fees on closes. Trim planning now includes the
+  taker schedule and account fee tier; settlement deducts the observed gross fee from the net
+  release. No builder fee is requested. Legacy and lost receipts do not invent a zero fee.
+- Root/product copy, simulated examples, cost receipts and operational docs now describe actual
+  behavior. The original zero-fee golden vectors are labelled historical simulation examples.
+- Operator commands refuse a missing source file instead of silently creating an empty database.
+  Backup uses SQLite's online backup API rather than copying a live WAL-mode file.
+
+The original package boundaries, native HTTP/SQLite approach, encrypted key custody and instrument
+UI remain. They fit a single-machine MVP. No framework, queue service, database service, auth SDK,
+wallet SDK or speculative feature was added. No dependency version or lockfile was changed.
+No production secrets, real accounts, deployments, external messages or mainnet orders were created.
+
+## Meaningful commits
+
+All are on `codex/mvp-hardening`, starting from `46d3a4b`. Each implementation milestone ran
+relevant checks before commit; extra second-pass corrections are separate coherent units.
+
+| Commit | Purpose |
+|---|---|
+| `032fe24` | Record the initial audit and prioritized backlog. |
+| `4d3c177` | Atomic SIWE nonce use and validated push destinations/keys. |
+| `723b90c` | Gate all guard dispatches and reconcile interrupted deploys safely. |
+| `044aa66` | Serialize key changes and refuse unproved Trade scope. |
+| `80c6a3e` | Environment binding, consistent SQLite backups, readiness and shutdown. |
+| `9c81dee` | Confirm log receipts and count saved deploys once. |
+| `e9382a1` | Bound socket startup and serialize cancellable request waits. |
+| `f54d94c` | Preserve recovered actions and cap recovery attempts. |
+| `782950d` | Browser session/stream recovery and isolated production journeys. |
+| `c33b7c5` | Current closing fees, net collateral and honest cost receipts/copy. |
+| `01663b8` | Reject position changes during delayed dispatch. |
+| `130c2d1` | Clarify remaining simulation claims and ignore unrelated storage events. |
+
+The final operations/handoff commit contains this completed report, missing-database refusal,
+expanded migration/backup preservation checks and updated README/security/deployment docs.
+
+## Verification results
+
+Performed locally on Node 24.21.0 / pnpm 11.24.0. These are actual results, not CI claims.
+
+| Check | Result / limits |
+|---|---|
+| Baseline `pnpm check` | Lint/typecheck passed; 135 tests in 13 files. Baseline production build passed. |
+| `pnpm install --frozen-lockfile` | Passed across all seven workspace projects; unchanged lockfile. Production-only install also passed inside Docker. |
+| Final `pnpm check` | Biome lint, engine/web/e2e TypeScript checks, **162 tests in 16 files passed**. Includes golden/property, adversarial auth/push, key races, recovery/caps, fee paths, storage and readiness. |
+| `pnpm build` | Next production build passed, including static/dynamic routes and share-image compilation. |
+| Production browser profile | `AIRBAG_E2E=1 NEXT_PUBLIC_ENGINE_URL=http://localhost:8877 NEXT_PUBLIC_SITE_URL=http://localhost:31300 pnpm build`, then `CI=1 E2E_WEB_PORT=31300 pnpm e2e`: **6 passed** using bundled Chromium. Local Chrome/dev profile also passed. |
+| Browser behavior | Real SIWE signatures from disposable test wallets, key linking, settings preview, arm, trim/re-add/re-arm/save, receipt/detail/public report, PNG OG image, phone pause/settings, stream interruption/reconnect, cross-tab logout and config retry passed. Axe serious/critical WCAG checks and overflow checks passed on tested views. Uncaught browser page errors fail the suite; none occurred. Not a full screen-reader/keyboard audit. |
+| Visual inspection | Desktop 1440×900 and phone 375×812 screenshots inspected at baseline and confirmation. Current typography/layout preserved; no horizontal overflow. Full-page captures include the fixed phone navigation at the captured viewport. |
+| Impeccable detector | Ran once. Returned existing imported-CSS font/radius advisories and a false font warning on the font-extraction regex in `save.ts`; no CSS redesign made to satisfy those heuristics. This is not a clean detector result. Visual inspection and axe are the stronger evidence for this scoped work. |
+| `pnpm contracts:test` | Foundry via pinned Docker image: **9 passed**, including one save per deploy, writer/owner access and rotation, valid reasons, sequential records and no funds. No deployed-contract verification. |
+| Indexer | Envio codegen, TypeScript and **3 handler tests passed**, including duplicate save events, per-market totals and liquidation aggregates. No real HyperSync/Cloud ingestion run. |
+| SQLite migration/recovery | Schema-1 disk fixture migrated to schema 2; settings, deploys and links preserved through WAL-aware backup/reopen; mismatched mode/chain and future schema rejected. No user database migration was run. |
+| Engine image | Final production Docker image built; simulation `/ready` returned 200 with `ok:true`; Docker health became healthy; config endpoint/startup logs checked; SIGTERM exited 0 without OOM or runtime errors. Test container removed. |
+| Operator backup smoke | Running image produced an online backup. Native SQLite `integrity_check` returned `ok`, schema version 2 and `simulation:10143` binding. Missing-source backup intentionally exited 1, and neither source nor backup was created. |
+| `pnpm audit --audit-level high` | Passed threshold; **one low** vulnerability remains (esbuild GHSA-g7r4-m6w7-qqqr). No high/critical findings. See accepted risks. |
+| Gitleaks | Full Git history/all refs with redaction passed; no leaks found. Rechecked after implementation commits. This does not inspect private host secret stores. |
+
+Failures were fixed rather than hidden: the default browser port was occupied by an existing user
+server, so tests gained explicit port overrides and refuse reuse; storage fallback placement
+broke hard navigations and was corrected before committing; retry test timing advanced blocks
+before its 5 ms settlement timeout and now waits long enough; strict viem receipt-fixture typing
+and the zero-fee formatting assertion were corrected. Initial immediate Docker curls ran before
+startup and received an empty reply; readiness and Docker health subsequently passed. Expected
+negative tests intentionally reject invalid inputs. Next/Playwright only reported the harness's
+`NO_COLOR`/`FORCE_COLOR` environment warning. It is not an application runtime error.
+
+## Remaining backlog and launch gates
+
+| Priority | Work / reason | Dependency and affected area | Required proof |
+|---|---|---|---|
+| Launch gate | Funded disposable testnet execution, including the high-id Trade-scope probe and fee-bearing close/re-add. Simulation cannot prove exchange semantics. | Owner testnet wallet/funds/key; `spike`, perpl and guard | Perpl UI/chain/WS liquidation agree; actual fill/fee/balance/deposit reconcile; no unintended order. |
+| Launch gate | Independent review of trading recovery, numerics, auth and key custody. AI tests are not an independent safety review. | Reviewer with protocol expertise | Adversarial review and disposable-position chaos tests before any funded live beta. |
+| Launch gate | Egress allow-list, revocation/expiry, connection limits, forwarding-off, live feed failure and host alerts. | Deployed testnet engine with static egress | Refused keys cannot act; stale/paused recovery holds; `/ready` alerts reach the operator. |
+| Launch gate | Real VAPID push delivery and browser permissions; backup/master-key restore drill. | HTTPS installation, push keys/device, host secret store | Tested notification and revoke/unsubscribe, offline delivery expectations, database and key recovery after host loss. |
+| Optional feature gate | Log writer gas, confirmed events, retries after errors, real indexer ingestion. | Deployed testnet contract/writer, Envio token | Onchain rows match receipts; actual events indexed once; failed writes observed and handled. |
+| Deferred | Durable onchain outbox; current queue is in memory and failed records are not automatically backfilled. | Only needed when public recording is operationally promised | Crash/restart/revert replay without missing or duplicate records. |
+| Deferred | More robust attribution under simultaneous user trades/manual collateral changes; per-market liquidation shares. | Live protocol evidence; guard/chain and save model | Correct reconciliation despite concurrent mutations; truthful per-market estimates. Until then, public save values remain counterfactual estimates. |
+| Deferred | HA, distributed coordination and large-scale stream fanout. | Usage beyond a single-machine beta | Load/failover evidence. Adding another engine now would risk duplicate trading against one account. |
+| Accepted low risk | esbuild advisory affects Windows esbuild dev-server file serving, which this app does not invoke. It is transitive tooling, not the production engine. Avoid a forced minor-version override outside dependents' ranges solely to make audit green. | Upstream Vite/Vitest/tsx/Envio compatible update | Upgrade and rerun install/build/test/codegen when compatible versions resolve it. [Advisory](https://github.com/advisories/GHSA-g7r4-m6w7-qqqr). |
+
+Additional limits: price gaps or thin books can still liquidate positions; service-wide readiness
+does not mean every linked key is healthy; logout ends the web session rather than stopping an
+armed server-side guard; localStorage bearer tokens and Next inline-script allowances remain;
+rate-limit maps, private SSE connections and full-state fanout need production load observation.
+Optional contract records are writer-attested and the log's counters are not independent proof
+of financial savings. Counterfactual returns approximate a fill at the old liquidation price and
+currently share a first-market liquidation split with a 0.8 fallback. Public reports can lag 30 s.
+
+## Manual checklist
+
+1. On desktop and phone, complete onboarding with a real wallet; reject signing, switch wallets,
+   deny storage/permissions and retry an unreachable engine. Confirm simulation/live labelling.
+2. Link a disposable real Trade key with both egress addresses. Try a Read key, wrong wallet,
+   expired/revoked key and exhausted connection budget. Verify no unproved key is stored.
+3. Match entry, funding, liquidation, fee tier, spare balance and preview with Perpl. Test BTC and
+   ETH longs/shorts, capped trims and spare-only protection. Fee changes must be reflected.
+4. Execute a small testnet trim and verify order types, IOC limit, actual fee, net re-add,
+   transaction, receipt and new liquidation. Test partial/no-fill and retry exhaustion.
+5. Pause between orders, disable forwarding, freeze/revoke the key, interrupt each socket and
+   restart after sending a close/add. No new dispatch while unsafe; no duplicate collateral add.
+   Repeat with concurrent manual trades/collateral moves and investigate every ambiguous result.
+6. Change settings during a deploy, attempt link/unlink while paused recovery is pending, and
+   verify the existing episode retains its policy/key. Re-arm once safe; check terminal alerts.
+7. Install the HTTPS PWA; deny/allow notifications; observe actual deploy/save/failure pushes on
+   target phones, revoke permission and unsubscribe. Test keyboard, focus, zoom and screen readers.
+8. Take an online backup, rotate/check master keys, restore on a stopped disposable host with a
+   clean target path, and confirm sessions/settings/links/receipts/pending orders survive.
+9. If using public logs, check reverted/missing events, writer rotation, gas depletion, queue loss
+   and duplicate indexer events on deployed testnet. Confirm public estimates and share cards.
+
+## Final assessment
+
+**Demo-ready; live MVP release blocked.** The implementation is materially stronger and its
+simulated core journey is verified end to end with persistent storage and native operational
+checks. It is not production-ready and cannot honestly be called a verified live protection MVP:
+no funded Perpl testnet trade has been executed, no independent review or host recovery drill has
+occurred, and real push/log/indexer paths remain external. No mainnet activity or deployment was
+attempted. Existing local servers were preserved; isolated browser servers and the owned smoke
+container were stopped. The detailed launch gates above define the next work without pretending
+that a passing build proves financial safety.

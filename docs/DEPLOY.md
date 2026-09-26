@@ -57,7 +57,7 @@ fly secrets set MASTER_KEY="$(openssl rand -base64 32)"
 fly secrets set WEB_ORIGIN=https://<web domain> ENGINE_EGRESS_IPS=<egress IPv4>/32
 fly secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:<you>
 fly deploy
-curl https://<app>.fly.dev/health
+curl --fail https://<app>.fly.dev/ready
 ```
 
 - Pick the region with the lowest round trip to `app.perpl.xyz` (`fly ping` from a few regions) and
@@ -68,8 +68,43 @@ curl https://<app>.fly.dev/health
 - Keep one machine: the engine is a single process by design
   ([ADR 0003](adr/0003-engine-runtime.md)). `min_machines_running = 1` and auto-stop are already
   set in `fly.toml`, because protection must never sleep.
-- Backups: Fly snapshots volumes daily. Download one before any migration:
-  `fly ssh sftp get /data/airbag.db`.
+- Verify your provider's volume snapshot policy. Before migration or key rotation, make a
+  consistent SQLite snapshot using the native backup command described below. Copying only
+  the live `.db` file can omit committed rows still in its WAL.
+
+### Database binding, backup and restore
+
+Default local files are `data/airbag-<mode>-<network>.db`. Fly sets an explicit
+`/data/airbag.db`; the file records mode and chain id and rejects a mismatch. Separate live and
+simulation deployments need separate files/volumes. Live mode refuses `:memory:`.
+
+For an existing populated file created before environment binding, stop the engine, inspect its
+source environment and take a backup. Then adopt it explicitly; this command is an assertion by
+the operator and cannot determine whether legacy receipts were originally simulated:
+
+```bash
+DATABASE_PATH=./data/airbag.db node --env-file-if-exists=.env apps/engine/src/cli.ts backup ./backups/airbag-before-bind.db
+DATABASE_PATH=./data/airbag.db node --env-file-if-exists=.env apps/engine/src/cli.ts bind-database live:10143
+```
+
+Use `simulation:10143` for the old testnet simulation, or `live:143` only for a verified mainnet
+file. Select that same `DATABASE_PATH` when starting the engine; never switch identities to get
+past a rejection. Do not reuse a mainnet file for tests.
+
+The `backup` command uses SQLite's online backup API, works while the engine is running and
+refuses to overwrite an existing destination. On the Fly image, run from `/app/apps/engine`:
+
+```bash
+DATABASE_PATH=/data/airbag.db node src/cli.ts backup /data/airbag-backup-2026-09-27.db
+```
+
+Download the resulting backup with `fly ssh sftp get /data/airbag-backup-2026-09-27.db` and keep an
+encrypted copy off the engine volume. Restore with the engine stopped: preserve the existing DB,
+WAL and SHM files together, restore the backup to a clean target path, set `DATABASE_PATH`, keep
+the matching master keys, and start once. Check `/ready`, linked accounts, settings and receipts.
+A restore retains pending orders; restart waits out their recorded execution window before
+reconciliation. File migration and backup/reopen are automated tests; a host disaster-recovery
+drill is still required.
 
 ## 3. Web on Vercel
 
@@ -98,5 +133,9 @@ See `indexer/README.md`. Needs an `ENVIO_API_TOKEN`. Set `ENVIO_CHAIN_ID`,
 - Link a real key through the web app from the deployed engine (its egress IP on the key's
   allow-list), check the dashboard shows the account, then arm demo mode on a small testnet
   position to record a real deploy and check the push alert arrives.
-- An uptime check on `/health`, and an uptime alert on the engine being down: while it is down,
+- An uptime check on `/ready`, and an uptime alert on the engine being down: while it is down,
   nothing is being trimmed.
+- Match the live taker fee tier, observed `Order.f`, net released collateral and post-deploy
+  liquidation with Perpl. The historical zero-fee landing replay is not a live estimate.
+- Exercise pause/re-arm and restart during a close, during a re-add, and after a lost acknowledgement
+  using only a disposable testnet position. No duplicate add or unexpected trim is acceptable.

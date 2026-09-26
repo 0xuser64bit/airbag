@@ -109,9 +109,11 @@ sequenceDiagram
   Note over G: later blocks: old liquidation price reached while open = save (recordSave), closed first = precaution
 ```
 
-A restart between the close and the re-add is finished on the next snapshot: the guard compares the
-position with the state recorded when the close was sent and re-adds what's missing, unless the
-deposit shows it already landed.
+A restart compares fresh snapshots with persisted pre-order state and exact re-add targets.
+It waits beyond the last order's execution deadline before retrying, so an original order
+still in transit cannot be followed by a duplicate. Recovery stays pending while paused,
+stale, frozen or forwarding is off. Rejected recovery consumes the retry budget and never
+becomes a successful receipt merely because the recovery code ran.
 
 ## Invariants
 
@@ -126,11 +128,13 @@ Enforced in code and covered by tests.
    Perpl's head more than `STALE_BLOCKS` behind Monad's), while paused, key-rejected, frozen, or
    with order forwarding off.
 3. One deploy in flight per position. `rq` strictly increasing per account, seeded from
-   `Account.lfr`; unique `sn` per frame. Pending orders always have a deadline (60 blocks for
-   `lb: 0`), so a lost final status cannot hold a position's lock forever.
+   `Account.lfr`; unique `sn` per frame. Guard orders persist explicit `head + order_ttl_blocks`
+   deadlines before dispatch. Unknown outcomes retain their lock until safe reconciliation;
+   unlink/replacement checks that lock independently of the displayed status.
 4. Outcomes come from positions, balances and `mt:24`, never from `mt:3`.
-5. Every socket closes after 10 s of silence and reconnects, so a connection that stops delivering
-   cannot silently freeze protection.
+5. Socket startup times out after 10 s and shutdown cancels opening and request-budget waits.
+   Open sockets close after 10 s of silence and reconnect. The dashboard also detects silence;
+   the engine publishes stale state without relying on a new block to arrive.
 6. The API secret is decrypted only in engine memory and never logged or returned
    ([ADR 0006](adr/0006-api-key-custody.md)).
 
@@ -140,6 +144,13 @@ Enforced in code and covered by tests.
 - **Simulation** (`ENGINE_MODE=simulation`): the same engine, guard and API on paper accounts and
   scripted prices ([ADR 0012](adr/0012-exchange-port-and-simulation.md)). Every screen says so. CI
   and the end-to-end tests run here. The simulation's `POST /v1/sim/*` controls 404 in live mode.
+
+SQLite is bound to mode and chain id. Local default files are
+`data/airbag-<mode>-<network>.db`; an explicit path still must match the stored identity.
+Populated legacy files require an operator backup and explicit binding. `/health` provides
+process diagnostics; `/ready` returns 503 when the engine/feed cannot protect positions.
+Fly, Docker and CI use readiness. It is a service-wide check; individual key problems remain
+visible in each account's status.
 
 ## The web app
 
@@ -177,17 +188,25 @@ Accepted for now, and worth knowing before changing anything near them.
   refreshes (`apps/web/lib/save.ts`), so "now, BTC is at …" can lag the market. The figures always
   match the price the page states. Save links are `prefetch={false}` for the same reason: the kept
   amount moves with the price, so an early fetch plants a stale snapshot.
+- Counterfactual returns use a shared liquidation-user share read from the first covered market,
+  with a 0.8 fallback, and estimate a fill at the old liquidation price. Market-specific shares,
+  liquidation slippage and later external changes are not reconstructed.
 - One engine process on one machine: if it is down, nothing is protected. Put an external uptime
-  check on `/health` when it is deployed.
+  check on `/ready` when it is deployed.
 - The dashboard stream sends the whole state every block to every open tab. Fine for tens of users,
   not thousands.
-- The scope probe cancels the smallest order id the account does not have. On an account that has
-  never had an order, a first order placed in the same second could take that id and be cancelled.
-  Harmless to positions, rare.
-- If the funding seed from Perpl's REST API fails at boot, premium PnL counts as zero until the
-  next funding event, which can put the liquidation price off by the accrued premium. Logged as
-  `funding.seed.error`.
-- Pausing mid-deploy leaves the retry pending until re-armed; settings changed mid-deploy apply from
-  the next attempt.
+- The scope probe uses a high safe uint64 id outside the snapshot, avoiding the old low-id race.
+  Its live acceptance is still unverified; there is no authoritative scope-introspection API.
+- Live startup requires funding and fee schedules. Unknown data blocks protection rather than
+  silently valuing funding or fees as zero. Fee estimates can still change at execution time.
+- Pausing mid-deploy leaves recovery pending until re-armed. Target, trim cap and spare policy
+  are frozen for that episode; changes apply to the next episode.
+- Concurrent user trades or manual collateral moves can make snapshot-based reconciliation
+  ambiguous. Recovery checks position/account identity, but cannot attribute every external
+  mutation. Disposable testnet chaos testing and independent review remain launch gates.
+- The optional onchain writer has an in-memory queue, without durable retry or a persistent
+  outbox. Receipts survive in SQLite, but failed log writes require operator investigation and
+  are not silently backfilled on restart. The contract is writer-attested, not independent proof
+  that a counterfactual liquidation would have occurred.
 - The session token lives in `localStorage`. The CSP limits where a script could send it, but Next's
   inline scripts need `'unsafe-inline'`.

@@ -120,12 +120,17 @@ describe('config', () => {
 });
 
 describe('store', () => {
-  it('migrates and backs up a legacy WAL database without losing users or settings', async () => {
+  it('migrates and backs up legacy users, settings, sealed keys and deploys; refuses newer schemas', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'airbag-store-'));
     try {
       const path = join(dir, 'legacy.db');
       const old = openStore(path);
       old.putSettings(WALLET, { ...DEFAULT_SETTINGS, targetPct: 12 });
+      const master: MasterKeys = { current: 1, keys: new Map([[1, Buffer.from(KEY_A, 'base64')]]) };
+      const aad = `airbag:v1:${WALLET}:42`;
+      const sealed = seal('simulation-fixture', aad, master);
+      old.putLink({ wallet: WALLET, accountId: 42, keyHint: 'test', sealed, linkedAt: 1 });
+      old.insertDeploy(deploy('persisted', 10));
       old.close();
       const legacy = new DatabaseSync(path);
       legacy.exec('DROP TABLE environment; PRAGMA user_version = 1;');
@@ -133,6 +138,8 @@ describe('store', () => {
       const migrated = openStore(path);
       try {
         expect(migrated.schemaVersion()).toBe(2);
+        expect(migrated.settings(WALLET).targetPct).toBe(12);
+        expect(migrated.deploy('persisted')?.accountId).toBe(42);
         expect(() => migrated.bindEnvironment('simulation:10143')).toThrow(/Legacy/);
         migrated.bindEnvironment('simulation:10143', true);
         migrated.putSettings(WALLET, { ...DEFAULT_SETTINGS, targetPct: 13 });
@@ -144,10 +151,19 @@ describe('store', () => {
       try {
         restored.bindEnvironment('simulation:10143');
         expect(restored.settings(WALLET).targetPct).toBe(13);
+        expect(restored.deploy('persisted')).toEqual(deploy('persisted', 10));
+        expect(restored.link(WALLET)?.sealed).toEqual(sealed);
+        expect(open(restored.link(WALLET)?.sealed ?? sealed, aad, master)).toBe(
+          'simulation-fixture',
+        );
         expect(() => restored.bindEnvironment('live:143')).toThrow(/belongs to/);
       } finally {
         restored.close();
       }
+      const future = new DatabaseSync(path);
+      future.exec('PRAGMA user_version = 999;');
+      future.close();
+      expect(() => openStore(path)).toThrow(/newer/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
