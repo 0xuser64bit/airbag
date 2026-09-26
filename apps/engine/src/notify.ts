@@ -1,9 +1,10 @@
 // What the engine tells people: Web Push (VAPID) to every browser a wallet subscribed, and the
 // optional onchain log. Copy follows the design's voice: plain, numbers first, no exclamation.
 
+import { ECDH } from 'node:crypto';
 import { fmt } from '@airbag/risk';
 import webpush from 'web-push';
-import type { Deploy, Store } from './db.ts';
+import type { Deploy, PushSubscription, Store } from './db.ts';
 import type { Notifier } from './guard.ts';
 import type { Logger } from './log.ts';
 
@@ -13,6 +14,35 @@ export interface PushMessage {
   /** Path in the web app to open on click. */
   url: string;
   tag: string;
+}
+
+/** A subscription is untrusted input, and sending a push makes an outbound server request. */
+export function validatePush(sub: PushSubscription): void {
+  const url = new URL(sub.endpoint);
+  const provider =
+    ['fcm.googleapis.com', 'updates.push.services.mozilla.com', 'web.push.apple.com'].includes(
+      url.hostname,
+    ) || /^[a-z0-9-]+\.notify\.windows\.com$/.test(url.hostname);
+  if (
+    !provider ||
+    url.protocol !== 'https:' ||
+    url.port ||
+    url.username ||
+    url.password ||
+    url.hash
+  ) {
+    throw new Error('Use a subscription issued by Chrome, Firefox, Safari or Edge.');
+  }
+  const decode = (key: string, bytes: number) => {
+    if (!/^[A-Za-z0-9_-]+={0,2}$/.test(key)) throw new Error('Invalid push encryption key.');
+    const value = Buffer.from(key, 'base64url');
+    if (value.length !== bytes) throw new Error('Invalid push encryption key.');
+    return value;
+  };
+  const publicKey = decode(sub.keys.p256dh, 65);
+  if (publicKey[0] !== 4) throw new Error('Invalid push public key.');
+  ECDH.convertKey(publicKey, 'prime256v1');
+  decode(sub.keys.auth, 16);
 }
 
 export function deployMessage(d: Deploy): PushMessage {
@@ -66,7 +96,12 @@ export class Push {
     let sent = 0;
     for (const sub of this.store.pushSubscriptions(wallet)) {
       try {
-        await webpush.sendNotification(sub, JSON.stringify(msg), { TTL: 3_600, urgency: 'high' });
+        validatePush(sub); // Also protects subscriptions stored before validation was introduced.
+        await webpush.sendNotification(sub, JSON.stringify(msg), {
+          TTL: 3_600,
+          urgency: 'high',
+          timeout: 10_000,
+        });
         sent += 1;
       } catch (err) {
         const status = (err as { statusCode?: number }).statusCode;

@@ -12,6 +12,7 @@ import type { Config } from './config.ts';
 import type { Deploy, Settings, Store } from './db.ts';
 import type { Engine } from './engine.ts';
 import type { Logger } from './log.ts';
+import { validatePush } from './notify.ts';
 import { LANDING_PATH, SAMPLE_SPARE_CNS, type SimChain, samplePositions } from './sim.ts';
 
 export interface ApiDeps {
@@ -315,14 +316,19 @@ export function createApi(deps: ApiDeps): Server {
     const body = await readJson(ctx.req);
     const endpoint = str(body.endpoint, 'endpoint', 2_048);
     const keys = body.keys as { p256dh?: unknown; auth?: unknown } | undefined;
-    if (!endpoint.startsWith('https://')) throw bad('endpoint must be https.');
-    store.addPush(w, {
+    const sub = {
       endpoint,
       keys: {
         p256dh: str(keys?.p256dh, 'keys.p256dh', 256),
         auth: str(keys?.auth, 'keys.auth', 256),
       },
-    });
+    };
+    try {
+      validatePush(sub);
+    } catch {
+      throw bad('Invalid push subscription. Enable alerts using this browser.');
+    }
+    store.addPush(w, sub);
     return { ok: true };
   });
 

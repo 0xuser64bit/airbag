@@ -3,7 +3,7 @@
 
 import { createHash, randomBytes } from 'node:crypto';
 import { createPublicClient, getAddress, type Hex, http, recoverMessageAddress } from 'viem';
-import { parseSiweMessage } from 'viem/siwe';
+import { parseSiweMessage, validateSiweMessage } from 'viem/siwe';
 import type { Store } from './db.ts';
 
 const NONCE_TTL_MS = 10 * 60_000;
@@ -49,15 +49,37 @@ export class Auth {
   ): Promise<{ token: string; wallet: string; expiresAt: number }> {
     const m = parseSiweMessage(message);
     if (!m.address || !m.nonce || !m.domain) throw new Error('Not a sign-in message.');
+    if (
+      m.version !== '1' ||
+      !m.uri ||
+      !m.issuedAt ||
+      !validateSiweMessage({ message: m, time: new Date(now) })
+    ) {
+      throw new Error('Invalid sign-in message.');
+    }
     if (!this.opts.domains.includes(m.domain)) throw new Error(`Wrong domain ${m.domain}.`);
+    const uri = new URL(m.uri);
+    if (
+      uri.host !== m.domain ||
+      !['http:', 'https:'].includes(uri.protocol) ||
+      uri.username ||
+      uri.password
+    ) {
+      throw new Error('Sign-in URI does not match the domain.');
+    }
     if (m.chainId !== this.opts.chainId) throw new Error(`Sign in on chain ${this.opts.chainId}.`);
     const exp = this.nonces.get(m.nonce);
     if (!exp || exp <= now) throw new Error('This sign-in request expired. Try again.');
     if (m.expirationTime && m.expirationTime.getTime() <= now) throw new Error('Sign-in expired.');
     if (m.notBefore && m.notBefore.getTime() > now) throw new Error('Sign-in not valid yet.');
-    if (m.issuedAt && Math.abs(m.issuedAt.getTime() - now) > NONCE_TTL_MS) {
+    if (
+      !Number.isFinite(m.issuedAt.getTime()) ||
+      Math.abs(m.issuedAt.getTime() - now) > NONCE_TTL_MS
+    ) {
       throw new Error('Sign-in was issued too long ago.');
     }
+    // Consume before any await: two concurrent verifications must not share this nonce.
+    this.nonces.delete(m.nonce);
     const address = getAddress(m.address);
     let ok = false;
     try {
@@ -70,7 +92,6 @@ export class Auth {
       ok = await this.client.verifyMessage({ address, message, signature }).catch(() => false);
     }
     if (!ok) throw new Error('The signature does not match the wallet.');
-    this.nonces.delete(m.nonce);
 
     const token = randomBytes(32).toString('base64url');
     const wallet = address.toLowerCase();
