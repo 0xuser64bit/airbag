@@ -175,7 +175,8 @@ below; the screen-by-screen reference is in [`design/`](../../design/README.md).
 
 Airbag watches a trader's Perpl positions every Monad block and, when a price move uses up a set
 share of a position's margin cushion, trims the smallest useful amount and re-adds the released
-margin, so a liquidation never closes the whole position. The users are active Perpl traders at
+margin to move liquidation further away. Trading fees, gaps, thin books and outages can still
+prevent protection; product copy must never promise that liquidation is impossible. The users are active Perpl traders at
 5–15x leverage who cannot watch the screen around the clock: they set Airbag up once, glance at it
 beside Perpl, and reach it from a push alert on their phone, often at night and just after a deploy.
 

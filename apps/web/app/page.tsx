@@ -58,7 +58,7 @@ const SAFETY = [
   ],
   [
     'It only shrinks positions.',
-    'Every order it sends is reduce-only. It never opens, adds to or flips a position. The engine is open source, so you can check.',
+    'Closes are reduce-only. Airbag can add your own margin, but never opens, grows or flips a position. The engine is open source, so you can check.',
     'Enforced by Airbag’s engine',
   ],
   [
@@ -310,7 +310,7 @@ export default async function Landing() {
                   Airbag trimmed your BTC long
                 </span>
                 <span className="muted">
-                  {ex.trim} BTC at $97,000. Liquidation now {ex.newLiq}. Fee $0.
+                  Zero-fee simulation: {ex.trim} BTC at $97,000. Liquidation now {ex.newLiq}.
                 </span>
               </div>
             </li>

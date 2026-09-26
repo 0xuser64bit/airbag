@@ -71,7 +71,8 @@ export function useSession(): Session | null | undefined {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   useEffect(() => {
     const read = () => setSession(loadSession());
-    const sync = () => {
+    const sync = (event: StorageEvent) => {
+      if (event.key !== KEY && event.key !== null) return;
       memoryOnly = false;
       read();
     };
