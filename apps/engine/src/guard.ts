@@ -514,8 +514,13 @@ export class AccountGuard {
         }
         delete episode.readd;
         delete d.data.readd;
+        if ((this.after(mkt, m, fill)?.distance ?? 1) < d.data.target - 1e-6)
+          return this.retryOrStop(mkt, episode, 'Trimming the rest next block.', fill);
         return this.finish(mkt, d, this.exchange.head, 'done', fill);
       }
+      // A recovered spare-margin deploy must never turn into an unplanned close.
+      if (d.kind === 'margin' && d.data.marginAttempt)
+        return await this.addSpare(mkt, d, m, fromCns(d.data.marginAttempt.amount, this.cd), mark);
       const risk = this.risk(p, m, head);
       const spare = this.spare();
       const policy = {
@@ -548,10 +553,6 @@ export class AccountGuard {
       }
       this.deps.log.error('deploy.error', { id: d.id, err });
       this.entry(d, head, 'Airbag hit an error and stopped this deploy. You have been alerted.');
-      this.deps.notify.alert(
-        this.wallet,
-        `Airbag stopped protecting your ${d.symbol} after an error. Check the position on Perpl.`,
-      );
       this.finish(mkt, d, head, 'failed');
     } finally {
       this.busy.delete(mkt);
@@ -623,6 +624,7 @@ export class AccountGuard {
       lots: lotsBefore,
       deposit: depositBefore.toString(),
       balance: balanceBefore.toString(),
+      filledBefore: d.data.close?.filledLots ?? 0,
     };
     const sentAt = Date.now();
     this.entry(
@@ -823,10 +825,11 @@ export class AccountGuard {
       `${text.replace(/ ?(Trying again|Trimming the rest|Will retry)[^.]*\./, '')} Stopped after ${episode.attempts} attempts.`.trim(),
     );
     const anyFill = (d.data.close?.filledLots ?? 0) > 0 || d.data.spareAdded > 0;
-    this.deps.notify.alert(
-      this.wallet,
-      `Airbag couldn't finish protecting your ${d.symbol} ${d.side} after ${episode.attempts} attempts. Check it on Perpl.`,
-    );
+    if (anyFill && !episode.readd)
+      this.deps.notify.alert(
+        this.wallet,
+        `Airbag reached its attempt limit before the ${d.symbol} target. Check the position on Perpl.`,
+      );
     if (episode.readd)
       d.data.error = 'The released margin could not be re-added. Check the position on Perpl.';
     this.finish(mkt, d, this.exchange.head, anyFill && !episode.readd ? 'done' : 'failed', fill);
@@ -849,6 +852,10 @@ export class AccountGuard {
       d.closedAt = Date.now();
     }
     if (phase === 'failed') {
+      this.deps.notify.alert(
+        this.wallet,
+        `Airbag couldn't finish protecting your ${d.symbol}. Check the position and released margin on Perpl.`,
+      );
       // Don't hammer a failing path: wait ~30 s before a new episode can start.
       this.cooldownUntil.set(mkt, head + 100);
       if (!d.data.close?.filledLots && !d.data.spareAdded) d.outcome = 'precaution';
@@ -1038,10 +1045,16 @@ export class AccountGuard {
               'Recovered a close from the position snapshot; its fill price is an estimate.',
             );
           }
+          if (at.filledBefore !== undefined)
+            d.data.close.filledLots = Math.max(d.data.close.filledLots, at.filledBefore + filled);
           d.phase = 'readding';
           this.save(d);
           if (remaining > 0n) {
             episode.readd = { amount: remaining, fill };
+            if (episode.attempts >= this.deps.maxAttempts) {
+              this.retryOrStop(mkt, episode, 'Could not finish the recovered re-add.', fill);
+              continue;
+            }
             episode.attempts += 1;
             d.data.attempts = episode.attempts;
             this.episodes.set(mkt, episode);

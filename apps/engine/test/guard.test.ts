@@ -204,6 +204,26 @@ describe('deploy paths', () => {
     expect(h.alerts).toHaveLength(1);
   });
 
+  it('continues a partial trim after its failed re-add succeeds', async () => {
+    const h = harness({ fillShare: (_lots, attempt) => (attempt === 1 ? 0.5 : 1), failAdds: 1 });
+    await h.run(Array(20).fill(97_000));
+    expect(h.paper.sent.map((f) => f.t)).toEqual([3, 6, 6, 3, 6]);
+    expect(only(h.store).data.after?.distance).toBeGreaterThanOrEqual(0.0999);
+  });
+
+  it('retries a lost spare-margin order without switching to a trim', async () => {
+    const h = harness({ spareCns: 10_000_000_000n });
+    const submit = h.paper.submit.bind(h.paper);
+    h.paper.submit = async () => ({ result: 'lost', rq: 0 });
+    await h.run([97_000]);
+    expect(only(h.store).kind).toBe('margin');
+    h.paper.submit = submit;
+    await h.blocks(6);
+    expect(h.paper.sent.map((f) => f.t)).toEqual([6]);
+    expect(only(h.store).phase).toBe('done');
+    expect(h.paper.positions.get(BTC)?.s).toBe(100_000);
+  });
+
   it('retries a close that gapped past its worst price, at the new mark', async () => {
     const h = harness();
     // Trigger at $97,000; the next block is $96,000, below the $96,515 limit.
@@ -442,6 +462,18 @@ describe('restart in the middle of a deploy', () => {
     await h.blocks(5);
     expect(h.paper.sent).toHaveLength(0);
     expect(h.store.deploy('crash1')?.phase).toBe('done');
+  });
+
+  it('does not send a recovered re-add once the attempt budget is exhausted', async () => {
+    const h = interrupted('5109400000');
+    const d = h.store.deploy('crash1');
+    if (!d) throw new Error('missing deploy');
+    d.data.attempts = 3;
+    h.store.updateDeploy(d);
+    await h.blocks(3);
+    expect(h.paper.sent).toHaveLength(0);
+    expect(h.store.deploy('crash1')?.phase).toBe('failed');
+    expect(h.alerts).toHaveLength(1);
   });
 });
 
