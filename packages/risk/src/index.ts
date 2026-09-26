@@ -1,5 +1,5 @@
 // Airbag risk math. Pure functions in human units (dollars, base units), no I/O.
-// Formulas: docs/BRIEF.md section 4, which follows Perpl's liquidation docs
+// Formulas: docs/RISK-MODEL.md, which follows Perpl's liquidation docs
 // (https://docs.perpl.xyz/exchange/liquidation) and dex-sdk's position.rs.
 
 export * as fmt from './format.ts';

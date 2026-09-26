@@ -21,7 +21,7 @@ import {
   triggered,
 } from '../src/index.ts';
 
-// Golden vectors: docs/BRIEF.md section 4, compared at the precision the design displays.
+// Golden vectors: docs/RISK-MODEL.md, compared at the precision the design displays.
 const usd = (v: number | null) => Math.round(v ?? Number.NaN).toLocaleString('en-US');
 const pct = (v: number, dp = 2) => (v * 100).toFixed(dp);
 

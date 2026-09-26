@@ -8,7 +8,7 @@ import {
   type Position,
 } from '../src/index.ts';
 
-// Golden vectors: docs/BRIEF.md section 4. Compared at the precision the design displays.
+// Golden vectors: docs/RISK-MODEL.md. Compared at the precision the design displays.
 const usd = (v: number) => Math.round(v).toLocaleString('en-US');
 const pct = (v: number) => (v * 100).toFixed(2);
 

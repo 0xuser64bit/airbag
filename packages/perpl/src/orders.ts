@@ -1,4 +1,4 @@
-// The order-type allowlist (docs/BRIEF.md section 5, ADR 0003). Airbag may only close or
+// The order-type allowlist (docs/PERPL.md, ADR 0003). Airbag may only close or
 // reduce (3, 4), add the user's own collateral (6), or cancel (5). Closes are IOC, so Airbag
 // never has a resting order to cancel: its only cancel is the link-time scope probe, aimed at
 // an order id the account doesn't have.

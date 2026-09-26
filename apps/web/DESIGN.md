@@ -165,19 +165,69 @@ components:
     height: "48px"
 ---
 
-# Design System: Airbag
+# Airbag web app
+
+The design system and content contract for `apps/web`. Read this before changing anything the trader
+sees or reads. Tokens, components, motion and the rules are in the YAML block above and the sections
+below; the screen-by-screen reference is in [`design/`](../../design/README.md).
+
+## What this app is for
+
+Airbag watches a trader's Perpl positions every Monad block and, when a price move uses up a set
+share of a position's margin cushion, trims the smallest useful amount and re-adds the released
+margin, so a liquidation never closes the whole position. The users are active Perpl traders at
+5–15x leverage who cannot watch the screen around the clock: they set Airbag up once, glance at it
+beside Perpl, and reach it from a push alert on their phone, often at night and just after a deploy.
+
+Three moments have to work: **onboarding** (connect, sign in, link a key, choose a policy, arm),
+**the glance** (armed, how far each position is from liquidation, what Airbag will do at the line),
+and **the deploy** (before and after, a block-by-block log, the counterfactual).
+
+## Content rules
+
+These are the product, not preferences.
+
+- **Yellow means Airbag**, the line it acts at and anything it did. **Red means liquidation** and
+  nothing else. No third hue, ever.
+- **Show the math.** Every claim on screen is a number the engine computed, with the price it is
+  measured at. Nothing on screen is hand-typed or mocked: the landing replay and the settings
+  preview both run `@airbag/risk`, so they cannot disagree with the engine.
+- **Honest about limits.** Say what was verified, what the user confirmed, what is an estimate and
+  what is simulated. A deploy is a **Save** only if the pre-deploy liquidation price was later
+  reached while the position was still open; otherwise it is a **Precaution**. Never call a
+  precaution a save. The counterfactual liquidation return is an estimate and is labelled one.
+  Perpl exposes no endpoint that reads a key's IP allow-list back, so the UI says the user confirmed
+  the lock — never that Airbag verified it. Simulated data is always labelled simulated, and the
+  indexer's liquidation count is shown only when the indexer answers.
+- **Status has a fixed vocabulary.** Armed, Deploying, Deployed · re-armed, Paused, Data stale ·
+  holding, Connecting, Key rejected · relink, One-Click Trading off, Perpl connection limit, Account
+  frozen. Lamps and copy both draw from this list; a new state needs a lamp state and a word here.
+- **The trader stays in control.** Pause, edit, unlink and revoke are always one step away.
+- **Voice:** plain, precise, trader-literate. Sentence case. Numbers over adjectives. No
+  exclamation marks, no "seamless", no "unlock", no "leverage" as a verb.
+
+## Accessibility
+
+WCAG 2.1 AA, checked by axe in the Playwright journeys in CI, where serious and critical violations
+fail the run. Real buttons and links, labelled inputs, `aria-pressed` and `role="switch"`, a visible
+focus ring, 44 px targets, 4.5:1 text contrast, and reduced-motion support. Colour is never the
+only signal: liquidation and Airbag values also carry words.
+
+---
+
+# The system
 
 ## Overview
 
-**Creative North Star: "The Envelope Protection Panel"**
+**North star: "the envelope protection panel".**
 
 Airbag is flight-envelope protection for a leveraged position, and the interface is the cockpit panel that shows it. The page is the panel face, graphite and bone, cut into bays by 1px rules. Instruments are dark glass wells set into that face behind a thin bezel: a vertical price tape for the position closest to liquidation, horizontal runways for the rest, a per-block strip. Status is carried by annunciator lamps, lit tiles in a strip under the masthead, never by pills or stat cards.
 
-The panel is quiet while the trader is safe: bone and grey only, numbers in tabular mono, motion limited to readouts rolling their digits each block. Colour appears only when it carries one of two meanings. Yellow is Airbag (the line it acts at, and anything it did). Red is liquidation and nothing else. When Airbag acts, the display's bezel lights yellow, the hazard stripe wipes across its top, and the bug and bands slide with damped instrument motion to their new places, the old ones left as dashed, struck-through ghosts.
+The panel is quiet while the trader is safe: bone and grey only, numbers in tabular mono, motion limited to readouts rolling their digits each block. Colour appears only when it carries one of two meanings. When Airbag acts, the display's bezel lights yellow, the hazard stripe wipes across its top, and the bug and bands slide with damped instrument motion to their new places, the old ones left as dashed, struck-through ghosts.
 
-Density is instrument density: small mono labels naming values, big mono readouts, sentence-case prose in Instrument Sans kept short and to the point. The rejected alternative is explicit: a card grid of stat tiles and status pills, and a paper-stock light theme (built once and rejected by the owner).
+Density is instrument density: small mono labels naming values, big mono readouts, sentence-case prose in Instrument Sans kept short and to the point.
 
-**Key Characteristics:**
+**Key characteristics:**
 - One continuous panel face; bays and sections separated by 1px rules, never by floating cards.
 - Instruments sunk into darker glass wells with an inset shadow; nothing is lifted.
 - Two meaning colours only: yellow for Airbag, red for liquidation.

@@ -2,7 +2,7 @@
   "name": "@airbag/spike",
   "version": "0.0.0",
   "private": true,
-  "description": "M0 spike scripts against Perpl testnet. Folded into the engine after M1.",
+  "description": "Testnet verification scripts for the live trading path. See docs/DEPLOY.md.",
   "license": "MIT",
   "type": "module",
   "scripts": {

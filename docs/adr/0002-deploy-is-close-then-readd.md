@@ -6,7 +6,7 @@ Date: 23 Sep 2026
 
 The brief's trim math assumes that after a reduce-only close the position keeps its whole deposit, so the smaller position has a far-away liquidation price ($94,000 → $87,300 in the golden vectors).
 
-Onchain data says otherwise. Perpl shrinks the deposit pro-rata on a decrease and settles realized PnL to the account balance. That held within 1 CNS of rounding in 400 `PositionDecreased` events per network (`docs/RESEARCH.md` §1). With deposit `s·M` on size `s·n`, the liquidation price doesn't move.
+Onchain data says otherwise. Perpl shrinks the deposit pro-rata on a decrease and settles realized PnL to the account balance. That held within 1 CNS of rounding in 400 `PositionDecreased` events per network ([PERPL.md](../PERPL.md)). With deposit `s·M` on size `s·n`, the liquidation price doesn't move.
 
 ## Decision
 

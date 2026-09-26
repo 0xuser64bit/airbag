@@ -3,7 +3,7 @@
 // https://github.com/PerplFoundation/api-docs/blob/main/websocket.md#market-data-websocket
 //
 // The stale guard measures how far our data trails the chain, never the age of a mark: an
-// unchanged mark is legitimately up to ~169 blocks old (docs/RESEARCH.md §3a).
+// unchanged mark is legitimately up to ~169 blocks old (docs/PERPL.md, measured cadence).
 
 import {
   backoff,

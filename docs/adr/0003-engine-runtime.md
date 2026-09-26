@@ -1,5 +1,11 @@
 # 0003. Engine: one always-on Node process, order-type allowlist in three layers
 
+> **Amended by [0010](0010-engine-owns-state-in-sqlite.md):** no Postgres; the engine keeps its
+> state in SQLite. **Corrected after measurement:** the tick is driven by the `heartbeat@<chain>`
+> stream, not by `MarketState.at.b`, and the stale guard compares our head with the chain's rather
+> than judging a mark's age — an unchanged mark is legitimately up to ~169 blocks old. See
+> [PERPL.md](../PERPL.md).
+
 Date: 23 Sep 2026
 
 ## Context
@@ -23,5 +29,5 @@ The engine must evaluate every linked position every Monad block (~300 ms), act 
 
 ## Consequences
 
-- A single process is a single point of failure. The landing page says so already ("If … Airbag's servers are down, nothing gets trimmed"). A resting Perpl trigger order as a backstop is logged as a later idea in RESEARCH.md.
+- A single process is a single point of failure. The landing page says so already ("If … Airbag's servers are down, nothing gets trimmed"). A resting Perpl trigger order as a backstop is noted as a possible later move in PERPL.md.
 - Horizontal scale later means sharding accounts across processes, each with its own egress IP on the key's allow-list (max 4 CIDRs per key).

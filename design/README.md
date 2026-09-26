@@ -1,8 +1,12 @@
 # Airbag design reference
 
-> **24 Sep 2026:** the web app keeps this identity (palette, type, mark, colour meaning, copy, numbers) but rebuilds the screens as an instrument panel. See `apps/web/DESIGN.md` and `docs/BRIEF.md` §8.
+> These artboards are the approved **identity**: palette, type, mark, colour meaning, copy and
+> numbers. The screens were rebuilt on that identity as one instrument panel — see
+> [`apps/web/DESIGN.md`](../apps/web/DESIGN.md) for what the app actually implements, and treat the
+> layouts here as reference, not as markup to copy.
 
-These are the source files of the approved Airbag design, exported from a design canvas. They are **reference material, not code to import.**
+The source files are exported from a design canvas. They are **reference material, not code to
+import.**
 
 ## How to read them
 
@@ -15,7 +19,7 @@ These are the source files of the approved Airbag design, exported from a design
 
 | File | Size | What it is |
 |---|---|---|
-| `System.dc.html` | 1440×1960 | Identity, color, type, components (buttons, pills, runway in three states, deploy log row) |
+| `System.dc.html` | 1440×1960 | Identity, colour, type, and the components as first drawn (buttons, status pills, runway in three states, deploy log row). The shipped app replaced the pills with annunciator lamps; see `apps/web/DESIGN.md`. |
 | `Main.dc.html` | 1440×5700 | Landing page. The crash-test replay logic (price path, timing, lane math) is in its script block. |
 | `Connect.dc.html` | 1280×940 | Onboarding 1: wallet connected, Perpl account found |
 | `LinkKey.dc.html` | 1280×940 | Onboarding 2: create a Trade key, IP allow-list, paste, verified |
@@ -27,4 +31,4 @@ These are the source files of the approved Airbag design, exported from a design
 | `MobileDeploy.dc.html` | 390×844 | Phone: deploy detail |
 | `MobileSave.dc.html` | 390×844 | Phone: save report |
 
-All numbers shown in the designs are the golden test vectors in `docs/BRIEF.md` section 4. Sample account data (positions, block numbers, times, tx hash, IP ranges) is illustrative; the IP ranges are documentation addresses (203.0.113.0/24), not real servers.
+All numbers shown in the designs are the golden test vectors in [`docs/RISK-MODEL.md`](../docs/RISK-MODEL.md). Sample account data (positions, block numbers, times, tx hash, IP ranges) is illustrative; the IP ranges are documentation addresses (203.0.113.0/24), not real servers.

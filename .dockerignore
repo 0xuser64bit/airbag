@@ -3,7 +3,6 @@
 **/.envio
 .git
 .github
-.claude
 design
 docs
 e2e
