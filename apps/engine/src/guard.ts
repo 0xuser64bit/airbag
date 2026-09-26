@@ -231,6 +231,9 @@ export class AccountGuard {
 
   /** Checked inside the builder, after the trading client's rate-limit wait. */
   private async submit(d: Deploy, build: (ids: { sn: number; rq: number }) => AllowedOrderFrame) {
+    const expected = this.exchange.positions.get(d.marketId);
+    const size = expected?.s;
+    const deposit = expected?.c;
     const outcome = await this.exchange.submit((ids) => {
       const p = this.exchange.positions.get(d.marketId);
       const m = this.market(d.marketId);
@@ -242,6 +245,8 @@ export class AccountGuard {
         this.exchange.account?.id !== d.accountId
       )
         throw new DeferredDeploy('Order held until protection is safe.');
+      if (p.s !== size || p.c !== deposit || (p.sd === 1) !== (d.side === 'long'))
+        throw new Error('Position changed while waiting to dispatch; check it on Perpl.');
       const frame = build(ids);
       frame.lb = this.exchange.head + (m.order_ttl_blocks || 20);
       d.data.pendingOrder = { rq: frame.rq, deadline: frame.lb };

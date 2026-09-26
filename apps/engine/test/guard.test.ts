@@ -112,7 +112,8 @@ function harness(opts: Options = {}) {
 
 const flush = async () => {
   for (let i = 0; i < 20; i++) await new Promise((r) => setImmediate(r));
-  await new Promise((r) => setTimeout(r, 2));
+  // Let the 5 ms snapshot-settlement timeout finish before advancing another block.
+  await new Promise((r) => setTimeout(r, 10));
 };
 
 const only = (store: ReturnType<typeof openStore>) => {
@@ -504,6 +505,28 @@ it('does not send the re-add after a pause between the close and margin add', as
   await h.blocks(4);
   expect(h.paper.sent.map((f) => f.t)).toEqual([3, 6]);
   expect(only(h.store).phase).toBe('done');
+});
+
+it('refuses a plan if the position changes during the request-budget wait', async () => {
+  const h = harness();
+  const submit = h.paper.submit.bind(h.paper);
+  let release = () => {};
+  const wait = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  h.paper.submit = async (build) => {
+    await wait;
+    return submit(build);
+  };
+  await h.run([97_000]);
+  const p = h.paper.positions.get(BTC);
+  if (!p) throw new Error('missing position');
+  p.s -= 100;
+  release();
+  await flush();
+  expect(h.paper.sent).toHaveLength(0);
+  expect(only(h.store).phase).toBe('failed');
+  expect(h.alerts).toHaveLength(1);
 });
 
 it('never rounds a capped trim beyond the lot budget, even for a three-lot position', async () => {
