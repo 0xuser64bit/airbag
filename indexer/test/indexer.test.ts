@@ -66,6 +66,13 @@ describe('AirbagLog', () => {
               block: block(107),
               params: { deployId: 1n, oldLiqHitBlock: 107n },
             },
+            {
+              contract: 'AirbagLog',
+              event: 'SaveRecorded',
+              srcAddress: LOG,
+              block: block(108),
+              params: { deployId: 1n, oldLiqHitBlock: 108n },
+            },
           ],
         },
       },

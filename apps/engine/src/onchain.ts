@@ -11,6 +11,7 @@ import {
   http,
   isHex,
   parseEventLogs,
+  type TransactionReceipt,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import type { Deploy, Store } from './db.ts';
@@ -63,6 +64,23 @@ export const airbagLogAbi = [
 
 const ZERO32 = `0x${'0'.repeat(64)}` as Hex;
 
+/** Success must include our contract's event; another address cannot supply the deploy id. */
+export function confirmedDeployId(
+  receipt: Pick<TransactionReceipt, 'status' | 'logs'>,
+  address: string,
+): number {
+  if (receipt.status !== 'success') throw new Error('AirbagLog transaction reverted');
+  const [event] = parseEventLogs({
+    abi: airbagLogAbi,
+    logs: receipt.logs.filter((l) => l.address.toLowerCase() === address.toLowerCase()),
+    eventName: 'DeployRecorded',
+  });
+  const id = Number(event?.args.deployId ?? 0);
+  if (!Number.isSafeInteger(id) || id <= 0)
+    throw new Error('AirbagLog receipt is missing a valid DeployRecorded event');
+  return id;
+}
+
 /** recordDeploy's arguments in Perpl's own units: lots and price-scaled integers. */
 export function deployArgs(d: Deploy, m: Market) {
   const pd = m.config.price_decimals;
@@ -114,6 +132,7 @@ export function airbagLog(
   return {
     recordDeploy: (d) =>
       enqueue(async () => {
+        if (d.data.onchain?.deployId) return;
         const m = markets.get(d.marketId);
         if (!m) return;
         const hash = await wallet.writeContract({
@@ -123,26 +142,22 @@ export function airbagLog(
           args: deployArgs(d, m),
         });
         const receipt = await reader.waitForTransactionReceipt({ hash, timeout: 60_000 });
-        const [event] = parseEventLogs({
-          abi: airbagLogAbi,
-          logs: receipt.logs,
-          eventName: 'DeployRecorded',
-        });
-        d.data.onchain = { deployId: Number(event?.args.deployId ?? 0), tx: hash };
+        d.data.onchain = { deployId: confirmedDeployId(receipt, cfg.address), tx: hash };
         store.updateDeploy(d);
         log.info('onchain.deploy', { id: d.id, deployId: d.data.onchain.deployId, tx: hash });
       }),
     recordSave: (d) =>
       enqueue(async () => {
         const onchain = d.data.onchain;
-        if (!onchain?.deployId || !d.data.save) return;
+        if (!onchain?.deployId || !d.data.save || onchain.saveTx) return;
         const hash = await wallet.writeContract({
           address: cfg.address,
           abi: airbagLogAbi,
           functionName: 'recordSave',
           args: [BigInt(onchain.deployId), BigInt(d.data.save.block)],
         });
-        await reader.waitForTransactionReceipt({ hash, timeout: 60_000 });
+        const receipt = await reader.waitForTransactionReceipt({ hash, timeout: 60_000 });
+        if (receipt.status !== 'success') throw new Error('AirbagLog save transaction reverted');
         d.data.onchain = { ...onchain, saveTx: hash };
         store.updateDeploy(d);
         log.info('onchain.save', { id: d.id, deployId: onchain.deployId, tx: hash });

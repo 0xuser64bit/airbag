@@ -81,6 +81,16 @@ contract AirbagLogTest {
         log.recordDeploy(1, 1, bytes32(0), 1, 1, 1, 1, 2);
     }
 
+    function test_aDeployCanOnlyBeSavedOnce() public {
+        _deploy();
+        vm.prank(WRITER);
+        log.recordSave(1, 123);
+        require(log.saved(1), "saved");
+        vm.prank(WRITER);
+        vm.expectRevert(abi.encodeWithSelector(AirbagLog.AlreadySaved.selector, 1));
+        log.recordSave(1, 124);
+    }
+
     function test_ownerRotatesTheWriter() public {
         log.setWriter(STRANGER);
         require(log.writer() == STRANGER, "rotated");

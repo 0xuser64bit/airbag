@@ -16,6 +16,7 @@ contract AirbagLog {
     address public writer;
     /// @notice Number of deploys recorded; also the id of the latest one.
     uint256 public deploys;
+    mapping(uint256 => bool) public saved;
 
     /// @param deployId Sequential, from 1.
     /// @param accountId The Perpl exchange account.
@@ -48,6 +49,7 @@ contract AirbagLog {
     error ZeroAddress();
     error UnknownDeploy(uint256 deployId);
     error BadReason(uint8 reason);
+    error AlreadySaved(uint256 deployId);
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -86,6 +88,8 @@ contract AirbagLog {
 
     function recordSave(uint256 deployId, uint256 oldLiqHitBlock) external onlyWriter {
         if (deployId == 0 || deployId > deploys) revert UnknownDeploy(deployId);
+        if (saved[deployId]) revert AlreadySaved(deployId);
+        saved[deployId] = true;
         emit SaveRecorded(deployId, oldLiqHitBlock);
     }
 

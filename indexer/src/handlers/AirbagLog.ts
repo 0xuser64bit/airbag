@@ -42,7 +42,7 @@ indexer.onEvent({ contract: 'AirbagLog', event: 'DeployRecorded' }, async ({ eve
 indexer.onEvent({ contract: 'AirbagLog', event: 'SaveRecorded' }, async ({ event, context }) => {
   const id = `${event.chainId}-${event.params.deployId}`;
   const deploy = await context.Deploy.get(id);
-  if (!deploy) return; // The contract rejects saves for unknown deploys; nothing to mark.
+  if (!deploy || deploy.saved) return; // Also handles duplicate saves emitted by older contracts.
   context.Deploy.set({ ...deploy, saved: true, oldLiqHitBlock: event.params.oldLiqHitBlock });
   const t = await totals(context, event.chainId);
   context.AirbagTotals.set({ ...t, saves: t.saves + 1 });
