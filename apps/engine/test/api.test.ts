@@ -67,6 +67,13 @@ const blocks = async (n: number) => {
 };
 
 describe('public endpoints', () => {
+  it('distinguishes process health from protection readiness', async () => {
+    app.feed.headAt = 1;
+    expect((await call('GET', '/health')).body.ok).toBe(false);
+    expect((await call('GET', '/ready')).status).toBe(503);
+    await blocks(1);
+    expect((await call('GET', '/ready')).status).toBe(200);
+  });
   it('reports health and config', async () => {
     await blocks(1);
     const health = await call('GET', '/health');
@@ -275,6 +282,28 @@ describe('onboarding to a deploy, over HTTP', () => {
     expect(text.startsWith('data: ')).toBe(true);
     expect(JSON.parse(text.slice(6)).status).toBe('unlinked');
     // Left open on purpose: afterAll's app.stop() has to end it, as a deploy's SIGTERM would.
+  });
+
+  it('publishes stale state even when no block ticks arrive', async () => {
+    const { body: session } = await signIn();
+    await blocks(1);
+    const ctl = new AbortController();
+    const timeout = setTimeout(() => ctl.abort(), 4_000);
+    try {
+      const res = await fetch(`${base}/v1/stream`, {
+        headers: { authorization: `Bearer ${session.token}` },
+        signal: ctl.signal,
+      });
+      const reader = res.body?.getReader();
+      await reader?.read();
+      app.feed.headAt = 1;
+      app.engine.lastTickAt = 1;
+      const next = await reader?.read();
+      expect(JSON.parse(new TextDecoder().decode(next?.value).slice(6)).block.stale).toBe(true);
+    } finally {
+      clearTimeout(timeout);
+      ctl.abort();
+    }
   });
 });
 

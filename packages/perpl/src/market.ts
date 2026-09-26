@@ -18,7 +18,7 @@ import { MT } from './types.ts';
 
 export interface Staleness {
   stale: boolean;
-  reason?: 'no-data' | 'feed-silent' | 'behind-chain';
+  reason?: 'no-data' | 'feed-silent' | 'behind-chain' | 'no-funding';
   /** Monad head minus Perpl's head, when Monad's head is known. */
   lagBlocks: number;
 }
@@ -30,6 +30,7 @@ export interface MarketFeedOptions {
   markets: Market[];
   /** Never act when data trails the head by more than this many blocks (brief §5). */
   staleBlocks: number;
+  requireFunding?: boolean;
   /** Monad JSON-RPC websocket for newHeads. Optional cross-check. */
   monadWsUrl?: string;
   /** Called on every Perpl heartbeat: the per-block tick. */
@@ -103,6 +104,11 @@ export class MarketFeed {
     const limit = this.opts.staleBlocks;
     const lagBlocks = this.monadHead && this.head ? this.monadHead - this.head : 0;
     if (!this.head) return { stale: true, reason: 'no-data', lagBlocks };
+    if (
+      this.opts.requireFunding &&
+      this.opts.markets.some((m) => m.config.is_open && !this.fundingAt(m.id, this.head))
+    )
+      return { stale: true, reason: 'no-funding', lagBlocks };
     if (now - this.headAt > (limit + 1) * BLOCK_MS) {
       return { stale: true, reason: 'feed-silent', lagBlocks };
     }

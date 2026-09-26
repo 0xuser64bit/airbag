@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 import { loadConfig } from '../src/config.ts';
 import { DEFAULT_SETTINGS, type Deploy, openStore } from '../src/db.ts';
@@ -116,6 +120,38 @@ describe('config', () => {
 });
 
 describe('store', () => {
+  it('migrates and backs up a legacy WAL database without losing users or settings', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'airbag-store-'));
+    try {
+      const path = join(dir, 'legacy.db');
+      const old = openStore(path);
+      old.putSettings(WALLET, { ...DEFAULT_SETTINGS, targetPct: 12 });
+      old.close();
+      const legacy = new DatabaseSync(path);
+      legacy.exec('DROP TABLE environment; PRAGMA user_version = 1;');
+      legacy.close();
+      const migrated = openStore(path);
+      try {
+        expect(migrated.schemaVersion()).toBe(2);
+        expect(() => migrated.bindEnvironment('simulation:10143')).toThrow(/Legacy/);
+        migrated.bindEnvironment('simulation:10143', true);
+        migrated.putSettings(WALLET, { ...DEFAULT_SETTINGS, targetPct: 13 });
+        await migrated.backup(join(dir, 'backup.db'));
+      } finally {
+        migrated.close();
+      }
+      const restored = openStore(join(dir, 'backup.db'));
+      try {
+        restored.bindEnvironment('simulation:10143');
+        expect(restored.settings(WALLET).targetPct).toBe(13);
+        expect(() => restored.bindEnvironment('live:143')).toThrow(/belongs to/);
+      } finally {
+        restored.close();
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
   const deploy = (id: string, createdAt: number): Deploy => ({
     id,
     wallet: WALLET,
@@ -157,8 +193,22 @@ describe('store', () => {
 
   it('migrates a fresh database and is idempotent on reopen', () => {
     const s = openStore(':memory:');
-    expect(s.schemaVersion()).toBe(1);
+    expect(s.schemaVersion()).toBe(2);
     s.close();
+  });
+
+  it('binds an environment and refuses cross-network/mode reuse or implicit legacy adoption', () => {
+    const s = openStore(':memory:');
+    try {
+      s.ensureUser(WALLET);
+      expect(() => s.bindEnvironment('simulation:10143')).toThrow(/Legacy/);
+      s.bindEnvironment('simulation:10143', true);
+      s.bindEnvironment('simulation:10143');
+      expect(() => s.bindEnvironment('live:10143')).toThrow(/belongs to/);
+      expect(() => s.bindEnvironment('simulation:143', true)).toThrow(/belongs to/);
+    } finally {
+      s.close();
+    }
   });
 
   it('keeps sessions until they expire', () => {

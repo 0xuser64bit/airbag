@@ -221,6 +221,10 @@ export class AccountGuard {
     this.stopped = true;
   }
 
+  async drain(): Promise<void> {
+    while (this.busy.size > 0 || this.recovering) await new Promise((r) => setTimeout(r, 10));
+  }
+
   private canAct(): boolean {
     return ['armed', 're-armed', 'deploying'].includes(this.status());
   }
@@ -640,7 +644,6 @@ export class AccountGuard {
         leverage: p.lv,
       }),
     );
-    if (outcome.result === 'lost') await this.until(() => this.exchange.state === 'live', 20_000);
     const mayHaveFilled = ['filled', 'partial', 'lost'].includes(outcome.result);
     if (mayHaveFilled)
       await this.until(() => (this.exchange.positions.get(mkt)?.s ?? 0) < lotsBefore);
@@ -1089,6 +1092,7 @@ export class AccountGuard {
     const step = this.deps.pollMs ?? 50;
     for (let waited = 0; waited <= ms; waited += step) {
       if (pred()) return true;
+      if (this.stopped) return false;
       await new Promise((r) => setTimeout(r, step));
     }
     return pred();

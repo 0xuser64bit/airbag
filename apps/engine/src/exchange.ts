@@ -86,6 +86,11 @@ export class PaperExchange implements Exchange {
     return new Promise((resolve) => this.queue.push({ frame, at: this.head, resolve }));
   }
 
+  close(): void {
+    this.state = 'stopped';
+    for (const q of this.queue.splice(0)) q.resolve({ result: 'lost', rq: q.frame.rq });
+  }
+
   /** Advances to `head`, settling every order whose delay has passed. */
   onBlock(head: number): void {
     this.head = head;

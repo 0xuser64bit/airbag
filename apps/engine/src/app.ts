@@ -51,6 +51,8 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
     createLogger(cfg.logLevel, { svc: 'engine', network: cfg.network.network, mode: cfg.mode });
   const live = cfg.mode === 'live';
   const ctx: Context = live ? await fetchContext(cfg.network.apiUrl) : SIM_CONTEXT;
+  if (live && ctx.chain.chain_id !== cfg.network.chainId)
+    throw new Error('Perpl context chain does not match PERPL_NETWORK');
   const exchange = ctx.instances[0]?.address ?? '';
   const chain = live ? perplChain(cfg.network.rpcUrl, exchange) : undefined;
 
@@ -77,16 +79,33 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
   };
 
   const store = openStore(cfg.databasePath);
+  try {
+    store.bindEnvironment(`${cfg.mode}:${cfg.network.chainId}`);
+  } catch (err) {
+    store.close();
+    throw err;
+  }
   let engine: Engine | undefined;
   const feed = new MarketFeed({
     url: `${cfg.network.wsUrl}/ws/v1/market-data`,
     chainId: cfg.network.chainId,
     markets: ctx.markets,
     staleBlocks: cfg.staleBlocks,
+    requireFunding: live,
     ...(live ? { monadWsUrl: cfg.network.rpcWsUrl } : {}),
     onBlock: (h) => engine?.tick(h),
     onState: (up, reason) => log[up ? 'info' : 'warn']('feed.state', { up, reason }),
   });
+  if (live) {
+    try {
+      feed.seedFunding(
+        await fetchRecentFunding(cfg.network.apiUrl, ctx.markets[0]?.funding_interval_sec ?? 2_580),
+      );
+    } catch (err) {
+      store.close();
+      throw err;
+    }
+  }
   const push = new Push(store, log, cfg.vapid);
   const onchain =
     opts.onchain ??
@@ -165,9 +184,6 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
     ...(sim ? { sim } : {}),
     start() {
       if (live) {
-        void fetchRecentFunding(cfg.network.apiUrl, ctx.markets[0]?.funding_interval_sec ?? 2_580)
-          .then((f) => feed.seedFunding(f))
-          .catch((err: unknown) => log.warn('funding.seed.error', { err }));
         feed.start();
       } else if (sim && !opts.manualClock) {
         sim.start();
@@ -184,11 +200,13 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
     async stop() {
       clearInterval(purge);
       sim?.stop();
+      engine.stop();
       const closed = new Promise<void>((resolve) => api.close(() => resolve()));
       api.closeAllConnections(); // open dashboard streams never end on their own
       await closed;
       await accounts.closeAll();
       await feed.close();
+      await engine.drain();
       store.close();
     },
   };

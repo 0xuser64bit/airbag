@@ -2,7 +2,7 @@
 // tick. It also keeps the block tape the dashboard shows ("every block, checked").
 
 import type { Store } from './db.ts';
-import type { Exchange, PaperExchange } from './exchange.ts';
+import { type Exchange, PaperExchange } from './exchange.ts';
 import { AccountGuard, type Feed, type Markets, type Notifier } from './guard.ts';
 import type { Logger } from './log.ts';
 
@@ -66,6 +66,17 @@ export class Engine {
   reloadSettings(wallet: string): void {
     const guard = this.guards.get(wallet);
     if (guard) guard.settings = this.deps.store.settings(wallet);
+  }
+
+  stop(): void {
+    for (const guard of this.guards.values()) {
+      guard.stop();
+      if (guard.exchange instanceof PaperExchange) guard.exchange.close();
+    }
+  }
+
+  async drain(): Promise<void> {
+    await Promise.all([...this.guards.values()].map((g) => g.drain()));
   }
 
   /** Called on every new head. Never throws: one bad account can't stop the others. */

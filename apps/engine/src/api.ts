@@ -165,6 +165,17 @@ export function createApi(deps: ApiDeps): Server {
     };
   });
 
+  route('GET', '/ready', {}, () => {
+    if (
+      engine.feed.staleness().stale ||
+      !engine.lastTickAt ||
+      Date.now() - engine.lastTickAt > (cfg.staleBlocks + 1) * 400
+    ) {
+      throw new HttpError(503, 'not_ready', 'Protection is waiting for fresh market data.');
+    }
+    return { ok: true, mode: cfg.mode, head: engine.feed.head };
+  });
+
   route('GET', '/v1/config', {}, () => ({
     mode: cfg.mode,
     network: cfg.network.network,
@@ -286,12 +297,17 @@ export function createApi(deps: ApiDeps): Server {
       connection: 'keep-alive',
     });
     const send = () => {
+      if (res.destroyed || res.writableEnded) return;
+      if (res.writableLength > 65_536) return res.destroy();
       if (!auth.wallet(ctx.token)) return res.end();
       res.write(`data: ${JSON.stringify(dashboard(w))}\n\n`);
     };
     send();
     const off = engine.onTick(send);
-    const keepAlive = setInterval(() => res.write(': keep-alive\n\n'), 15_000);
+    // Also publish when the block feed stops, otherwise "Armed" freezes on screen forever.
+    const keepAlive = setInterval(() => {
+      if (Date.now() - engine.lastTickAt >= 1_000) send();
+    }, 1_000);
     ctx.req.on('close', () => {
       off();
       clearInterval(keepAlive);

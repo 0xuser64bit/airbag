@@ -16,10 +16,24 @@ const stop = async (signal: string) => {
   stopping = true;
   app.log.info('engine.stop', { signal });
   const force = setTimeout(() => process.exit(1), 10_000);
-  await app.stop();
+  try {
+    await app.stop();
+  } catch (err) {
+    app.log.error('engine.stop.error', { err });
+    process.exitCode = 1;
+  }
   clearTimeout(force);
-  process.exit(0);
+  process.exit(process.exitCode ?? 0);
 };
 process.on('SIGTERM', () => void stop('SIGTERM'));
 process.on('SIGINT', () => void stop('SIGINT'));
-process.on('unhandledRejection', (err) => app.log.error('unhandled.rejection', { err }));
+process.on('unhandledRejection', (err) => {
+  app.log.error('unhandled.rejection', { err });
+  process.exitCode = 1;
+  void stop('unhandledRejection');
+});
+app.api.on('error', (err) => {
+  app.log.error('api.listen.error', { err });
+  process.exitCode = 1;
+  void stop('listenError');
+});

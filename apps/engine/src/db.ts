@@ -4,7 +4,7 @@
 
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
+import { backup, DatabaseSync } from 'node:sqlite';
 import type { Sensitivity, Side } from '@airbag/risk';
 import type { Sealed } from './vault.ts';
 
@@ -74,6 +74,7 @@ const MIGRATIONS = [
     PRIMARY KEY (wallet, market_id)
   );
   `,
+  `CREATE TABLE environment (id INTEGER PRIMARY KEY CHECK (id = 1), identity TEXT NOT NULL);`,
 ];
 
 export interface Settings {
@@ -229,6 +230,10 @@ export function openStore(path: string) {
   const db = new DatabaseSync(path);
   db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
   const version = Number((db.prepare('PRAGMA user_version').get() as Row).user_version);
+  if (version > MIGRATIONS.length) {
+    db.close();
+    throw new Error('Database schema is newer than this engine. Do not downgrade it.');
+  }
   for (let v = version; v < MIGRATIONS.length; v++) {
     db.exec('BEGIN');
     try {
@@ -249,6 +254,21 @@ export function openStore(path: string) {
   return {
     close: () => db.close(),
     schemaVersion: () => Number((db.prepare('PRAGMA user_version').get() as Row).user_version),
+    backup: (destination: string) => backup(db, destination),
+    bindEnvironment(identity: string, adoptLegacy = false) {
+      const current = q('SELECT identity FROM environment WHERE id = 1').get() as Row | undefined;
+      if (current && current.identity !== identity)
+        throw new Error(
+          `Database belongs to ${current.identity}, not ${identity}. Use a separate DATABASE_PATH.`,
+        );
+      if (current) return;
+      const users = Number((q('SELECT count(*) AS n FROM users').get() as Row).n);
+      if (users > 0 && !adoptLegacy)
+        throw new Error(
+          `Legacy database is unbound. Back it up, verify its mode/network, then run cli.ts bind-database ${identity}.`,
+        );
+      q('INSERT INTO environment (id, identity) VALUES (1, ?)').run(identity);
+    },
 
     ensureUser: (wallet: string, now = Date.now()) => ensureUser.run(wallet, now),
 

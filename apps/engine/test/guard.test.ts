@@ -470,3 +470,14 @@ it('never rounds a capped trim beyond the lot budget, even for a three-lot posit
   expect(h.deployed).toHaveLength(0);
   expect(h.saved).toHaveLength(0);
 });
+
+it('shutdown leaves a pending order recoverable and cannot send a continuation', async () => {
+  const h = harness();
+  await h.run([97_000]);
+  h.engine.stop();
+  await h.engine.drain();
+  expect(h.paper.sent.map((f) => f.t)).toEqual([3]);
+  expect(only(h.store).phase).toBe('closing');
+  expect(only(h.store).data.pendingOrder).toBeDefined();
+  h.store.close();
+});

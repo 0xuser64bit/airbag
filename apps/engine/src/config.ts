@@ -64,8 +64,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     master = { current: 1, keys: new Map([[1, crypto.getRandomValues(Buffer.alloc(32))]]) };
   }
   const webOrigins = list(env.WEB_ORIGIN ?? 'http://localhost:3000');
+  if (webOrigins.length === 0) throw new Error('WEB_ORIGIN must contain at least one origin');
   for (const o of webOrigins) {
-    if (new URL(o).origin !== o) throw new Error(`WEB_ORIGIN entries must be bare origins: ${o}`);
+    if (new URL(o).origin !== o || !['https:', 'http:'].includes(new URL(o).protocol))
+      throw new Error(`WEB_ORIGIN entries must be HTTP(S) bare origins: ${o}`);
   }
   const demoWallets = new Set(list(env.DEMO_WALLETS).map((w) => w.toLowerCase()));
   for (const w of demoWallets) if (!isAddress(w)) throw new Error(`DEMO_WALLETS: bad address ${w}`);
@@ -73,12 +75,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const level = env.LOG_LEVEL ?? 'info';
   if (!isLevel(level)) throw new Error(`LOG_LEVEL must be debug, info, warn or error`);
 
+  const network = networkFromEnv(env);
   const cfg: Config = {
-    network: networkFromEnv(env),
+    network,
     mode,
     host: env.HOST ?? '0.0.0.0',
     port: int(env, 'PORT', 8787, 1, 65_535),
-    databasePath: env.DATABASE_PATH ?? './data/airbag.db',
+    databasePath: env.DATABASE_PATH ?? `./data/airbag-${mode}-${network.network}.db`,
     master,
     webOrigins,
     egressIps: list(env.ENGINE_EGRESS_IPS),
@@ -90,7 +93,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     demoMove: 0.003,
     logLevel: level,
   };
+  if (mode === 'live' && cfg.databasePath === ':memory:')
+    throw new Error('Live protection requires a persistent DATABASE_PATH');
   if (env.CLIENT_IP_HEADER) cfg.clientIpHeader = env.CLIENT_IP_HEADER.toLowerCase();
+  if (!!env.VAPID_PUBLIC_KEY !== !!env.VAPID_PRIVATE_KEY)
+    throw new Error('Set both VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY');
   if (env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY) {
     cfg.vapid = {
       publicKey: env.VAPID_PUBLIC_KEY,
@@ -100,7 +107,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   }
   const logAddress = env.AIRBAG_LOG_ADDRESS;
   const logKey = env.AIRBAG_LOG_PRIVATE_KEY;
+  if (!!logAddress !== !!logKey)
+    throw new Error('Set both AIRBAG_LOG_ADDRESS and AIRBAG_LOG_PRIVATE_KEY');
   if (logAddress && logKey) {
+    if (mode === 'simulation')
+      throw new Error('Simulation cannot write to a real AirbagLog contract');
     if (!isAddress(logAddress)) throw new Error('AIRBAG_LOG_ADDRESS is not an address');
     if (!/^0x[0-9a-fA-F]{64}$/.test(logKey))
       throw new Error('AIRBAG_LOG_PRIVATE_KEY must be 0x + 64 hex');

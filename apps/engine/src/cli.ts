@@ -6,6 +6,9 @@
 //   check-keys          Decrypts every stored key in memory and reports which master key
 //                       version it uses, without printing any secret.
 
+import { existsSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { networkFromEnv } from '@airbag/perpl';
 import { openStore, type Store } from './db.ts';
 import { type MasterKeys, masterKeysFromEnv, open, rewrap } from './vault.ts';
 
@@ -36,25 +39,48 @@ export function keyVersions(store: Store, master: MasterKeys): Record<string, nu
 
 if (import.meta.main) {
   const command = process.argv[2];
-  const master = masterKeysFromEnv(process.env);
-  if (!master) throw new Error('MASTER_KEY is not set');
-  const store = openStore(process.env.DATABASE_PATH ?? './data/airbag.db');
+  const network = networkFromEnv();
+  const store = openStore(
+    process.env.DATABASE_PATH ??
+      `./data/airbag-${process.env.ENGINE_MODE ?? 'live'}-${network.network}.db`,
+  );
   try {
-    if (command === 'rotate-master-key') {
-      const moved = rotateLinks(store, master);
-      console.log(
-        JSON.stringify({
-          rotated: moved,
-          current: master.current,
-          versions: keyVersions(store, master),
-        }),
-      );
-    } else if (command === 'check-keys') {
-      console.log(
-        JSON.stringify({ current: master.current, versions: keyVersions(store, master) }),
-      );
+    if (command === 'backup') {
+      const destination = process.argv[3];
+      if (!destination || existsSync(destination))
+        throw new Error('Choose a new backup path; existing files are never overwritten.');
+      mkdirSync(dirname(destination), { recursive: true });
+      await store.backup(destination);
+      console.log(JSON.stringify({ backup: destination }));
+    } else if (command === 'bind-database') {
+      const identity = process.argv[3] ?? '';
+      if (!/^(live|simulation):(10143|143)$/.test(identity))
+        throw new Error(
+          'Use bind-database <live|simulation>:<10143|143> after verifying the legacy database.',
+        );
+      store.bindEnvironment(identity, true);
+      console.log(JSON.stringify({ environment: identity }));
+    } else if (command === 'rotate-master-key' || command === 'check-keys') {
+      const master = masterKeysFromEnv(process.env);
+      if (!master) throw new Error('MASTER_KEY is not set');
+      if (command === 'rotate-master-key') {
+        const moved = rotateLinks(store, master);
+        console.log(
+          JSON.stringify({
+            rotated: moved,
+            current: master.current,
+            versions: keyVersions(store, master),
+          }),
+        );
+      } else {
+        console.log(
+          JSON.stringify({ current: master.current, versions: keyVersions(store, master) }),
+        );
+      }
     } else {
-      console.error('usage: cli.ts rotate-master-key | check-keys');
+      console.error(
+        'usage: cli.ts rotate-master-key | check-keys | backup <new-path> | bind-database <identity>',
+      );
       process.exitCode = 2;
     }
   } finally {
