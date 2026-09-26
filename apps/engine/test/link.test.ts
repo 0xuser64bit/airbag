@@ -1,6 +1,10 @@
-import type { ConnectionState, OrderOutcome } from '@airbag/perpl';
+import { randomBytes } from 'node:crypto';
+import type { ConnectionState, OrderOutcome, TradingClient } from '@airbag/perpl';
 import { describe, expect, it } from 'vitest';
-import { checkKey, LinkError } from '../src/accounts.ts';
+import { Accounts, checkKey, LinkError } from '../src/accounts.ts';
+import { openStore } from '../src/db.ts';
+import type { Engine } from '../src/engine.ts';
+import { createLogger } from '../src/log.ts';
 
 const WALLET = '0x7a3f00000000000000000000000000000000c21e';
 const account = { id: 4127, fr: false, fw: true, lfr: 9, b: '0', lb: '0' };
@@ -50,9 +54,9 @@ describe('checkKey', () => {
     expect(sent).toEqual([expect.objectContaining({ mt: 22, t: 5, oid: 2, acc: 4127, mkt: 16 })]);
   });
 
-  it('says so when Perpl never answered the scope probe', async () => {
+  it('refuses to store a key when Perpl never proved its Trade scope', async () => {
     const { c } = client({ probe: { result: 'lost', rq: 10 } });
-    await expect(checkKey(c, WALLET, 16)).resolves.toMatchObject({ tradeScope: false });
+    await fails(checkKey(c, WALLET, 16), 'scope_unverified');
   });
 
   it('refuses a Read key', async () => {
@@ -75,4 +79,42 @@ describe('checkKey', () => {
     await fails(checkKey(client({ ready: 'limited' }).c, WALLET, 16), 'too_many_connections');
     await fails(checkKey(client({ ready: 'down' }).c, WALLET, 16), 'perpl_timeout');
   });
+});
+
+it('serializes key changes and rechecks the guard after verification awaits Perpl', async () => {
+  const store = openStore(':memory:');
+  const guard = { hasPendingDeploy: false };
+  const engine = { guards: new Map([[WALLET, guard]]) } as unknown as Engine;
+  const { c } = client({});
+  const gate = Promise.withResolvers<void>();
+  let closed = false;
+  c.ready = async () => {
+    await gate.promise;
+    c.state = 'live';
+  };
+  c.close = async () => {
+    closed = true;
+  };
+  const accounts = new Accounts({
+    store,
+    engine,
+    log: createLogger('error', {}, () => {}),
+    master: { current: 1, keys: new Map([[1, randomBytes(32)]]) },
+    probeMarketId: 16,
+    openTrading: () => c as unknown as TradingClient,
+  });
+  try {
+    const linking = accounts.link(WALLET, 'key-token', randomBytes(32).toString('hex'));
+    await fails(accounts.link(WALLET, 'other', randomBytes(32).toString('hex')), 'key_busy');
+    await fails(accounts.unlink(WALLET), 'key_busy');
+    guard.hasPendingDeploy = true;
+    gate.resolve();
+    await fails(linking, 'deploying');
+    expect(closed).toBe(true);
+    expect(store.link(WALLET)).toBeUndefined();
+    expect(engine.guards.get(WALLET)).toBe(guard);
+    await fails(accounts.unlink(WALLET), 'deploying');
+  } finally {
+    store.close();
+  }
 });

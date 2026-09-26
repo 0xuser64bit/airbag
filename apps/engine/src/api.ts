@@ -133,7 +133,7 @@ export function createApi(deps: ApiDeps): Server {
   };
   /** Swapping the key under a running deploy would strand it between the close and the re-add. */
   const notDeploying = (w: string) => {
-    if (engine.guards.get(w)?.status() === 'deploying') {
+    if (engine.guards.get(w)?.hasPendingDeploy) {
       throw new HttpError(
         409,
         'deploying',
@@ -374,6 +374,7 @@ export function createApi(deps: ApiDeps): Server {
     const sim = simOnly();
     const link = store.link(w);
     if (!link) throw bad('Link a key first.');
+    notDeploying(w);
     engine.remove(w);
     store.deleteReference(w, 16);
     store.deleteReference(w, 32);
@@ -696,7 +697,7 @@ export function createApi(deps: ApiDeps): Server {
       }
       throw new HttpError(404, 'not_found', 'No such route.');
     } catch (err) {
-      if (err instanceof HttpError) {
+      if (err instanceof HttpError || err instanceof LinkError) {
         send(req, res, err.status, { error: { code: err.code, message: err.message } });
       } else {
         log.error('api.error', { method: req.method, path: url.pathname, err });

@@ -104,6 +104,12 @@ export async function checkKey(
   }
   // A Read key is refused at the gateway; anything that reached the chain proves Trade scope.
   const tradeScope = outcome !== undefined && !['lost', 'rejected'].includes(outcome.result);
+  if (!tradeScope)
+    throw new LinkError(
+      504,
+      'scope_unverified',
+      'Perpl did not confirm Trade scope. No key was stored. Try again.',
+    );
   return { accountId: account.id, forwarding: account.fw, frozen: account.fr, tradeScope };
 }
 
@@ -137,6 +143,8 @@ const aad = (wallet: string, accountId: number) => `airbag:v1:${wallet}:${accoun
 export class Accounts {
   private readonly deps: AccountsDeps;
   private readonly clients = new Map<string, TradingClient>();
+  private readonly changing = new Set<string>();
+  private stopped = false;
 
   constructor(deps: AccountsDeps) {
     this.deps = deps;
@@ -178,6 +186,36 @@ export class Accounts {
   }
 
   async link(wallet: string, apiKey: string, secretHex: string): Promise<Linked> {
+    return this.change(wallet, () => this.linkKey(wallet, apiKey, secretHex));
+  }
+
+  private assertIdle(wallet: string): void {
+    if (this.stopped || this.deps.engine.guards.get(wallet)?.hasPendingDeploy) {
+      throw new LinkError(
+        409,
+        'deploying',
+        'Airbag has an unfinished deploy. Finish or resume it before changing the key.',
+      );
+    }
+  }
+
+  private async change<T>(wallet: string, job: () => Promise<T>): Promise<T> {
+    this.assertIdle(wallet);
+    if (this.changing.has(wallet))
+      throw new LinkError(
+        409,
+        'key_busy',
+        'A key change is already in progress. Try again shortly.',
+      );
+    this.changing.add(wallet);
+    try {
+      return await job();
+    } finally {
+      this.changing.delete(wallet);
+    }
+  }
+
+  private async linkKey(wallet: string, apiKey: string, secretHex: string): Promise<Linked> {
     let key: KeyObject;
     try {
       key = ed25519Key(secretHex);
@@ -206,35 +244,37 @@ export class Accounts {
     let check: KeyCheck;
     try {
       check = await checkKey(client, wallet, this.deps.probeMarketId);
+      // Verification awaits Perpl. The existing guard may have started a deploy meanwhile.
+      this.assertIdle(wallet);
+      this.deps.store.putLink({
+        wallet,
+        accountId: check.accountId,
+        keyHint,
+        sealed: seal(
+          JSON.stringify({ apiKey, secret: secretHex.replace(/^0x/, '') }),
+          aad(wallet, check.accountId),
+          this.deps.master,
+        ),
+        linkedAt: now,
+      });
+      this.replace(wallet, client, client);
+      this.deps.log.info('key.linked', {
+        wallet,
+        account: check.accountId,
+        forwarding: check.forwarding,
+        tradeScope: check.tradeScope,
+      });
+      return {
+        accountId: check.accountId,
+        keyHint,
+        forwarding: check.forwarding,
+        tradeScope: check.tradeScope,
+        simulated: false,
+      };
     } catch (err) {
-      await client.close();
+      if (this.clients.get(wallet) !== client) await client.close();
       throw err;
     }
-    this.deps.store.putLink({
-      wallet,
-      accountId: check.accountId,
-      keyHint,
-      sealed: seal(
-        JSON.stringify({ apiKey, secret: secretHex.replace(/^0x/, '') }),
-        aad(wallet, check.accountId),
-        this.deps.master,
-      ),
-      linkedAt: now,
-    });
-    this.replace(wallet, client, client);
-    this.deps.log.info('key.linked', {
-      wallet,
-      account: check.accountId,
-      forwarding: check.forwarding,
-      tradeScope: check.tradeScope,
-    });
-    return {
-      accountId: check.accountId,
-      keyHint,
-      forwarding: check.forwarding,
-      tradeScope: check.tradeScope,
-      simulated: false,
-    };
   }
 
   private replace(wallet: string, exchange: Parameters<Engine['add']>[1], client?: TradingClient) {
@@ -247,17 +287,20 @@ export class Accounts {
   }
 
   async unlink(wallet: string): Promise<void> {
-    this.deps.engine.remove(wallet);
-    const client = this.clients.get(wallet);
-    this.clients.delete(wallet);
-    await client?.close();
-    this.deps.store.deleteLink(wallet);
-    const s = this.deps.store.settings(wallet);
-    this.deps.store.putSettings(wallet, { ...s, armed: false });
-    this.deps.log.info('key.unlinked', { wallet });
+    return this.change(wallet, async () => {
+      this.deps.engine.remove(wallet);
+      const client = this.clients.get(wallet);
+      this.clients.delete(wallet);
+      await client?.close();
+      this.deps.store.deleteLink(wallet);
+      const s = this.deps.store.settings(wallet);
+      this.deps.store.putSettings(wallet, { ...s, armed: false });
+      this.deps.log.info('key.unlinked', { wallet });
+    });
   }
 
   async closeAll(): Promise<void> {
+    this.stopped = true;
     await Promise.all([...this.clients.values()].map((c) => c.close()));
     this.clients.clear();
   }
