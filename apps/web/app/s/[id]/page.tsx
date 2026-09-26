@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = `Saved ${fmt.usd(save.kept)} on a ${save.symbol} ${save.side}`;
   return {
     title,
-    description: `${save.symbol} hit the old liquidation price after Airbag ${save.kind === 'trim' ? 'trimmed, fee-free' : 'added spare margin'}. Kept ${fmt.usd(save.kept)} versus a liquidation.`,
+    description: `${save.symbol} hit the old liquidation price after Airbag ${save.kind === 'trim' ? 'trimmed' : 'added spare margin'}. Kept ${fmt.usd(save.kept)} versus a liquidation.`,
     openGraph: { title, type: 'article' },
     twitter: { card: 'summary_large_image', title },
   };
@@ -153,8 +153,8 @@ export default async function SavePage({ params }: Props) {
         <footer className={s.about}>
           <p className={`display ${s.tagline}`}>Get trimmed, not liquidated.</p>
           <p className="muted">
-            Airbag checks Perpl positions every Monad block and trims just enough, fee-free, before
-            the liquidation engine can close all of it.
+            Airbag checks Perpl positions every Monad block and trims just enough before the
+            liquidation engine can close all of it.
           </p>
           <Link href="/" className="btn btn-secondary">
             See how it works

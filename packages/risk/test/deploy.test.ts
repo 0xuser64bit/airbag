@@ -144,6 +144,22 @@ describe('golden vectors: save versus liquidation', () => {
 });
 
 describe('planning edge cases', () => {
+  it('sizes long and short trims to reach the target after closing fees', () => {
+    for (const side of ['long', 'short'] as const) {
+      const p = { ...btc, side, closeFeeRate: 0.000345 };
+      const price = side === 'long' ? 97_000 : 103_000;
+      const policy = { ...balanced, maxTrim: 0.75, useSpare: false };
+      const plan = trimOf(planDeploy(p, price, 0, policy));
+      const withoutFees = trimOf(planDeploy({ ...p, closeFeeRate: 0 }, price, 0, policy));
+      expect(plan.fraction).toBeGreaterThan(withoutFees.fraction);
+      const after = applyTrim(p, plan.fraction, price);
+      expect(distanceToLiquidation(after.position, price)).toBeCloseTo(policy.target, 10);
+      expect(equity(p, price) - equity(after.position, price)).toBeCloseTo(
+        plan.fraction * p.size * price * p.closeFeeRate,
+        8,
+      );
+    }
+  });
   it('uses spare margin when it alone reaches the target, with the smallest amount', () => {
     const plan = planDeploy(btc, 97_000, 10_000, balanced);
     expect(plan.kind).toBe('margin');
@@ -258,6 +274,25 @@ describe('properties', () => {
               : p;
         expect(distanceToLiquidation(after, price)).toBeGreaterThanOrEqual(policy.target - 1e-9);
       }),
+    );
+  });
+
+  it('fee-aware planning reaches the target across generated positions', () => {
+    fc.assert(
+      fc.property(
+        genPosition,
+        genPolicy,
+        fc.double({ min: 0, max: 0.01, noNaN: true }),
+        (before, policy, closeFeeRate) => {
+          const p = { ...before, closeFeeRate };
+          const price = atLine(p, SENSITIVITY.balanced);
+          const plan = planDeploy(p, price, 0, { ...policy, useSpare: false });
+          if (plan.kind !== 'trim' || plan.capped || plan.fraction === 1) return;
+          expect(
+            distanceToLiquidation(applyTrim(p, plan.fraction, price).position, price),
+          ).toBeGreaterThanOrEqual(policy.target - 1e-9);
+        },
+      ),
     );
   });
 

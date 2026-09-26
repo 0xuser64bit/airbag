@@ -29,6 +29,7 @@ const market = (
     maintenance_margin: maintenance,
     funding_sum_scaling_exp: 0,
     is_open: true,
+    taker_fee: 0,
   },
   state: { at: { b: 0 }, orl: mark, mrk: mark, lst: mark, bid: mark, ask: mark },
   funding: { at: { b: 0 }, feb: 0, rate: 0, sum: 0, div: 1 },

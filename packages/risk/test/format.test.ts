@@ -8,6 +8,9 @@ describe('display formatting', () => {
     expect(fmt.usd(12.345)).toBe('$12.35');
     expect(fmt.usd(0.026311)).toBe('$0.02631');
     expect(fmt.usd(null)).toBe('—');
+    expect(fmt.fee(undefined)).toBe('unconfirmed');
+    expect(fmt.fee(0)).toBe('$0');
+    expect(fmt.fee(16.425)).toBe('$16.43');
   });
 
   it('prints percentages, sizes, leverage and blocks', () => {

@@ -402,7 +402,7 @@ export function AirbagForm(props: AirbagFormProps) {
         )}
         <p className={s.rules}>
           Uses Perpl’s {symbol} rules: {fmt.pct(r, Number.isInteger(r * 100) ? 0 : 2)} maintenance
-          margin, fee-free closes.
+          margin, {fmt.pct(pos.closeFeeRate ?? 0, 4)} estimated taker fee on closes.
           {sample ? ' Sample position: no open position to preview on yet.' : ''}
         </p>
       </aside>

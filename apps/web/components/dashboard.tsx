@@ -41,9 +41,9 @@ function atLineSentence(p: PositionView, st: Settings): string {
   const size = `${fmt.size((at.fraction ?? 0) * p.size, p.sizeDecimals)} ${p.symbol}`;
   if (at.capped) {
     const away = at.liquidation === null ? null : Math.abs(p.line - at.liquidation) / p.line;
-    return `${where} trims ${size}, the most you allow, fee-free. Liquidation ends up ${fmt.pct(away)} away.`;
+    return `${where} trims ${size}, the most you allow. Liquidation ends up ${fmt.pct(away)} away.`;
   }
-  return `${where} trims ${size}, fee-free, so liquidation sits ${target} away.`;
+  return `${where} trims ${size}, so liquidation sits ${target} away after estimated trading fees.`;
 }
 
 /**
@@ -288,7 +288,8 @@ export function InterventionDisplay({ d, p }: { d: DeployDetail; p: PositionView
         {first && last && (
           <p className={`num ${s.interMeta}`}>
             {fmt.clock(first.at)} → {fmt.clock(last.at)} · blocks {fmt.block(first.block)}–
-            {last.block.toLocaleString('en-US')} · fee $0
+            {last.block.toLocaleString('en-US')} · fee{' '}
+            {fmt.fee(d.kind === 'margin' ? 0 : d.data.close?.fee)}
           </p>
         )}
       </header>

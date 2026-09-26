@@ -84,7 +84,7 @@ const FAQ = [
   ],
   [
     'Does it cost anything?',
-    'Airbag is free during the beta. The trims themselves are free too: closing or reducing a position on Perpl carries no trading fee.',
+    'Airbag charges no service fee during the beta. Perpl trading fees apply to trims; the engine estimates your current taker rate and receipts show the observed fee.',
   ],
   [
     'Do I need to keep a tab open?',
@@ -128,7 +128,7 @@ export default async function Landing() {
             <div className={s.heroCopy}>
               <p className={s.lede}>
                 Airbag checks your Perpl positions every Monad block. When a wick eats half your
-                margin cushion, it trims just enough of the position, fee-free, before the
+                margin cushion, it trims the position to move liquidation further away before the
                 liquidation engine can close all of it.
               </p>
               <div className={s.ctas}>
@@ -142,7 +142,7 @@ export default async function Landing() {
               <ul className={s.promises}>
                 {[
                   'Your key can’t withdraw. Perpl blocks it.',
-                  'Trims are fee-free. Closing on Perpl costs nothing.',
+                  'Trim estimates include Perpl trading fees.',
                   'Open source, and free during the beta.',
                 ].map((t) => (
                   <li key={t}>
@@ -159,7 +159,7 @@ export default async function Landing() {
         <section id="math" className={s.section} aria-labelledby="math-title">
           <div className={s.sectionHead}>
             <h2 id="math-title" className={`display ${s.h2}`}>
-              A liquidation costs a fifth of what’s left. Closing it yourself costs nothing.
+              A liquidation shares its proceeds. A trim pays trading fees and keeps the rest open.
             </h2>
             {liquidated !== null && (
               <p className={s.stat}>
@@ -190,11 +190,11 @@ export default async function Landing() {
               <div className={s.pathHead}>
                 <h3>When you close it yourself</h3>
                 <Annunciator state="airbag-line" size="sm">
-                  Fee $0
+                  Trading fees apply
                 </Annunciator>
               </div>
               <ul className={s.dashList}>
-                <li>Closing or reducing a position is fee-free on Perpl.</li>
+                <li>Perpl charges trading fees on the amount you close.</li>
                 <li>You choose how much goes, and keep the rest of the position.</li>
                 <li>Airbag does it for you, in the block after your line is crossed.</li>
               </ul>
@@ -222,7 +222,7 @@ export default async function Landing() {
                     </th>
                     <td data-label="Without Airbag">Open, {ex.atLine} equity</td>
                     <td data-label="With Airbag">
-                      Trims {ex.trim} BTC, fee $0. Liquidation moves to {ex.newLiq}.
+                      Zero-fee example: trims {ex.trim} BTC. Liquidation moves to {ex.newLiq}.
                     </td>
                   </tr>
                   <tr>

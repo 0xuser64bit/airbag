@@ -4,6 +4,10 @@ Everything here was read from Perpl's own docs or measured against live endpoint
 named. It is the reference for `packages/perpl` and for anyone changing the engine's exchange
 layer. **Read it before changing the protocol code**: most of it is not guessable from the types.
 
+Endpoint measurements below are historical research, not a fresh execution proof. Re-check live
+context and a funded disposable account before launch. The 2026-09-27 audit re-read the current
+official API documentation and corrected fee handling; old zero-fee assumptions are obsolete.
+
 Sources: Perpl `api-docs` (README, `authentication.md`, `websocket.md`, `rest-endpoints.md`,
 `types.md`, `integrations.md`), [docs.perpl.xyz](https://docs.perpl.xyz) (margin, liquidation,
 insurance and ADL, funding), `PerplFoundation/dex-sdk` (`state/position.rs`, bundled `Exchange.json`),
@@ -70,16 +74,21 @@ These are the ones that have cost real time. Each is enforced or tested somewher
 - **Premium PnL comes from funding sums, not a field:**
   `premium = −s · (fundingSum_now − efs) · size / (div · 10^pd)` with
   `div = 10^funding_sum_scaling_exp`. Funding is realized on every size change. If the funding
-  seed fails at boot, premium PnL counts as zero until the next funding event, which can put the
-  liquidation price off by the accrued premium (logged as `funding.seed.error`).
+  seed fails at boot, the live engine refuses to start. It also refuses to act until a funding
+  event valid at the current head is known.
 - **The idle timeout is 5 s on mainnet, 10 s on testnet, and applies before sign-in too.** Send
   `mt:29` immediately on open.
 - **Four trading connections per wallet**, shared with the user's own browser tabs. The engine needs
   one; if the user has four Perpl tabs open, ours is refused. Surface it in key health.
 - **There is no key-introspection endpoint.** Scope and IP allow-list cannot be read back. Scope is
-  probed at link time with a cancel for an order id the account does not have (a read key is
+  probed at link time with a high safe uint64 order id outside the open-order snapshot (a read key is
   refused with 403 at the gateway). The IP lock cannot be checked from here, so the UI says what was
   checked and asks the user to confirm the rest.
+- **Closes have fees.** Current [API fee documentation](https://github.com/PerplFoundation/api-docs/blob/main/README.md#fees--fee-tiers)
+  charges on size added and removed. Taker rates are micros, selected by `Account.ft`, with a base
+  fallback. `Order.f` is the gross observed fee; never add builder fees a second time. Airbag
+  does not request a builder fee. The risk model sizes trims after estimated taker fees and
+  re-adds the net released collateral. The landing replay is explicitly a zero-fee simulation.
 
 ## Order frame (`mt:22`)
 

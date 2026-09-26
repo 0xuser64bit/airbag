@@ -19,6 +19,9 @@ export interface MarketConfig {
   maintenance_margin: number;
   funding_sum_scaling_exp: number;
   is_open: boolean;
+  /** Fee schedule in micros (1e-6 fractions); arrays are indexed by Account.ft. */
+  taker_fee?: number;
+  taker_fees?: number[];
 }
 
 export interface MarketState {
@@ -68,6 +71,7 @@ export interface Context {
 
 export interface Account {
   id: number;
+  ft?: number;
   /** Frozen. */
   fr: boolean;
   /** Order forwarding ("One-Click Trading"). Orders fail with sr:34 while false. */

@@ -19,6 +19,8 @@ export interface Position {
   funding: number;
   /** r: maintenance margin fraction, e.g. 0.04 for BTC. */
   maintenance: number;
+  /** Taker fee fraction on a close. Zero only for explicitly fee-free simulations. */
+  closeFeeRate?: number;
 }
 
 /** +1 for longs, −1 for shorts (Perpl's `s`). */
@@ -121,7 +123,10 @@ export const marginNeeded = (p: Position, target: number): number =>
  */
 export function liquidationAfterTrim(p: Position, price: number, remaining: number): number {
   const d = direction(p.side);
-  return price + d * p.maintenance * p.entry - (d * equity(p, price)) / (remaining * p.size);
+  const fee = (1 - remaining) * p.size * price * (p.closeFeeRate ?? 0);
+  return (
+    price + d * p.maintenance * p.entry - (d * (equity(p, price) - fee)) / (remaining * p.size)
+  );
 }
 
 /**
@@ -135,7 +140,9 @@ export function planDeploy(p: Position, price: number, spare: number, policy: Po
   if (policy.useSpare && need <= spare) {
     return { kind: 'margin', amount: need, liquidation: liquidationPrice(applyMargin(p, need)) };
   }
-  const keep = equity(p, price) / (p.size * (p.maintenance * p.entry + price * policy.target));
+  const fee = p.size * price * (p.closeFeeRate ?? 0);
+  const denominator = p.size * (p.maintenance * p.entry + price * policy.target) - fee;
+  const keep = denominator > 0 ? (equity(p, price) - fee) / denominator : 0;
   const wanted = Math.min(1, 1 - Math.max(0, keep));
   const fraction = Math.min(wanted, policy.maxTrim);
   return {
@@ -165,7 +172,7 @@ export function applyTrim(
   fill: number,
 ): { position: Position; realizedPnl: number; released: number } {
   const keep = 1 - fraction;
-  const released = fraction * equity(p, fill);
+  const released = fraction * (equity(p, fill) - p.size * fill * (p.closeFeeRate ?? 0));
   return {
     position: {
       ...p,

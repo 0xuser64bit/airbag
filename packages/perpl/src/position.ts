@@ -14,6 +14,7 @@ export function toRiskPosition(
   market: Market,
   collateralDecimals: number,
   fundingSum: number,
+  feeTier = 0,
 ): Position {
   const side = pos.sd === 1 ? 'long' : 'short';
   const pd = market.config.price_decimals;
@@ -26,5 +27,13 @@ export function toRiskPosition(
     deposit: scaled(Number(pos.c), collateralDecimals),
     funding: -direction(side) * perUnit * size,
     maintenance: maintenanceFraction(market),
+    closeFeeRate: closeFeeRate(market, feeTier),
   };
+}
+
+export function closeFeeRate(market: Market, feeTier = 0): number {
+  const micros = market.config.taker_fees?.[feeTier] ?? market.config.taker_fee;
+  if (typeof micros !== 'number' || !Number.isFinite(micros) || micros < 0 || micros > 100_000)
+    throw new Error('Invalid Perpl taker fee');
+  return micros / 1_000_000;
 }

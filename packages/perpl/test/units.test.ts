@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
+import { closeFeeRate } from '../src/position.ts';
+import type { Market } from '../src/types.ts';
 import { effectiveEntryPrice, lotsToClose, worstClosePrice } from '../src/units.ts';
+
+it('reads fee tiers and refuses missing or invalid fee schedules', () => {
+  const market = { config: { taker_fee: 345, taker_fees: [345, 300] } } as Market;
+  expect(closeFeeRate(market, 1)).toBe(0.0003);
+  expect(closeFeeRate(market, 99)).toBe(0.000345);
+  expect(() => closeFeeRate({ config: {} } as Market)).toThrow(/taker fee/);
+  market.config.taker_fee = -1;
+  expect(() => closeFeeRate(market, 99)).toThrow(/taker fee/);
+});
 
 describe('effectiveEntryPrice (Q16 residue, vectors from dex-sdk position.rs)', () => {
   it.each([

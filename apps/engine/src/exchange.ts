@@ -9,6 +9,7 @@ import {
   type AllowedOrderFrame,
   assertAllowed,
   type ConnectionState,
+  closeFeeRate,
   effectiveEntryPrice,
   fromCns,
   type Market,
@@ -182,10 +183,15 @@ export class PaperExchange implements Exchange {
     const depositBefore = BigInt(pos.c);
     const depositAfter = (depositBefore * BigInt(pos.s - lots)) / BigInt(pos.s);
     const realized = direction(side) * scaled(lots, sd) * (scaled(mark, pd) - entry);
+    const fee = toCnsFloor(
+      scaled(lots, sd) * scaled(mark, pd) * closeFeeRate(market, account.ft ?? 0),
+      cd,
+    );
     const released =
       depositBefore -
       depositAfter +
-      (realized >= 0 ? toCnsFloor(realized, cd) : -toCnsFloor(-realized, cd));
+      (realized >= 0 ? toCnsFloor(realized, cd) : -toCnsFloor(-realized, cd)) -
+      fee;
     account.b = (BigInt(account.b) + released).toString();
     pos.s -= lots;
     pos.c = depositAfter.toString();
@@ -197,7 +203,10 @@ export class PaperExchange implements Exchange {
     return {
       result: full ? 'filled' : 'partial',
       rq: frame.rq,
-      order: this.order(frame, full ? OrderStatus.Filled : OrderStatus.Canceled, lots, mark),
+      order: {
+        ...this.order(frame, full ? OrderStatus.Filled : OrderStatus.Canceled, lots, mark),
+        f: fee.toString(),
+      },
     };
   }
 

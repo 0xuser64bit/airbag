@@ -8,6 +8,13 @@ dependencies, so the engine and the browser compute the same numbers from the sa
 Formulas follow [Perpl's liquidation docs](https://docs.perpl.xyz/exchange/liquidation) and
 `PerplFoundation/dex-sdk`'s `state/position.rs`.
 
+The old assumption that closes are free is obsolete. As checked on 2026-09-27,
+[Perpl's API documentation](https://github.com/PerplFoundation/api-docs/blob/main/README.md#fees--fee-tiers)
+charges trading fees on size removed as well as added. Airbag reads the taker rate from
+`taker_fees[Account.ft]`, falling back to `taker_fee`, in micros. Missing live fee schedules
+are refused. Orders request no builder fee. Observed gross `Order.f` is recorded; an
+interrupted or legacy receipt with no attributable fee says unconfirmed.
+
 ## Definitions
 
 Long side; shorts mirror it through `s = direction(side)` (+1 long, −1 short).
@@ -50,18 +57,21 @@ A deploy is **two orders**, not one ([ADR 0002](adr/0002-deploy-is-close-then-re
 2. **Trim the smallest amount** that puts liquidation at least `d` (default 10%) from the trigger.
    For a long with remaining fraction `s`:
    ```
-   L'(s) = T + m − Q / (s · n)
-   target L' ≤ T · (1 − d)  ⇒  s ≤ Q / (n · (m + T·d))
+   k = current taker fee fraction
+   A = n · T · k             fee for closing the entire original size
+   L'(s) = T + m − (Q − (1−s)·A) / (s · n)
+   target L' ≤ T · (1 − d)  ⇒  s ≤ (Q−A) / (n · (m + T·d) − A)
    trim fraction = 1 − s, capped at maxTrim (default 50%)
    ```
-   Shorts: `L'(s) = T − m + Q/(s·n)`, target `L' ≥ T·(1 + d)`, same bound on `s`.
+   Shorts use the opposite direction with the same fee-adjusted bound on `s`.
 3. Send `CloseLong`/`CloseShort` (`t:3`/`t:4`), `fl:4` (IOC), with a worst price 0.5% from mark
    (configurable), and a valid `lb`.
 4. **Re-add the released equity.** Perpl shrinks the deposit pro-rata on a decrease, so the close
    alone leaves the liquidation price exactly where it was. As soon as the fill lands, send
    `IncreasePositionCollateral` for the collateral the close released, net of realized PnL
-   (`(1 − s)·equity(P_fill)`), read from the account update in the fill rather than recomputed. The
-   position then carries equity `Q` on the smaller size, which is what `L'(s)` assumes.
+   and closing fees, read from the balance change and capped by the net model estimate. The
+   position then carries `Q` minus the closing fee on the smaller size. Entry fees reported on
+   a live snapshot are historical charges, not another deduction from its current deposit.
 5. On a partial fill, re-add what was released, recompute and retry on the next block, up to
    `MAX_DEPLOY_ATTEMPTS`, within the episode's cap, then alert.
 6. **Re-arm** on the smaller position with the fill price as the new reference.
@@ -83,8 +93,10 @@ account.
 ## Golden vectors
 
 From the approved design, and asserted by `packages/risk/test` at the precision the design
-displays. If a change to the model breaks one of these, either the model or the design is wrong;
-find out which before moving on.
+displays. These are **zero-fee simulation vectors**, preserved to exercise the original design;
+they are not live cost estimates. Fee-bearing long/short, property and engine checks cover the
+current fee model separately. With a 345-micro taker rate, the same BTC trigger needs a slightly
+larger trim and the observed fee is deducted from released collateral.
 
 BTC long, `n = 1.000`, `E = 100,000`, `M = 10,000`, `r = 4%`, `F = 0`, spare margin `S = 420`:
 

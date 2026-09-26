@@ -241,6 +241,7 @@ describe('onboarding to a deploy, over HTTP', () => {
 
     const detail = await call('GET', `/v1/deploys/${d.id}`, { token });
     expect(detail.body.simulated).toBe(true);
+    expect(detail.body.data.close.fee).toBe(0);
     expect(detail.body.data.timeline.map((e: { text: string }) => e.text)).toEqual(
       expect.arrayContaining([
         'Mark hit $97,000. Half your cushion is gone.',

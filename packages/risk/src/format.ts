@@ -21,6 +21,10 @@ export function usd(v: number | null | undefined): string {
 /** A price level: whole dollars from $100, then enough places for small-priced markets. */
 export const price = usd;
 
+/** Observed fee, with a distinct unknown state for interrupted/legacy receipts. */
+export const fee = (v: number | null | undefined): string =>
+  v == null ? 'unconfirmed' : v === 0 ? '$0' : usd(v);
+
 /** 5.45% · 10.00% · −3.09%. */
 export function pct(fraction: number | null | undefined, digits = 2): string {
   if (fraction === null || fraction === undefined || !Number.isFinite(fraction)) return '—';

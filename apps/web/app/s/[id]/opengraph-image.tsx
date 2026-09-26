@@ -86,7 +86,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     save.kind === 'trim'
       ? `${fmt.size(save.trimmed, save.sizeDecimals)} ${save.symbol} trimmed`
       : `${fmt.usd(save.spareAdded)} margin added`,
-    'fee $0',
+    `fee ${fmt.fee(save.fee)}`,
     save.lineToFillMs !== null ? `${fmt.duration(save.lineToFillMs)} after the line` : null,
     save.hitAfterMs !== null
       ? `old liquidation price hit ${fmt.duration(save.hitAfterMs)} later`

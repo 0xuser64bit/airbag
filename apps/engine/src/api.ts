@@ -601,6 +601,7 @@ export function createApi(deps: ApiDeps): Server {
       sizeDecimals: sizeDecimals(d.marketId),
       spareAdded: d.data.spareAdded,
       fillPrice: d.data.close?.fillPrice ?? null,
+      fee: d.kind === 'margin' ? 0 : (d.data.close?.fee ?? null),
       oldLiquidation: d.data.before.liquidation,
       lineToFillMs: filled ? filled.at - d.data.trigger.at : null,
       lineToFillBlocks: filled ? filled.block - d.data.trigger.block : null,

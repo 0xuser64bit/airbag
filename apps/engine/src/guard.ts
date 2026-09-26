@@ -266,7 +266,7 @@ export class AccountGuard {
   private risk(p: PerplPosition, m: Market, head: number): Position {
     const funding = this.deps.feed.fundingAt(p.mkt, head);
     // No known funding event means no premium yet: the sum equals the position's entry sum.
-    return toRiskPosition(p, m, this.cd, funding?.sum ?? p.efs);
+    return toRiskPosition(p, m, this.cd, funding?.sum ?? p.efs, this.exchange.account?.ft ?? 0);
   }
 
   private markOf(m: Market): number | undefined {
@@ -675,19 +675,22 @@ export class AccountGuard {
     const fill = outcome.order?.fp ? scaled(outcome.order.fp, pd) : mark;
     const share = filled / lotsBefore;
     const realized = direction(risk.side) * share * risk.size * (fill - risk.entry);
+    const fee = outcome.order?.f === undefined ? undefined : fromCns(outcome.order.f, this.cd);
+    const priorFee = d.data.close ? d.data.close.fee : 0;
     d.data.close = {
       lots: (d.data.close?.lots ?? 0) + lots,
       limitPrice: scaled(limit, pd),
       filledLots: (d.data.close?.filledLots ?? 0) + filled,
       fillPrice: fill,
       realizedPnl: (d.data.close?.realizedPnl ?? 0) + realized,
+      fee: fee === undefined || priorFee === undefined ? undefined : priorFee + fee,
       ...txOf(outcome),
     };
     const partial = filled < lots;
     this.entry(
       d,
       this.exchange.head,
-      `${partial ? `Filled ${fmt.size(scaled(filled, sd), sd)} of ${fmt.size(scaled(lots, sd), sd)} ${d.symbol}` : 'Filled'} at ${fmt.usd(fill)}. Realized ${fmt.usd(realized)}. Fee $0.`,
+      `${partial ? `Filled ${fmt.size(scaled(filled, sd), sd)} of ${fmt.size(scaled(lots, sd), sd)} ${d.symbol}` : 'Filled'} at ${fmt.usd(fill)}. Realized ${fmt.usd(realized)}. Fee ${fmt.fee(fee)}.`,
       { tone: 'airbag', ...txOf(outcome) },
     );
 
@@ -705,7 +708,10 @@ export class AccountGuard {
     this.save(d);
     await this.until(() => BigInt(this.exchange.account?.b ?? '0') !== balanceBefore);
     const observed = BigInt(this.exchange.account?.b ?? '0') - balanceBefore;
-    const expected = toCnsFloor(share * equity(risk, fill), this.cd);
+    const expected = toCnsFloor(
+      share * equity(risk, fill) - (fee ?? share * risk.size * fill * (risk.closeFeeRate ?? 0)),
+      this.cd,
+    );
     const free = BigInt(this.exchange.account?.b ?? '0') - BigInt(this.exchange.account?.lb ?? '0');
     let readd = observed > 0n ? observed : expected;
     if (readd > (expected * 105n) / 100n) readd = (expected * 105n) / 100n;
@@ -1025,7 +1031,11 @@ export class AccountGuard {
           };
           const fill = d.data.readd?.fill ?? d.data.close?.fillPrice ?? d.data.trigger.mark;
           const proRata = (BigInt(at.deposit) * BigInt(p.s)) / BigInt(at.lots);
-          const expected = toCnsFloor((filled / at.lots) * equity(before, fill), this.cd);
+          const expected = toCnsFloor(
+            (filled / at.lots) *
+              (equity(before, fill) - before.size * fill * (before.closeFeeRate ?? 0)),
+            this.cd,
+          );
           // New records carry an exact target; legacy records use the pre-close deposit.
           d.data.readd ??= { deposit: proRata.toString(), amount: expected.toString(), fill };
           const target = BigInt(d.data.readd.deposit) + BigInt(d.data.readd.amount);
@@ -1045,8 +1055,10 @@ export class AccountGuard {
               'Recovered a close from the position snapshot; its fill price is an estimate.',
             );
           }
-          if (at.filledBefore !== undefined)
+          if (at.filledBefore !== undefined) {
+            if (at.filledBefore + filled > d.data.close.filledLots) delete d.data.close.fee;
             d.data.close.filledLots = Math.max(d.data.close.filledLots, at.filledBefore + filled);
+          }
           d.phase = 'readding';
           this.save(d);
           if (remaining > 0n) {

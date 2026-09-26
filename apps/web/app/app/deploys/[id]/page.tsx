@@ -72,14 +72,13 @@ export default function DeployPage({ params }: { params: Promise<{ id: string }>
         <p className={`num ${s.meta}`}>
           {fmt.date(d.createdAt)} · {fmt.clock(d.createdAt).slice(0, 8)}
           {first && last
-            ? ` · blocks ${fmt.block(first.block)}–${last.block.toLocaleString('en-US')} · fee $0`
+            ? ` · blocks ${fmt.block(first.block)}–${last.block.toLocaleString('en-US')} · fee ${fmt.fee(d.kind === 'margin' ? 0 : d.data.close?.fee)}`
             : ''}
         </p>
         {after?.distance !== undefined && after.distance !== null && (
           <p className={s.lede}>
             Your {d.symbol} {d.side} was <span className="num">{fmt.pct(b.distance)}</span> from
             liquidation. Now it’s <span className="num">{fmt.pct(after.distance)}</span>.
-            {d.kind === 'trim' ? ' The trim was fee-free.' : ''}
           </p>
         )}
       </header>

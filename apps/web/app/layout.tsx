@@ -9,7 +9,7 @@ const ui = Instrument_Sans({ subsets: ['latin'], axes: ['wdth'], variable: '--fo
 const mono = Martian_Mono({ subsets: ['latin'], axes: ['wdth'], variable: '--font-mono' });
 
 const description =
-  'Airbag checks your Perpl positions every Monad block and trims just enough, fee-free, before the liquidation engine can close all of it.';
+  'Airbag checks your Perpl positions every Monad block and trims to move liquidation further away. Trading fees and slippage apply.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

@@ -25,6 +25,7 @@ interface Options {
   failAdds?: number;
   markets?: number[];
   short?: boolean;
+  feeMicros?: number;
 }
 
 function harness(opts: Options = {}) {
@@ -33,10 +34,14 @@ function harness(opts: Options = {}) {
   const saved: Deploy[] = [];
   const alerts: string[] = [];
   let engine: Engine | undefined;
+  const marketDefinitions = SIM_CONTEXT.markets.map((m) => ({
+    ...m,
+    config: { ...m.config, taker_fee: opts.feeMicros ?? 0 },
+  }));
   const feed = new MarketFeed({
     url: 'wss://unused',
     chainId: 10143,
-    markets: SIM_CONTEXT.markets,
+    markets: marketDefinitions,
     staleBlocks: 3,
     onBlock: (h) => engine?.tick(h),
   });
@@ -44,7 +49,7 @@ function harness(opts: Options = {}) {
     store,
     log: createLogger('error', {}, () => {}),
     markets: {
-      byId: new Map(SIM_CONTEXT.markets.map((m) => [m.id, m])),
+      byId: new Map(marketDefinitions.map((m) => [m.id, m])),
       covered: new Set(opts.markets ?? [BTC, ETH]),
       collateralDecimals: 6,
       userShare: 0.8,
@@ -61,7 +66,7 @@ function harness(opts: Options = {}) {
     pollMs: 1,
     settleMs: 5,
   });
-  const chain = new SimChain(feed, SIM_CONTEXT.markets);
+  const chain = new SimChain(feed, marketDefinitions);
   store.putSettings(WALLET, { ...DEFAULT_SETTINGS, armed: true, ...opts.settings });
   let attempt = 0;
   let adds = 0;
@@ -71,7 +76,7 @@ function harness(opts: Options = {}) {
     accountId: 4127,
     balanceCns: opts.spareCns ?? SAMPLE_SPARE_CNS,
     positions,
-    markets: new Map(SIM_CONTEXT.markets.map((m) => [m.id, m])),
+    markets: new Map(marketDefinitions.map((m) => [m.id, m])),
     collateralDecimals: 6,
     markOf: (id) => feed.mark(id),
     ...(opts.fillShare || opts.failAdds
@@ -169,6 +174,16 @@ describe('the landing-page crash test, through the real engine', () => {
 });
 
 describe('deploy paths', () => {
+  it('plans and settles a fee-bearing trim without spending the original spare balance', async () => {
+    const h = harness({ feeMicros: 345 });
+    await h.run(Array(8).fill(97_000));
+    const d = only(h.store);
+    expect(d.data.close?.filledLots).toBeGreaterThan(48_906);
+    expect(d.data.close?.fee).toBeGreaterThan(16);
+    expect(d.data.after?.distance).toBeGreaterThanOrEqual(0.0999);
+    expect(h.paper.account?.b).toBe(SAMPLE_SPARE_CNS.toString());
+    expect(d.data.timeline.some((e) => e.text.includes('Fee $16'))).toBe(true);
+  });
   it('adds spare margin instead of trimming when it alone reaches the target', async () => {
     const h = harness({ spareCns: 10_000_000_000n });
     await h.run([99_000, 98_000, 97_000, 97_000, 97_000]);

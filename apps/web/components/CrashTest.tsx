@@ -94,7 +94,7 @@ export function CrashTest() {
           <h2 id="crash-title" className={s.title}>
             Crash test · BTC long · 10x
           </h2>
-          <p className="muted">Same position, same wick, run twice</p>
+          <p className="muted">Zero-fee simulation · same position, same wick, run twice</p>
         </div>
         <div className={s.controls}>
           <div className={s.ticker} aria-hidden="true">
@@ -187,8 +187,9 @@ export function CrashTest() {
         })}
       </ol>
       <figcaption className={s.caption}>
-        A scripted wick, compressed: one frame per Monad block. Liquidation terms are Perpl’s: 4%
-        BTC maintenance margin, 80% of the remaining margin returned.
+        A scripted zero-fee example, compressed: one frame per Monad block. Live trading fees apply.
+        Liquidation terms are Perpl’s: 4% BTC maintenance margin, 80% of the remaining margin
+        returned.
       </figcaption>
     </figure>
   );

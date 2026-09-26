@@ -60,6 +60,8 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
   const covered = new Set<number>();
   for (const symbol of cfg.markets) {
     const m = ctx.markets.find((x) => symbolOf(x).toUpperCase() === symbol);
+    if (live && m?.config.is_open && !Number.isFinite(m.config.taker_fee))
+      throw new Error(`Perpl fee schedule missing for ${symbol}; refusing a fee-free assumption`);
     if (m?.config.is_open) covered.add(m.id);
     else log.warn('market.not-covered', { symbol, reason: m ? 'closed' : 'unknown' });
   }

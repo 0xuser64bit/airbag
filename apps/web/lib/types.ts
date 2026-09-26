@@ -171,6 +171,7 @@ export interface DeployData {
     filledLots: number;
     fillPrice: number;
     realizedPnl: number;
+    fee?: number;
     tx?: string;
   };
   margin?: { amount: number; reason: 'spare' | 'readd'; tx?: string };
@@ -249,6 +250,7 @@ export interface SaveReport {
   sizeDecimals: number;
   spareAdded: number;
   fillPrice: number | null;
+  fee: number | null;
   oldLiquidation: number;
   lineToFillMs: number | null;
   lineToFillBlocks: number | null;

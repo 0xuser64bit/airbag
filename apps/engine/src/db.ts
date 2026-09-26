@@ -149,6 +149,8 @@ export interface DeployData {
     filledLots: number;
     fillPrice: number;
     realizedPnl: number;
+    /** Gross observed trading fee; absent if a lost outcome cannot be attributed. */
+    fee?: number | undefined;
     tx?: string;
   };
   margin?: { amount: number; reason: 'spare' | 'readd'; tx?: string };
