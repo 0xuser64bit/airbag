@@ -27,7 +27,11 @@ export const viewport: Viewport = { themeColor: '#11110F', colorScheme: 'dark' }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${ui.variable} ${mono.variable}`}>
+    <html
+      lang="en"
+      data-scroll-behavior="smooth"
+      className={`${display.variable} ${ui.variable} ${mono.variable}`}
+    >
       <body>{children}</body>
     </html>
   );

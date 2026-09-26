@@ -74,6 +74,21 @@ export default function LinkKeyPage() {
   return (
     <div className={s.withAside}>
       <div className={s.content}>
+        {(config.error || me.error) && (
+          <div className="notice" data-tone="alert" role="alert">
+            <span>{config.error?.message ?? me.error?.message}</span>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => {
+                config.reload();
+                me.reload();
+              }}
+            >
+              Try again
+            </button>
+          </div>
+        )}
         <div className={s.head}>
           <h1 className={`display ${s.h1}`}>Link a key that can’t withdraw</h1>
           <p className={s.lede}>
@@ -218,18 +233,10 @@ export default function LinkKeyPage() {
                 <p className="muted">
                   {done.simulated
                     ? 'Simulated: nothing was sent to Perpl.'
-                    : 'IP lock confirmed by you. Perpl doesn’t expose it, so it isn’t something Airbag verified.'}
+                    : 'IP allow-list acknowledged by you. Perpl doesn’t expose it, so Airbag cannot verify the restriction.'}
                 </p>
               </div>
             </div>
-            {done.tradeScope === false && (
-              <div className="notice" role="status">
-                <span>
-                  Perpl didn’t answer the scope check in time, so Airbag couldn’t confirm this is a
-                  Trade key. If it’s a Read key, the first deploy will fail and you’ll get an alert.
-                </span>
-              </div>
-            )}
             {done.forwarding === false && (
               <div className="notice" data-tone="alert" role="alert">
                 <span>

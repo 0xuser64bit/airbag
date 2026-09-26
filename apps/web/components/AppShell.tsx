@@ -58,7 +58,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const path = usePathname();
   const session = useSession();
-  const live = useDashboard(!!session);
+  const live = useDashboard(!!session, session?.token);
   const now = useNow();
   const data = live.data;
 

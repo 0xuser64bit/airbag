@@ -16,7 +16,7 @@ export default function SetupPage() {
   const session = useSession();
   const me = useMe(!!session);
   const config = useEngineConfig();
-  const live = useDashboard(!!session);
+  const live = useDashboard(!!session, session?.token);
 
   useEffect(() => {
     if (session === null) router.replace('/connect');

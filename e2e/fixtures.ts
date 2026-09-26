@@ -5,7 +5,18 @@ import { AxeBuilder } from '@axe-core/playwright';
 import { test as base, expect, type Page } from '@playwright/test';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 
-export const test = base.extend<{ wallet: `0x${string}` }>({
+export const ENGINE_URL = `http://localhost:${process.env.E2E_ENGINE_PORT ?? 8877}`;
+
+export const test = base.extend<{ wallet: `0x${string}`; runtimeErrors: undefined }>({
+  runtimeErrors: [
+    async ({ context }, use) => {
+      const errors: string[] = [];
+      context.on('page', (p) => p.on('pageerror', (err) => errors.push(err.message)));
+      await use(undefined);
+      expect(errors, 'uncaught browser runtime errors').toEqual([]);
+    },
+    { auto: true },
+  ],
   wallet: async ({ page }, use) => {
     const account = privateKeyToAccount(generatePrivateKey());
     await page.exposeFunction('__airbagTestSign', (hex: `0x${string}`) =>

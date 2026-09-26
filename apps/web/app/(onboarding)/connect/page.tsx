@@ -107,6 +107,14 @@ export default function ConnectPage() {
           move funds.
         </p>
       </div>
+      {config.error && (
+        <div className="notice" data-tone="alert" role="alert">
+          <span>{config.error.message}</span>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={config.reload}>
+            Try again
+          </button>
+        </div>
+      )}
 
       {!address ? (
         <WalletPicker

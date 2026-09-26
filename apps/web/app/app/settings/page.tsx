@@ -21,7 +21,21 @@ export default function SettingsPage() {
   const [guardUp, setGuardUp] = useState(false);
   const [unlinking, setUnlinking] = useState(false);
   const [problem, setProblem] = useState<string | undefined>();
-  if (!data || !config.data) return null;
+  if (!data) return null;
+  if (!config.data)
+    return (
+      <div className={s.page}>
+        <h1 className={`display ${s.h1}`}>Airbag settings</h1>
+        <p role={config.error ? 'alert' : 'status'}>
+          {config.error?.message ?? 'Loading engine settings'}
+        </p>
+        {config.error && (
+          <button type="button" className="btn btn-secondary" onClick={config.reload}>
+            Try again
+          </button>
+        )}
+      </div>
+    );
 
   return (
     <div className={s.page}>

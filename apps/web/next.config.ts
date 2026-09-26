@@ -20,6 +20,7 @@ const csp = [
 ].join('; ');
 
 const config: NextConfig = {
+  distDir: process.env.AIRBAG_E2E ? '.next-e2e' : '.next',
   reactStrictMode: true,
   poweredByHeader: false,
   async headers() {

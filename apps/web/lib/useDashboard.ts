@@ -17,27 +17,33 @@ export interface Live {
   unauthorized: boolean;
 }
 
-export function useDashboard(enabled = true): Live {
+export function useDashboard(enabled = true, sessionToken?: string): Live {
   const [live, setLive] = useState<Live>({
     connected: false,
     failed: false,
     unauthorized: false,
   });
   useEffect(() => {
+    setLive({ connected: false, failed: false, unauthorized: false });
     if (!enabled) return;
     const ctl = new AbortController();
     let attempt = 0;
     const run = async () => {
       while (!ctl.signal.aborted) {
-        const token = currentToken();
+        const token = sessionToken ?? currentToken();
         if (!token) {
           setLive((l) => ({ ...l, unauthorized: true }));
           return;
         }
+        const connection = new AbortController();
+        let lastFrame = Date.now();
+        const watch = setInterval(() => {
+          if (Date.now() - lastFrame > 10_000) connection.abort();
+        }, 1_000);
         try {
           const res = await fetch(`${ENGINE_URL}/v1/stream`, {
             headers: { authorization: `Bearer ${token}` },
-            signal: ctl.signal,
+            signal: AbortSignal.any([ctl.signal, connection.signal]),
             cache: 'no-store',
           });
           if (res.status === 401) {
@@ -52,6 +58,7 @@ export function useDashboard(enabled = true): Live {
           for (;;) {
             const { value, done } = await reader.read();
             if (done) break;
+            lastFrame = Date.now();
             buffer += value;
             let end = buffer.indexOf('\n\n');
             while (end >= 0) {
@@ -74,6 +81,9 @@ export function useDashboard(enabled = true): Live {
           }
         } catch {
           if (ctl.signal.aborted) return;
+        } finally {
+          clearInterval(watch);
+          connection.abort();
         }
         setLive((l) => ({ ...l, connected: false, failed: true }));
         const wait = Math.min(15_000, 500 * 2 ** attempt++);
@@ -82,6 +92,7 @@ export function useDashboard(enabled = true): Live {
     };
     void run();
     return () => ctl.abort();
-  }, [enabled]);
+    // The identity changes even when both the previous and next sessions are signed in.
+  }, [enabled, sessionToken]);
   return live;
 }

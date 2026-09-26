@@ -30,7 +30,9 @@ export async function api<T>(
         ...(opts.body !== undefined ? { 'content-type': 'application/json' } : {}),
       },
       ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}),
-      ...(opts.signal ? { signal: opts.signal } : {}),
+      signal: opts.signal
+        ? AbortSignal.any([opts.signal, AbortSignal.timeout(15_000)])
+        : AbortSignal.timeout(15_000),
     });
   } catch (err) {
     if ((err as Error).name === 'AbortError') throw err;
@@ -40,7 +42,15 @@ export async function api<T>(
       "Can't reach Airbag's engine. Check your connection and try again.",
     );
   }
-  const body = (await res.json().catch(() => ({}))) as {
+  const body = (await res.json().catch(() => {
+    if (res.ok)
+      throw new ApiError(
+        502,
+        'invalid_response',
+        'Airbag returned an unreadable response. Try again.',
+      );
+    return {};
+  })) as {
     error?: { code: string; message: string };
   };
   if (!res.ok) {
@@ -65,11 +75,16 @@ export function useApi<T>(path: string | null): Loadable<T> {
   const reload = useCallback(() => setN((x) => x + 1), []);
   // biome-ignore lint/correctness/useExhaustiveDependencies: `n` is the reload counter
   useEffect(() => {
-    if (path === null) return;
+    if (path === null) {
+      setState({ loading: false });
+      return;
+    }
     const ctl = new AbortController();
     setState((s) => ({ ...s, loading: true }));
     api<T>(path, { signal: ctl.signal })
-      .then((data) => setState({ data, loading: false }))
+      .then((data) => {
+        if (!ctl.signal.aborted) setState({ data, loading: false });
+      })
       .catch((error: unknown) => {
         if ((error as Error).name === 'AbortError') return;
         setState({ error: error as ApiError, loading: false });

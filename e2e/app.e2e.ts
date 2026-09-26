@@ -1,4 +1,4 @@
-import { checkA11y, checkNoOverflow, expect, test } from './fixtures.ts';
+import { checkA11y, checkNoOverflow, ENGINE_URL, expect, test } from './fixtures.ts';
 
 test('landing page: the crash test plays and the page is accessible', async ({ page }) => {
   await page.goto('/');
@@ -13,7 +13,7 @@ test('landing page: the crash test plays and the page is accessible', async ({ p
   await checkA11y(page, 'landing');
 });
 
-test('onboarding to a deploy and a save, as a trader would', async ({ page, wallet }) => {
+test('onboarding to a deploy and a save, as a trader would', async ({ page, wallet }, testInfo) => {
   // 1. Connect: the wallet is found, the Perpl account is looked up.
   await page.goto('/connect');
   await page.getByRole('button', { name: 'Connect Test Wallet' }).click();
@@ -34,14 +34,14 @@ test('onboarding to a deploy and a save, as a trader would', async ({ page, wall
   // 2b. Reset the shared simulation to its baseline. A wick from an earlier run (or a
   // retry of this journey) leaves BTC at $100,000; only a fresh engine sits at $99,420.
   // A signed-in wallet counts as connected, so connect shows the baseline right away.
-  await page.evaluate(async () => {
+  await page.evaluate(async (engineUrl) => {
     const s = JSON.parse(localStorage.getItem('airbag.session') ?? '{}') as { token?: string };
-    const res = await fetch('http://localhost:8787/v1/sim/reset', {
+    const res = await fetch(`${engineUrl}/v1/sim/reset`, {
       method: 'POST',
       headers: { authorization: `Bearer ${s.token ?? ''}` },
     });
     if (!res.ok) throw new Error(`sim reset failed: ${res.status}`);
-  });
+  }, ENGINE_URL);
   await page.goto('/connect');
   await expect(page.getByText('5.45%', { exact: false }).first()).toBeVisible();
   // The key button is disabled until the engine config loads; axe would grade its
@@ -71,6 +71,7 @@ test('onboarding to a deploy and a save, as a trader would', async ({ page, wall
   await expect(page.getByRole('status').filter({ hasText: 'Armed' }).first()).toBeVisible();
   await expect(page.getByText('If BTC reaches $97,000, Airbag trims 0.489 BTC')).toBeVisible();
   await checkA11y(page, 'dashboard');
+  await page.screenshot({ path: testInfo.outputPath('dashboard-desktop.png'), fullPage: true });
 
   // 5. The crash-test wick through the engine: trim, re-add, re-arm, then a save.
   await page.getByRole('button', { name: 'Play a wick on BTC' }).click();
@@ -106,7 +107,7 @@ test('onboarding to a deploy and a save, as a trader would', async ({ page, wall
   expect(og.headers()['content-type']).toBe('image/png');
 });
 
-test('a phone gets the tab bar and no sideways scrolling', async ({ page, wallet }) => {
+test('a phone gets the tab bar and no sideways scrolling', async ({ page, wallet }, testInfo) => {
   await page.setViewportSize({ width: 375, height: 812 });
   for (const path of ['/', '/connect']) {
     await page.goto(path);
@@ -123,6 +124,42 @@ test('a phone gets the tab bar and no sideways scrolling', async ({ page, wallet
   await expect(tabs.getByRole('link', { name: 'Deploys' })).toBeVisible();
   await checkNoOverflow(page);
   await checkA11y(page, 'phone dashboard');
+  await page.screenshot({ path: testInfo.outputPath('dashboard-phone.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Paused' }).first()).toBeVisible();
+  await tabs.getByRole('link', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: 'More distance' }).click();
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible();
+  await checkNoOverflow(page);
+  await checkA11y(page, 'phone settings');
+  // Deliver one real dashboard frame and then interrupt the stream. Keep the last state
+  // visible, explain its age, and recover when the real stream becomes available again.
+  const state = await page.evaluate(async (engineUrl) => {
+    const { token } = JSON.parse(localStorage.getItem('airbag.session') ?? '{}');
+    return (
+      await fetch(`${engineUrl}/v1/state`, { headers: { authorization: `Bearer ${token}` } })
+    ).json();
+  }, ENGINE_URL);
+  let delivered = false;
+  await page.route('**/v1/stream', async (route) => {
+    if (delivered) return route.abort();
+    delivered = true;
+    await route.fulfill({
+      contentType: 'text/event-stream',
+      body: `data: ${JSON.stringify(state)}\n\n`,
+    });
+  });
+  await page.reload();
+  await expect(page.getByText('Unknown', { exact: true })).toBeVisible();
+  await expect(page.getByText(/What you see is the last block/)).toBeVisible();
+  await page.unroute('**/v1/stream');
+  await expect(page.getByText('Live', { exact: true })).toBeVisible();
+  const other = await page.context().newPage();
+  await other.goto('/app/settings');
+  await other.getByRole('button', { name: 'Sign out' }).click();
+  await expect(page).toHaveURL(/\/connect$/);
+  await other.close();
   expect(wallet).toMatch(/^0x/);
 });
 
@@ -142,4 +179,14 @@ test('private pages send a signed-out visitor to connect; unknown saves 404', as
   await expect(page).toHaveURL(/\/connect$/);
   const res = await page.goto('/s/doesnotexist');
   expect(res?.status()).toBe(404);
+});
+
+test('an unavailable engine is explained and the config can be retried', async ({ page }) => {
+  await page.route('**/v1/config', (route) => route.abort());
+  await page.goto('/connect');
+  await expect(page.locator('.notice[role="alert"]')).toContainText("Can't reach Airbag");
+  await page.unroute('**/v1/config');
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.locator('.notice[role="alert"]')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Connect a test wallet' })).toBeVisible();
 });
