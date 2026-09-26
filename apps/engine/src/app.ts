@@ -102,6 +102,7 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
     slippageBps: cfg.slippageBps,
     maxAttempts: cfg.maxAttempts,
     demoMove: cfg.demoMove,
+    staleBlocks: cfg.staleBlocks,
   });
   const sim = live ? undefined : new SimChain(feed, ctx.markets);
   const alerted = new Map<string, number>();

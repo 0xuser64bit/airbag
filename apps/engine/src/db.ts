@@ -173,6 +173,12 @@ export interface DeployData {
   onchain?: { deployId: number; tx: string; saveTx?: string };
   /** State when the latest close was sent, for finishing it after a restart. CNS as strings. */
   attempt?: { lots: number; deposit: string; balance: string };
+  /** Write-ahead record: a lost order may still execute until this block. */
+  pendingOrder?: { rq: number; deadline: number };
+  marginAttempt?: { deposit: string; amount: string };
+  /** Exact deposit target for a re-add, persisted before sending it. */
+  readd?: { deposit: string; amount: string; fill: number };
+  useSpare?: boolean;
   error?: string;
   timeline: TimelineEntry[];
 }
@@ -352,10 +358,13 @@ export function openStore(path: string) {
         ) as Row[]
       ).map(toDeploy),
     /** Deploys a crash may have interrupted between the close and the re-add. */
-    unfinishedDeploys: (): Deploy[] =>
-      (q(`SELECT * FROM deploys WHERE phase IN ('closing', 'readding')`).all() as Row[]).map(
-        toDeploy,
-      ),
+    unfinishedDeploys: (wallet?: string): Deploy[] =>
+      (wallet === undefined
+        ? q(`SELECT * FROM deploys WHERE phase IN ('closing', 'readding')`).all()
+        : q(`SELECT * FROM deploys WHERE wallet = ? AND phase IN ('closing', 'readding')`).all(
+            wallet,
+          )
+      ).map((r) => toDeploy(r as Row)),
     /** Finished deploys whose position is still open: pending, or saves still counting. */
     trackedDeploys: (): Deploy[] =>
       (

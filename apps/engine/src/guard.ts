@@ -13,6 +13,7 @@
 
 import { randomBytes } from 'node:crypto';
 import {
+  type AllowedOrderFrame,
   closeOrder,
   fromCns,
   increaseCollateral,
@@ -78,6 +79,7 @@ export interface GuardDeps {
   /** Polls for position and balance updates; tests pass a fast one. */
   pollMs?: number;
   settleMs?: number;
+  staleBlocks?: number;
 }
 
 export type PositionStatus =
@@ -147,6 +149,7 @@ interface Episode {
 
 const RECENT_MS = 10 * 60_000;
 const newId = () => randomBytes(9).toString('base64url');
+class DeferredDeploy extends Error {}
 
 export class AccountGuard {
   readonly wallet: string;
@@ -164,7 +167,10 @@ export class AccountGuard {
     number,
     { positionId: number; reference: number; lots: number }
   >();
-  private resumed = false;
+  private recovering = false;
+  private initialized = false;
+  private stopped = false;
+  private readonly recoveryPending = new Set<number>();
 
   constructor(wallet: string, exchange: Exchange, settings: Settings, deps: GuardDeps) {
     this.wallet = wallet;
@@ -172,6 +178,7 @@ export class AccountGuard {
     this.settings = settings;
     this.deps = deps;
     for (const d of deps.store.trackedDeploys()) if (d.wallet === wallet) this.tracked.set(d.id, d);
+    for (const d of deps.store.unfinishedDeploys(wallet)) this.recoveryPending.add(d.marketId);
   }
 
   get cd(): number {
@@ -188,15 +195,62 @@ export class AccountGuard {
     const ex = this.exchange;
     if (ex.state === 'rejected') return 'key-rejected';
     if (ex.state === 'limited') return 'too-many-connections';
-    if (ex.state !== 'live') return 'connecting';
+    if (ex.state !== 'live' || !ex.account) return 'connecting';
     if (ex.account && !ex.account.fw) return 'forwarding-off';
     if (ex.account?.fr) return 'frozen';
-    if (!this.settings.armed) return 'paused';
-    if (this.deps.feed.staleness().stale) return 'stale';
-    if (this.episodes.size > 0 || this.busy.size > 0) return 'deploying';
+    if (!this.settings.armed || this.stopped) return 'paused';
+    const lag = this.deps.staleBlocks ?? 3;
+    if (
+      this.deps.feed.staleness().stale ||
+      this.deps.feed.head - ex.head > lag ||
+      Date.now() - ex.lastMessageAt > (lag + 1) * 400
+    )
+      return 'stale';
+    if (this.hasPendingDeploy) return 'deploying';
     const now = Date.now();
     for (const at of this.lastDeployAt.values()) if (now - at < RECENT_MS) return 're-armed';
     return 'armed';
+  }
+
+  /** Independent of the display status: a paused/stale deploy still owns its key. */
+  get hasPendingDeploy(): boolean {
+    return this.episodes.size > 0 || this.busy.size > 0 || this.recoveryPending.size > 0;
+  }
+
+  stop(): void {
+    this.stopped = true;
+  }
+
+  private canAct(): boolean {
+    return ['armed', 're-armed', 'deploying'].includes(this.status());
+  }
+
+  /** Checked inside the builder, after the trading client's rate-limit wait. */
+  private async submit(d: Deploy, build: (ids: { sn: number; rq: number }) => AllowedOrderFrame) {
+    const outcome = await this.exchange.submit((ids) => {
+      const p = this.exchange.positions.get(d.marketId);
+      const m = this.market(d.marketId);
+      if (
+        !this.canAct() ||
+        !m?.config.is_open ||
+        !p ||
+        p.pid !== d.data.positionId ||
+        this.exchange.account?.id !== d.accountId
+      )
+        throw new DeferredDeploy('Order held until protection is safe.');
+      const frame = build(ids);
+      frame.lb = this.exchange.head + (m.order_ttl_blocks || 20);
+      d.data.pendingOrder = { rq: frame.rq, deadline: frame.lb };
+      this.save(d);
+      return frame;
+    });
+    if (outcome.result === 'lost')
+      throw new DeferredDeploy(
+        'Order outcome unknown; waiting for fresh snapshots and its execution deadline.',
+      );
+    delete d.data.pendingOrder;
+    this.save(d);
+    return outcome;
   }
 
   private market(id: number): Market | undefined {
@@ -254,8 +308,14 @@ export class AccountGuard {
 
   /** The per-block check. Synchronous; deploys run in the background under the lock. */
   onBlock(head: number): void {
-    if (!this.resumed && this.exchange.state === 'live') {
-      this.resumed = true;
+    if (this.stopped) return;
+    if (!this.initialized && this.exchange.state === 'live') {
+      for (const d of this.deps.store.unfinishedDeploys(this.wallet))
+        this.recoveryPending.add(d.marketId);
+      this.initialized = true;
+    }
+    if (this.recoveryPending.size > 0 && !this.recovering && this.canAct()) {
+      this.recovering = true;
       void this.resume(head);
     }
     const status = this.status();
@@ -315,13 +375,14 @@ export class AccountGuard {
         ? 'paused'
         : !act
           ? 'blocked'
-          : episode || this.busy.has(p.mkt)
+          : episode || this.busy.has(p.mkt) || this.recoveryPending.has(p.mkt)
             ? 'deploying'
             : recent
               ? 're-armed'
               : 'armed';
 
       if (!act || this.busy.has(p.mkt)) continue;
+      if (this.recoveryPending.has(p.mkt)) continue;
       if (episode) {
         if (head >= episode.retryAt) void this.attempt(p.mkt, head, mark);
       } else if (head >= (this.cooldownUntil.get(p.mkt) ?? 0) && triggered(risk, mark, line)) {
@@ -383,6 +444,7 @@ export class AccountGuard {
         positionId: p.pid,
         target: policy.target,
         maxTrim: policy.maxTrim,
+        useSpare: policy.useSpare,
         spare,
         plannedLiquidation: plan.liquidation,
         capped: plan.kind === 'trim' && plan.capped,
@@ -437,7 +499,7 @@ export class AccountGuard {
       d.data.attempts = episode.attempts;
       const p = this.exchange.positions.get(mkt);
       const m = this.market(mkt);
-      if (!p || !m) {
+      if (!p || !m || p.pid !== d.data.positionId) {
         this.entry(d, head, 'The position closed before Airbag acted.');
         return this.finish(mkt, d, head, 'failed');
       }
@@ -447,11 +509,16 @@ export class AccountGuard {
           return this.retryOrStop(mkt, episode, 'Will retry the re-add next block.', fill);
         }
         delete episode.readd;
+        delete d.data.readd;
         return this.finish(mkt, d, this.exchange.head, 'done', fill);
       }
       const risk = this.risk(p, m, head);
       const spare = this.spare();
-      const policy = this.policy();
+      const policy = {
+        target: d.data.target,
+        maxTrim: d.data.maxTrim,
+        useSpare: d.data.useSpare ?? this.settings.useSpare,
+      };
       // The cap is a share of the position when the episode began.
       const budget = Math.max(
         0,
@@ -468,8 +535,19 @@ export class AccountGuard {
       if (plan.kind === 'margin') return await this.addSpare(mkt, d, m, plan.amount, mark);
       await this.trim(mkt, episode, m, p, risk, plan.fraction, plan.capped, head, mark);
     } catch (err) {
+      if (err instanceof DeferredDeploy || d.data.pendingOrder) {
+        this.entry(d, head, err instanceof Error ? err.message : 'Waiting to reconcile the order.');
+        this.save(d);
+        this.episodes.delete(mkt);
+        this.recoveryPending.add(mkt);
+        return;
+      }
       this.deps.log.error('deploy.error', { id: d.id, err });
       this.entry(d, head, 'Airbag hit an error and stopped this deploy. You have been alerted.');
+      this.deps.notify.alert(
+        this.wallet,
+        `Airbag stopped protecting your ${d.symbol} after an error. Check the position on Perpl.`,
+      );
       this.finish(mkt, d, head, 'failed');
     } finally {
       this.busy.delete(mkt);
@@ -480,7 +558,9 @@ export class AccountGuard {
     const cns = toCnsFloor(Math.min(amount, this.spare()), this.cd);
     const acc = this.exchange.account?.id ?? 0;
     const before = BigInt(this.exchange.positions.get(mkt)?.c ?? '0');
-    const outcome = await this.exchange.submit((ids) =>
+    d.data.marginAttempt = { deposit: before.toString(), amount: cns.toString() };
+    this.save(d);
+    const outcome = await this.submit(d, (ids) =>
       increaseCollateral({ ...ids, mkt, acc, lb: 0, amountCns: cns }),
     );
     await this.until(() => BigInt(this.exchange.positions.get(mkt)?.c ?? '0') > before);
@@ -520,7 +600,13 @@ export class AccountGuard {
     const sd = m.config.size_decimals;
     const pd = m.config.price_decimals;
     // Round the trim up to whole lots (never less than the math needs), but never past the cap.
-    const lots = capped ? Math.max(1, Math.floor(p.s * fraction)) : lotsToClose(p.s, fraction);
+    const budget =
+      Math.floor(episode.startLots * d.data.maxTrim + 1e-9) - (episode.startLots - p.s);
+    const lots = Math.min(
+      budget,
+      capped ? Math.floor(p.s * fraction + 1e-9) : lotsToClose(p.s, fraction),
+    );
+    if (lots <= 0) return this.finish(mkt, d, head, 'done', mark);
     const markScaled = this.deps.feed.mark(mkt) ?? Math.round(mark * 10 ** pd);
     const limit = worstClosePrice(risk.side, markScaled, this.deps.slippageBps);
     const account = this.exchange.account;
@@ -542,7 +628,7 @@ export class AccountGuard {
     );
     this.save(d);
 
-    const outcome = await this.exchange.submit((ids) =>
+    const outcome = await this.submit(d, (ids) =>
       closeOrder({
         ...ids,
         mkt,
@@ -559,6 +645,15 @@ export class AccountGuard {
     if (mayHaveFilled)
       await this.until(() => (this.exchange.positions.get(mkt)?.s ?? 0) < lotsBefore);
     const lotsAfter = this.exchange.positions.get(mkt)?.s ?? 0;
+    const current = this.exchange.positions.get(mkt);
+    if (current && current.pid !== d.data.positionId) {
+      this.entry(
+        d,
+        this.exchange.head,
+        'The position changed while the close was in flight. Check it on Perpl.',
+      );
+      return this.finish(mkt, d, this.exchange.head, 'failed');
+    }
     const filled = lotsBefore - lotsAfter;
     const filledAt = Date.now();
 
@@ -612,6 +707,13 @@ export class AccountGuard {
     if (readd > free) readd = free;
     let readdAt = filledAt;
     if (readd > 0n) {
+      episode.readd = { amount: readd, fill };
+      d.data.readd = {
+        deposit: this.exchange.positions.get(mkt)?.c ?? '0',
+        amount: readd.toString(),
+        fill,
+      };
+      this.save(d);
       const ok = await this.readd(mkt, d, m, readd, fill);
       readdAt = Date.now();
       if (!ok) {
@@ -622,6 +724,8 @@ export class AccountGuard {
         );
         return this.retryOrStop(mkt, episode, 'Will retry the re-add next block.', fill);
       }
+      delete episode.readd;
+      delete d.data.readd;
     }
     d.data.latency = {
       detectToSendMs: sentAt - d.data.trigger.at,
@@ -644,6 +748,13 @@ export class AccountGuard {
 
   /** IncreasePositionCollateral with margin a close released. False if the deposit didn't grow. */
   private async readd(mkt: number, d: Deploy, m: Market, amount: bigint, fill: number) {
+    const recorded = d.data.readd;
+    if (recorded)
+      amount =
+        BigInt(recorded.deposit) +
+        BigInt(recorded.amount) -
+        BigInt(this.exchange.positions.get(mkt)?.c ?? '0');
+    if (amount <= 0n) return true;
     const a = this.exchange.account;
     const free = BigInt(a?.b ?? '0') - BigInt(a?.lb ?? '0');
     const cns = amount < free ? amount : free;
@@ -652,7 +763,7 @@ export class AccountGuard {
       return false;
     }
     const before = BigInt(this.exchange.positions.get(mkt)?.c ?? '0');
-    const re = await this.exchange.submit((ids) =>
+    const re = await this.submit(d, (ids) =>
       increaseCollateral({ ...ids, mkt, acc: a?.id ?? 0, lb: 0, amountCns: cns }),
     );
     await this.until(() => BigInt(this.exchange.positions.get(mkt)?.c ?? '0') > before);
@@ -677,7 +788,7 @@ export class AccountGuard {
       `Put back ${fmt.usd(added)} of released margin. Liquidation now ${fmt.usd(after?.liquidation)}.`,
       { tone: 'airbag', ...txOf(re) },
     );
-    return true;
+    return added >= fromCns(amount, this.cd) - 1e-6;
   }
 
   /** The position after a deploy, measured at `price`. */
@@ -699,7 +810,7 @@ export class AccountGuard {
       this.entry(d, this.exchange.head, text);
       episode.retryAt = this.exchange.head + 1;
       // 'readding' lets a restart finish the re-add from the persisted pre-close state.
-      d.phase = episode.readd ? 'readding' : 'done';
+      d.phase = episode.readd ? 'readding' : 'closing';
       this.save(d);
       return;
     }
@@ -713,7 +824,9 @@ export class AccountGuard {
       this.wallet,
       `Airbag couldn't finish protecting your ${d.symbol} ${d.side} after ${episode.attempts} attempts. Check it on Perpl.`,
     );
-    this.finish(mkt, d, this.exchange.head, anyFill ? 'done' : 'failed', fill);
+    if (episode.readd)
+      d.data.error = 'The released margin could not be re-added. Check the position on Perpl.';
+    this.finish(mkt, d, this.exchange.head, anyFill && !episode.readd ? 'done' : 'failed', fill);
   }
 
   private finish(
@@ -727,6 +840,11 @@ export class AccountGuard {
     const p = this.exchange.positions.get(mkt);
     d.phase = phase;
     this.episodes.delete(mkt);
+    this.recoveryPending.delete(mkt);
+    if (phase === 'done' && !d.data.close?.filledLots && !d.data.spareAdded) {
+      d.outcome = 'precaution';
+      d.closedAt = Date.now();
+    }
     if (phase === 'failed') {
       // Don't hammer a failing path: wait ~30 s before a new episode can start.
       this.cooldownUntil.set(mkt, head + 100);
@@ -775,6 +893,12 @@ export class AccountGuard {
    * position is open and freezes when it closes; it's persisted every ~30 s meanwhile.
    */
   private watchSaves(head: number) {
+    if (
+      this.exchange.state !== 'live' ||
+      this.deps.feed.staleness().stale ||
+      this.deps.feed.head - this.exchange.head > (this.deps.staleBlocks ?? 3)
+    )
+      return;
     for (const d of this.tracked.values()) {
       const p = this.exchange.positions.get(d.marketId);
       if (!p || p.pid !== d.data.positionId) {
@@ -825,71 +949,138 @@ export class AccountGuard {
    * went back, put it back now, unless the deposit shows it already did.
    */
   private async resume(head: number) {
-    for (const d of this.deps.store.unfinishedDeploys()) {
-      if (d.wallet !== this.wallet || this.episodes.has(d.marketId)) continue;
-      const mkt = d.marketId;
-      const m = this.market(mkt);
-      const p = this.exchange.positions.get(mkt);
-      const at = d.data.attempt;
-      this.busy.add(mkt);
-      try {
-        if (!m || !p || !at || p.pid !== d.data.positionId) {
-          this.entry(
-            d,
-            head,
-            'Airbag restarted mid-deploy; the position has changed since, so it stopped here.',
-          );
-          d.phase = (d.data.close?.filledLots ?? 0) > 0 ? 'done' : 'failed';
-          this.save(d);
-          continue;
-        }
-        const filled = at.lots - p.s;
-        if (filled <= 0) {
-          this.entry(d, head, 'Airbag restarted before the close filled. Nothing was trimmed.');
-          d.phase = 'failed';
-          this.save(d);
-          continue;
-        }
-        const before: Position = {
-          ...this.risk(p, m, head),
-          size: scaled(at.lots, m.config.size_decimals),
-          deposit: fromCns(at.deposit, this.cd),
+    try {
+      for (const d of this.deps.store.unfinishedDeploys(this.wallet)) {
+        const mkt = d.marketId;
+        if (this.episodes.has(mkt) || this.busy.has(mkt)) continue;
+        // A socket loss does not cancel an order. Wait out its onchain execution window.
+        if (d.data.pendingOrder && head <= d.data.pendingOrder.deadline + 2) continue;
+        if (!this.canAct()) break;
+        const m = this.market(mkt);
+        const p = this.exchange.positions.get(mkt);
+        this.busy.add(mkt);
+        const episode: Episode = {
+          deploy: d,
+          attempts: d.data.attempts,
+          startLots: d.data.before.lots,
+          retryAt: head + 1,
         };
-        const proRata = (BigInt(at.deposit) * BigInt(p.s)) / BigInt(at.lots);
-        const fill = d.data.close?.fillPrice ?? d.data.trigger.mark;
-        const expected = toCnsFloor((filled / at.lots) * equity(before, fill), this.cd);
-        const already = BigInt(p.c) - proRata;
-        const free =
-          BigInt(this.exchange.account?.b ?? '0') - BigInt(this.exchange.account?.lb ?? '0');
-        let readd = expected - already;
-        if (readd > free) readd = free;
-        if (readd > expected / 10n) {
-          const acc = this.exchange.account?.id ?? 0;
-          const depositNow = BigInt(p.c);
-          const re = await this.exchange.submit((ids) =>
-            increaseCollateral({ ...ids, mkt, acc, lb: 0, amountCns: readd }),
-          );
-          await this.until(() => BigInt(this.exchange.positions.get(mkt)?.c ?? '0') > depositNow);
-          this.entry(
-            d,
-            this.exchange.head,
-            `Airbag restarted mid-deploy and put back ${fmt.usd(fromCns(readd, this.cd))} of released margin.`,
-            { tone: 'airbag', ...txOf(re) },
-          );
-        } else {
-          this.entry(
-            d,
-            head,
-            'Airbag restarted mid-deploy; the released margin was already back in the position.',
-          );
+        try {
+          delete d.data.pendingOrder;
+          if (
+            !m ||
+            !p ||
+            p.pid !== d.data.positionId ||
+            this.exchange.account?.id !== d.accountId
+          ) {
+            this.entry(
+              d,
+              head,
+              'Airbag restarted mid-deploy; the position changed, so it stopped here.',
+            );
+            this.finish(mkt, d, head, 'failed');
+            continue;
+          }
+          if (d.kind === 'margin') {
+            const at = d.data.marginAttempt;
+            const added = at ? BigInt(p.c) - BigInt(at.deposit) : 0n;
+            if (added > 0n) {
+              d.data.spareAdded += fromCns(added, this.cd);
+              d.data.margin = { amount: d.data.spareAdded, reason: 'spare' };
+              this.entry(
+                d,
+                head,
+                'Airbag reconciled the spare margin add from the position snapshot.',
+              );
+              this.finish(mkt, d, head, 'done', d.data.trigger.mark);
+            } else if (episode.attempts < this.deps.maxAttempts) {
+              this.episodes.set(mkt, episode);
+              this.recoveryPending.delete(mkt);
+            } else this.finish(mkt, d, head, 'failed');
+            continue;
+          }
+          const at = d.data.attempt;
+          const filled = at ? at.lots - p.s : 0;
+          if (!at || filled <= 0) {
+            if (episode.attempts < this.deps.maxAttempts) {
+              this.episodes.set(mkt, episode);
+              this.recoveryPending.delete(mkt);
+            } else this.finish(mkt, d, head, 'failed');
+            continue;
+          }
+          const before: Position = {
+            ...this.risk(p, m, head),
+            size: scaled(at.lots, m.config.size_decimals),
+            deposit: fromCns(at.deposit, this.cd),
+          };
+          const fill = d.data.readd?.fill ?? d.data.close?.fillPrice ?? d.data.trigger.mark;
+          const proRata = (BigInt(at.deposit) * BigInt(p.s)) / BigInt(at.lots);
+          const expected = toCnsFloor((filled / at.lots) * equity(before, fill), this.cd);
+          // New records carry an exact target; legacy records use the pre-close deposit.
+          d.data.readd ??= { deposit: proRata.toString(), amount: expected.toString(), fill };
+          const target = BigInt(d.data.readd.deposit) + BigInt(d.data.readd.amount);
+          const remaining = target - BigInt(p.c);
+          if (!d.data.close) {
+            d.data.close = {
+              lots: filled,
+              filledLots: filled,
+              limitPrice: fill,
+              fillPrice: fill,
+              realizedPnl:
+                direction(d.side) * scaled(filled, m.config.size_decimals) * (fill - before.entry),
+            };
+            this.entry(
+              d,
+              head,
+              'Recovered a close from the position snapshot; its fill price is an estimate.',
+            );
+          }
+          d.phase = 'readding';
+          this.save(d);
+          if (remaining > 0n) {
+            episode.readd = { amount: remaining, fill };
+            episode.attempts += 1;
+            d.data.attempts = episode.attempts;
+            this.episodes.set(mkt, episode);
+            if (!(await this.readd(mkt, d, m, remaining, fill))) {
+              this.retryOrStop(mkt, episode, 'Will retry the re-add next block.', fill);
+              this.recoveryPending.delete(mkt);
+              continue;
+            }
+            this.entry(
+              d,
+              this.exchange.head,
+              'Airbag restarted mid-deploy and restored the released margin.',
+            );
+          } else
+            this.entry(
+              d,
+              head,
+              'Airbag restarted mid-deploy; the released margin was already back.',
+            );
+          delete d.data.readd;
+          delete episode.readd;
+          const after = this.after(mkt, m, fill);
+          if (
+            (after?.distance ?? 1) < d.data.target - 1e-6 &&
+            episode.attempts < this.deps.maxAttempts
+          ) {
+            this.episodes.set(mkt, episode);
+            d.phase = 'closing';
+            this.recoveryPending.delete(mkt);
+            this.save(d);
+          } else this.finish(mkt, d, this.exchange.head, 'done', fill);
+        } catch (err) {
+          this.episodes.delete(mkt);
+          this.recoveryPending.add(mkt);
+          this.deps.log.warn('deploy.resume.deferred', { id: d.id, err });
+          this.save(d);
+        } finally {
+          this.busy.delete(mkt);
         }
-        this.busy.delete(mkt);
-        this.finish(mkt, d, this.exchange.head, 'done', fill);
-      } catch (err) {
-        this.deps.log.error('deploy.resume.error', { id: d.id, err });
-      } finally {
-        this.busy.delete(mkt);
       }
+    } finally {
+      this.recovering = false;
     }
   }
 

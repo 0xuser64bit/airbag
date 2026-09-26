@@ -309,8 +309,8 @@ describe('after a deploy', () => {
 });
 
 describe('restart in the middle of a deploy', () => {
-  function interrupted(depositCns: string) {
-    const h = harness();
+  function interrupted(depositCns: string, opts: Options = {}) {
+    const h = harness(opts);
     // State after the close filled at $97,000 but before the re-add landed.
     const p = h.paper.positions.get(BTC);
     if (!p || !h.paper.account) throw new Error('missing');
@@ -389,9 +389,84 @@ describe('restart in the middle of a deploy', () => {
   });
 
   it('does not add it twice if it already landed', async () => {
-    const h = interrupted('8532800000');
+    const h = interrupted('8532821000');
     await h.blocks(3);
     expect(h.paper.sent).toHaveLength(0);
     expect(h.store.deploy('crash1')?.phase).toBe('done');
   });
+
+  it('holds recovery while paused, stale, frozen or forwarding is off', async () => {
+    for (const blocked of ['paused', 'stale', 'frozen', 'forwarding'] as const) {
+      const h = interrupted('5109400000');
+      if (!h.paper.account) throw new Error('missing account');
+      if (blocked === 'paused') h.guard.settings.armed = false;
+      if (blocked === 'stale') {
+        h.feed.monadHead = h.chain.head + 100;
+        h.feed.monadHeadAt = Date.now() + 60_000;
+      }
+      if (blocked === 'frozen') h.paper.account.fr = true;
+      if (blocked === 'forwarding') h.paper.account.fw = false;
+      await h.blocks(3);
+      expect(h.paper.sent).toHaveLength(0);
+      expect(h.guard.hasPendingDeploy).toBe(true);
+      h.guard.settings.armed = true;
+      h.feed.monadHead = 0;
+      h.paper.account.fr = false;
+      h.paper.account.fw = true;
+      await h.blocks(3);
+      expect(h.store.deploy('crash1')?.phase).toBe('done');
+      expect(h.paper.sent.map((f) => f.t)).toEqual([6]);
+    }
+  });
+
+  it('keeps a rejected recovery pending, then reports failure after the retry limit', async () => {
+    const h = interrupted('5109400000', { failAdds: 10 });
+    await h.blocks(10);
+    expect(h.store.deploy('crash1')?.phase).toBe('failed');
+    expect(h.store.deploy('crash1')?.data.error).toMatch(/could not be re-added/);
+    expect(h.deployed).toHaveLength(0);
+    expect(h.paper.sent.every((f) => f.t === 6)).toBe(true);
+  });
+
+  it('waits for a lost order deadline and does not double-add a late execution', async () => {
+    const h = interrupted('5109400000');
+    const d = h.store.deploy('crash1');
+    if (!d) throw new Error('missing deploy');
+    d.data.pendingOrder = { rq: 42, deadline: h.chain.head + 5 };
+    h.store.updateDeploy(d);
+    await h.blocks(5);
+    expect(h.paper.sent).toHaveLength(0);
+    const p = h.paper.positions.get(BTC);
+    if (!p) throw new Error('missing position');
+    p.c = '8532821000'; // Original order finally executes before its deadline.
+    await h.blocks(5);
+    expect(h.paper.sent).toHaveLength(0);
+    expect(h.store.deploy('crash1')?.phase).toBe('done');
+  });
+});
+
+it('does not send the re-add after a pause between the close and margin add', async () => {
+  const h = harness();
+  await h.run([97_000]);
+  expect(h.paper.sent.map((f) => f.t)).toEqual([3]);
+  h.guard.settings.armed = false;
+  await h.blocks(3); // The close already sent can fill; no new order may leave.
+  expect(h.paper.sent.map((f) => f.t)).toEqual([3]);
+  expect(h.guard.hasPendingDeploy).toBe(true);
+  h.guard.settings.armed = true;
+  await h.blocks(4);
+  expect(h.paper.sent.map((f) => f.t)).toEqual([3, 6]);
+  expect(only(h.store).phase).toBe('done');
+});
+
+it('never rounds a capped trim beyond the lot budget, even for a three-lot position', async () => {
+  const h = harness({ settings: { maxTrimPct: 25, useSpare: false } });
+  const p = h.paper.positions.get(BTC);
+  if (!p) throw new Error('missing position');
+  p.s = 3;
+  p.c = '300000';
+  await h.run([97_000, 97_000, 97_000]);
+  expect(h.paper.sent).toHaveLength(0);
+  expect(h.deployed).toHaveLength(0);
+  expect(h.saved).toHaveLength(0);
 });

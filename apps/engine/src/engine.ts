@@ -17,6 +17,7 @@ export interface EngineDeps {
   demoMove: number;
   pollMs?: number;
   settleMs?: number;
+  staleBlocks?: number;
 }
 
 export interface TapeEntry {
@@ -56,6 +57,7 @@ export class Engine {
 
   remove(wallet: string): Exchange | undefined {
     const guard = this.guards.get(wallet);
+    guard?.stop();
     this.guards.delete(wallet);
     return guard?.exchange;
   }
