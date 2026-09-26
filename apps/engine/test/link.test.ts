@@ -51,7 +51,9 @@ describe('checkKey', () => {
       tradeScope: true,
     });
     // The probe cancels an order id that isn't one of the account's open orders.
-    expect(sent).toEqual([expect.objectContaining({ mt: 22, t: 5, oid: 2, acc: 4127, mkt: 16 })]);
+    expect(sent).toEqual([
+      expect.objectContaining({ mt: 22, t: 5, oid: Number.MAX_SAFE_INTEGER, acc: 4127, mkt: 16 }),
+    ]);
   });
 
   it('refuses to store a key when Perpl never proved its Trade scope', async () => {

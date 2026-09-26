@@ -112,6 +112,7 @@ export class TokenBucket {
   private at = performance.now();
   private readonly capacity: number;
   private readonly perSecond: number;
+  private queue: Promise<void> = Promise.resolve();
   constructor(capacity: number, perSecond: number) {
     this.capacity = capacity;
     this.perSecond = perSecond;
@@ -122,13 +123,17 @@ export class TokenBucket {
     this.tokens = Math.min(this.capacity, this.tokens + ((now - this.at) / 1000) * this.perSecond);
     this.at = now;
   }
-  async take(): Promise<void> {
-    this.refill();
-    if (this.tokens < 1) {
-      await sleep(((1 - this.tokens) / this.perSecond) * 1000);
+  take(signal?: AbortSignal): Promise<void> {
+    const next = this.queue.then(async () => {
       this.refill();
-    }
-    this.tokens -= 1;
+      while (this.tokens < 1 && !signal?.aborted) {
+        await sleep(((1 - this.tokens) / this.perSecond) * 1000, signal);
+        this.refill();
+      }
+      if (!signal?.aborted) this.tokens -= 1;
+    });
+    this.queue = next;
+    return next;
   }
 }
 
@@ -174,6 +179,7 @@ export class TradingClient {
 
   /** Resolves once snapshots have arrived; rejects if the key is refused or on timeout. */
   ready(timeoutMs = 15_000): Promise<void> {
+    if (this.stop.signal.aborted) return Promise.reject(new Error('stopped'));
     if (this.state === 'live') return Promise.resolve();
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -182,7 +188,8 @@ export class TradingClient {
       }, timeoutMs);
       const check = (state: ConnectionState, reason?: string) => {
         if (state === 'live') resolve();
-        else if (state === 'rejected' || state === 'limited') reject(new Error(reason ?? state));
+        else if (state === 'rejected' || state === 'limited' || state === 'stopped')
+          reject(new Error(reason ?? state));
         else return;
         clearTimeout(timer);
         this.waitReady.delete(check);
@@ -207,9 +214,9 @@ export class TradingClient {
   private async sendOnce(
     build: (ids: { sn: number; rq: number }) => AllowedOrderFrame,
   ): Promise<OrderOutcome> {
-    await this.bucket.take();
+    await this.bucket.take(this.stop.signal);
     const socket = this.socket;
-    if (!socket?.isOpen || this.state !== 'live' || !this.account) {
+    if (this.stop.signal.aborted || !socket?.isOpen || this.state !== 'live' || !this.account) {
       return { result: 'lost', rq: 0, error: `not connected (${this.state})` };
     }
     this.rq = Math.max(this.rq, this.account.lfr) + 1;
@@ -260,13 +267,14 @@ export class TradingClient {
           this.opts.url,
           () => JSON.stringify(signInFrame(this.opts.chainId, this.opts.apiKey, this.opts.key)),
           this.opts.WebSocket,
+          this.stop.signal,
         );
         this.socket = socket;
         this.lastSn = undefined;
         this.gotWallet = false;
         socket.listen((m) => this.handle(m));
         const ping = setInterval(() => {
-          void this.bucket.take().then(() => {
+          void this.bucket.take(this.stop.signal).then(() => {
             if (socket.isOpen) socket.send(JSON.stringify({ mt: MT.Ping, t: Date.now() }));
           });
         }, 30_000);

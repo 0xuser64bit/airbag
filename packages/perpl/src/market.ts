@@ -168,7 +168,12 @@ export class MarketFeed {
       let reason = 'could not connect';
       try {
         // Market-data sockets need no pings: data arrives every block (Perpl docs).
-        const socket = await openSocket(this.opts.url, subscribe, this.opts.WebSocket);
+        const socket = await openSocket(
+          this.opts.url,
+          subscribe,
+          this.opts.WebSocket,
+          this.stop.signal,
+        );
         this.connected = true;
         this.opts.onState?.(true);
         attempt = 0;
@@ -193,7 +198,7 @@ export class MarketFeed {
       JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_subscribe', params: ['newHeads'] });
     while (!this.stop.signal.aborted) {
       try {
-        const socket = await openSocket(url, subscribe, this.opts.WebSocket);
+        const socket = await openSocket(url, subscribe, this.opts.WebSocket, this.stop.signal);
         attempt = 0;
         socket.listen((m) => {
           const head = (m as { params?: { result?: { number?: string } } }).params?.result?.number;

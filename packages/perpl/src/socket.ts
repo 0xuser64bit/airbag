@@ -22,7 +22,9 @@ export function openSocket(
   url: string,
   firstFrame?: () => string,
   WS: WebSocketCtor = WebSocket,
+  signal?: AbortSignal,
 ): Promise<Socket> {
+  if (signal?.aborted) return Promise.reject(new Error('socket opening aborted'));
   const ws = new WS(url);
   const listeners = new Set<(m: Message, at: number) => void>();
   const waiters = new Set<(err: Error) => void>();
@@ -32,6 +34,7 @@ export function openSocket(
     let msg: Message;
     try {
       msg = JSON.parse(String(ev.data)) as Message;
+      if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return;
     } catch {
       return; // A frame we can't parse can't be acted on. Drop it rather than crash.
     }
@@ -83,12 +86,37 @@ export function openSocket(
   };
 
   return new Promise((resolve, reject) => {
+    const clean = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', abort);
+    };
+    const fail = (message: string) => {
+      clean();
+      reject(new Error(message));
+      ws.close(4000, 'opening failed');
+    };
+    const abort = () => fail('socket opening aborted');
+    const timer = setTimeout(() => fail(`socket did not open within 10 seconds: ${url}`), 10_000);
+    signal?.addEventListener('abort', abort, { once: true });
     ws.addEventListener('open', () => {
+      clean();
       // Perpl closes sockets that stay silent past the idle timeout, sign-in included.
-      if (firstFrame) ws.send(firstFrame());
-      resolve(socket);
+      try {
+        if (firstFrame) ws.send(firstFrame());
+        resolve(socket);
+      } catch {
+        fail('could not send socket sign-in');
+      }
     });
-    ws.addEventListener('error', () => reject(new Error(`could not open ${url}`)));
+    ws.addEventListener('error', () => fail(`could not open ${url}`), { once: true });
+    ws.addEventListener(
+      'close',
+      () => {
+        clean();
+        reject(new Error(`socket closed before opening ${url}`));
+      },
+      { once: true },
+    );
   });
 }
 

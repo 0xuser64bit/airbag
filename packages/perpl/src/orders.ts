@@ -94,17 +94,17 @@ export function increaseCollateral(
 }
 
 /**
- * A harmless cancel sent once at link time to learn a key's scope: a Read key is refused with
+ * A cancel sent once at link time to learn a key's scope: a Read key is refused with
  * code 403 on mt:3, a Trade key gets code 0 and then a failed mt:24. No API reports scope
- * otherwise. The order id is never one of the account's open orders, so the cancel can't
- * remove anything: the exchange only cancels orders the account owns.
+ * otherwise. Use a high uint64 id outside the snapshot, avoiding the low next-created-order
+ * race. The exchange only cancels orders the account owns; live verification is still required.
  */
 export function scopeProbe(
   envelope: Envelope,
   accountOpenOrderIds: ReadonlySet<number>,
 ): CancelFrame {
-  let oid = 1;
-  while (accountOpenOrderIds.has(oid)) oid++;
+  let oid = Number.MAX_SAFE_INTEGER;
+  while (accountOpenOrderIds.has(oid)) oid--;
   return { mt: 22, ...envelope, t: 5, oid, s: 0, fl: 0, lv: 0 };
 }
 

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ed25519Key } from '../src/auth.ts';
 import { closeOrder, increaseCollateral } from '../src/orders.ts';
-import { TradingClient, type TradingEvent } from '../src/trading.ts';
+import { TokenBucket, TradingClient, type TradingEvent } from '../src/trading.ts';
 import { fakeServer, flush } from './fake-ws.ts';
 
 // RFC 8032 test vector 1: a public test key, not a credential.
@@ -264,5 +264,20 @@ describe('TradingClient', () => {
     client = t.client;
     await expect(client.submit(close)).resolves.toMatchObject({ result: 'lost' });
     expect(t.server.sockets).toHaveLength(0);
+  });
+
+  it('serializes simultaneous rate-limit waits and cancels queued work on shutdown', async () => {
+    vi.useFakeTimers();
+    const bucket = new TokenBucket(1, 1);
+    const completed: number[] = [];
+    const stop = new AbortController();
+    const jobs = [1, 2, 3, 4].map((id) => bucket.take(stop.signal).then(() => completed.push(id)));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(completed).toEqual([1]);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(completed).toEqual([1, 2]);
+    stop.abort();
+    await Promise.all(jobs);
+    expect(completed).toEqual([1, 2, 3, 4]); // Canceled waits resolve; sendOnce checks the signal.
   });
 });

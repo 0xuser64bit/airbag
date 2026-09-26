@@ -67,11 +67,11 @@ describe('order-type allowlist (brief section 5)', () => {
 
 describe('scope probe', () => {
   it('is an allowed cancel that never targets one of the account’s open orders', () => {
-    const open = new Set([1, 2, 4]);
+    const open = new Set([1, 2, 4, Number.MAX_SAFE_INTEGER]);
     const frame = scopeProbe(base, open);
-    expect(frame).toMatchObject({ mt: 22, t: 5, oid: 3 });
+    expect(frame).toMatchObject({ mt: 22, t: 5, oid: Number.MAX_SAFE_INTEGER - 1 });
     expect(open.has(frame.oid)).toBe(false);
     expect(() => assertAllowed(frame)).not.toThrow();
-    expect(scopeProbe(base, new Set()).oid).toBe(1);
+    expect(scopeProbe(base, new Set()).oid).toBe(Number.MAX_SAFE_INTEGER);
   });
 });
