@@ -6,7 +6,10 @@ dependencies, so the engine and the browser compute the same numbers from the sa
 ([ADR 0008](adr/0008-risk-math-numerics.md)).
 
 Formulas follow [Perpl's liquidation docs](https://docs.perpl.xyz/exchange/liquidation) and
-`PerplFoundation/dex-sdk`'s `state/position.rs`.
+`PerplFoundation/dex-sdk`'s `state/position.rs`. They are checked against the chain: Airbag's
+unrealized PnL matches `getPositionV2` on real testnet and mainnet positions, and in 159 real
+mainnet liquidations Perpl never liquidated before the mark reached the liquidation price this
+model computes ([PERPL.md](PERPL.md#checked-against-testnet-on-2026-10-01-without-a-key)).
 
 The old assumption that closes are free is obsolete. As checked on 2026-09-27,
 [Perpl's API documentation](https://github.com/PerplFoundation/api-docs/blob/main/README.md#fees--fee-tiers)
@@ -89,7 +92,10 @@ account.
   the trimmed position is still open. Otherwise it is a **Precaution**. Never call a precaution a
   save.
 - The counterfactual liquidation return is an estimate: `0.8 × equity` at the old liquidation
-  price, about `0.8 × MMR`. The UI labels it as an estimate.
+  price, about `0.8 × MMR`. The UI labels it as an estimate. The 80% itself is what Perpl paid in
+  each of 159 mainnet liquidations checked on 2026-10-01 (`pnpm --filter @airbag/spike
+  liquidations`); the estimate is the fill: a liquidation executes on the book near, not exactly
+  at, the liquidation price.
 - Save value = the current value of the Airbag path − the counterfactual return. Live while the
   position is open, frozen when it closes. The share card snapshots it.
 

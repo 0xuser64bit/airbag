@@ -1,4 +1,11 @@
-import { decodeFunctionData, encodeFunctionResult, type Hex, multicall3Abi } from 'viem';
+import {
+  decodeFunctionData,
+  encodeAbiParameters,
+  encodeEventTopics,
+  encodeFunctionResult,
+  type Hex,
+  multicall3Abi,
+} from 'viem';
 import { expect, it } from 'vitest';
 import { exchangeAbi, perplChain } from '../src/chain.ts';
 
@@ -64,4 +71,40 @@ it('reads a position in every market with one RPC request (public RPCs allow 15 
 
 it('refuses a chain it has no Multicall3 address for', () => {
   expect(() => perplChain('http://rpc.test', EXCHANGE, 1)).toThrow(/no Monad chain/);
+});
+
+it("decodes Perpl's liquidations with the contract's side encoding (0 long, 1 short)", async () => {
+  const event = exchangeAbi.find((x) => x.type === 'event' && x.name === 'PositionLiquidated');
+  if (event?.type !== 'event') throw new Error('missing event');
+  // The real BTC short liquidated in mainnet block 109,330,197.
+  const values = [1n, 1633n, 1, 855_613n, 856_028n, 1_520n, 0n, -35_021_016n, 299_440n];
+  const rest = [-84_514_992n, 0n, 39_834_732n, 1_040_302_593n, true] as const;
+  const data = encodeAbiParameters(event.inputs, [...values, ...rest] as never);
+  const fetchFn = (async (_url: unknown, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body)) as { id: number; method: string };
+    const log = {
+      address: EXCHANGE.toLowerCase(),
+      topics: encodeEventTopics({ abi: [event], eventName: 'PositionLiquidated' }),
+      data,
+      blockNumber: '0x6843f15',
+      blockHash: `0x${'1'.repeat(64)}`,
+      transactionHash: `0x${'2'.repeat(64)}`,
+      transactionIndex: '0x0',
+      logIndex: '0x0',
+      removed: false,
+    };
+    return new Response(JSON.stringify({ jsonrpc: '2.0', id: body.id, result: [log] }));
+  }) as typeof fetch;
+  const chain = perplChain('http://rpc.test', EXCHANGE, 143, fetchFn);
+  const [l] = await chain.liquidations(109_330_000n, 109_330_197n);
+  expect(l).toMatchObject({
+    block: 109_330_197n,
+    perpId: 1,
+    accountId: 1633,
+    side: 'short',
+    pricePns: 856_028n,
+    remainingLots: 0n,
+    depositCns: 84_514_992n,
+    toAccountCns: 39_834_732n,
+  });
 });

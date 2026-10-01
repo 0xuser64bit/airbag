@@ -244,10 +244,10 @@ a demo-day runbook (`144ef71`), and documentation of what is verified (`fee893a`
 | `pnpm build` | Production Next build passes. |
 | Live engine on Perpl testnet, no key | Boots, `/ready` 200, one block behind Monad. A random key's trading sign-in is closed with 3401 and reported "rejected". |
 | Real accounts | Lookups of seven real testnet wallets concurrently all succeed; the web's live connect page renders a market maker's eight real positions. |
-| `pnpm --filter @airbag/spike check` | Airbag's side decoding, Q16 entry residue and decimals reproduce the contract's own `deltaPnlCNS` on 19 testnet positions in 8 markets and 37 mainnet positions in 10 markets, worst difference under $0.0001. |
+| `pnpm --filter @airbag/spike check` | Airbag's side decoding, Q16 entry residue and decimals reproduce the contract's own `deltaPnlCNS` on 19 testnet positions in 8 markets and 37 mainnet positions in 10 markets, worst difference under $0.0001. Rerun with automatic account discovery: 45 testnet and 43 mainnet positions. |
 | `getMarginFractions` | Maintenance is flat per market at any size tried (BTC 4%, ETH 5%), so the fixed-maintenance liquidation formula holds; it matches Perpl's current liquidation docs. |
 | Simulation on Monad's clock | The full journey in a browser: trigger, fill one block later, re-add, save, on real testnet block numbers at the chain's cadence. |
-| Testnet liquidation events | A scan of the most recent ~300,000+ testnet blocks found no `PositionLiquidated` event to compare liquidation prices against; HyperSync needs a token. Still open. |
+| Liquidations | Testnet had none in its latest ~400,000 blocks. Mainnet had 160 in 3,000,000 blocks: in all 159 full ones Perpl liquidated only once the mark had reached the liquidation price Airbag computes for the position (median 0.03% past), and the trader received exactly 80% of the remaining equity, as save reports assume (`spike liquidations`). |
 | Gitleaks | Full history, 104 commits, no leaks. |
 
 ### Still open

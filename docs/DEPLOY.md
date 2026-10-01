@@ -69,6 +69,7 @@ pnpm --filter @airbag/spike deploy add --market BTC --amount 1 --send
 pnpm --filter @airbag/spike deploy trim --market BTC --fraction 0.3 --send
 pnpm --filter @airbag/spike measure 60                         # block time and feed lag, public data only
 pnpm --filter @airbag/spike check                              # Airbag's position math vs the contract, no key
+PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc1.monad.xyz pnpm --filter @airbag/spike liquidations   # vs Perpl's liquidations
 ```
 
 `account` prints the liquidation price derived from the trading WS beside the one derived from the

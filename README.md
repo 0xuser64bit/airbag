@@ -56,9 +56,12 @@ the explorer.
 on Perpl's context, fees, funding and feeds and reports ready a block behind Monad; it reads real
 traders' accounts from the chain; and its position math reproduces the contract's own unrealized
 PnL to under $0.0001 on 19 testnet positions and on 37 real traders' positions on Perpl mainnet,
-in 10 markets. Three of those mainnet traders were under 3% from liquidation. Anyone can rerun the
-check, which finds accounts with open positions itself: `pnpm --filter @airbag/spike check`, and
-with `PERPL_NETWORK=mainnet` for mainnet.
+in 10 markets. Three of those mainnet traders were under 3% from liquidation. And against Perpl's
+own liquidation engine: in **159 real mainnet liquidations**, Perpl never liquidated a position
+before the mark reached the liquidation price Airbag computes for it, and the trader got exactly
+80% of what was left every time, the figure Airbag's save reports assume. Both checks are
+commands anyone can rerun: `pnpm --filter @airbag/spike check` and
+`pnpm --filter @airbag/spike liquidations` ([how](docs/PERPL.md#checked-against-testnet-on-2026-10-01-without-a-key)).
 
 **Not done yet:** Airbag has **not traded on Perpl**. A real trim and re-add needs a disposable
 funded testnet wallet and a Trade key ([runbook](docs/DEPLOY.md#demo-day-a-real-deploy-on-perpl-testnet)).

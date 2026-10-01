@@ -23,6 +23,27 @@ const accountInfo = {
   ],
 } as const;
 
+const positionLiquidated = {
+  type: 'event',
+  name: 'PositionLiquidated',
+  inputs: [
+    u256('perpId'),
+    u256('posAccountId'),
+    { type: 'uint8', name: 'positionType' },
+    u256('markPricePNS'),
+    u256('liqPricePNS'),
+    u256('liqLotLNS'),
+    u256('posLotLNS'),
+    { type: 'int256', name: 'deltaPnlCNS' },
+    { type: 'int256', name: 'fundingCNS' },
+    { type: 'int256', name: 'posAmountCNS' },
+    u256('posDepositCNS'),
+    { type: 'int256', name: 'accAmountCNS' },
+    u256('accBalanceCNS'),
+    { type: 'bool', name: 'onOrderBook' },
+  ],
+} as const;
+
 export const exchangeAbi = [
   {
     type: 'function',
@@ -96,6 +117,7 @@ export const exchangeAbi = [
       },
     ],
   },
+  positionLiquidated,
 ] as const;
 
 export interface ChainAccount {
@@ -119,6 +141,27 @@ export interface ChainPosition {
   deltaPnlCns: bigint;
   premiumPnlCns: bigint;
   markPns: bigint;
+}
+
+/** One Perpl liquidation, as its PositionLiquidated event reports it. */
+export interface ChainLiquidation {
+  block: bigint;
+  perpId: number;
+  accountId: number;
+  side: 'long' | 'short';
+  markPns: bigint;
+  /** The price the liquidation executed at. */
+  pricePns: bigint;
+  lots: bigint;
+  /** Lots still open afterwards: 0 for a full liquidation. */
+  remainingLots: bigint;
+  /** PnL realized at the execution price. */
+  deltaPnlCns: bigint;
+  fundingCns: bigint;
+  /** The deposit the liquidation took out of the position (the event's -posAmountCNS). */
+  depositCns: bigint;
+  /** What went back to the trader's account. */
+  toAccountCns: bigint;
 }
 
 export type PerplChain = ReturnType<typeof perplChain>;
@@ -193,6 +236,31 @@ export function perplChain(
         premiumPnlCns: p.premiumPnlCNS,
         markPns: mark,
       };
+    },
+    head: (): Promise<bigint> => client.getBlockNumber(),
+    /** Liquidations between two blocks, inclusive. Public RPCs may cap the range per call. */
+    async liquidations(fromBlock: bigint, toBlock: bigint): Promise<ChainLiquidation[]> {
+      const logs = await client.getLogs({
+        address: exchange,
+        event: positionLiquidated,
+        fromBlock,
+        toBlock,
+        strict: true,
+      });
+      return logs.map(({ blockNumber, args: a }) => ({
+        block: blockNumber,
+        perpId: Number(a.perpId),
+        accountId: Number(a.posAccountId),
+        side: a.positionType === 0 ? 'long' : 'short',
+        markPns: a.markPricePNS,
+        pricePns: a.liqPricePNS,
+        lots: a.liqLotLNS,
+        remainingLots: a.posLotLNS,
+        deltaPnlCns: a.deltaPnlCNS,
+        fundingCns: a.fundingCNS,
+        depositCns: -a.posAmountCNS,
+        toAccountCns: a.accAmountCNS,
+      }));
     },
     async fundingSumAt(perpId: number, block: number): Promise<number> {
       const [sum] = await client.readContract({
