@@ -60,7 +60,7 @@ export function deployMessage(d: Deploy): PushMessage {
   const trimmed = c ? (c.filledLots / d.data.before.lots) * d.data.before.size : 0;
   return {
     title: `Airbag trimmed ${what}`,
-    body: `Airbag trimmed ${fmt.size(trimmed)} ${d.symbol} at ${fmt.usd(c?.fillPrice)}. Liquidation now ${liq}. Fee $0.`,
+    body: `Airbag trimmed ${fmt.size(trimmed)} ${d.symbol} at ${fmt.usd(c?.fillPrice)}. Liquidation now ${liq}. Fee ${fmt.fee(c?.fee)}.`,
     url: `/app/deploys/${d.id}`,
     tag: d.id,
   };

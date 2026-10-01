@@ -5,6 +5,7 @@ import { DEFAULT_SETTINGS, type Deploy, openStore, type Settings } from '../src/
 import { Engine } from '../src/engine.ts';
 import { PaperExchange } from '../src/exchange.ts';
 import { createLogger } from '../src/log.ts';
+import { deployMessage } from '../src/notify.ts';
 import {
   LANDING_PATH,
   SAMPLE_SPARE_CNS,
@@ -184,6 +185,7 @@ describe('deploy paths', () => {
     expect(d.data.after?.distance).toBeGreaterThanOrEqual(0.0999);
     expect(h.paper.account?.b).toBe(SAMPLE_SPARE_CNS.toString());
     expect(d.data.timeline.some((e) => e.text.includes('Fee $16'))).toBe(true);
+    expect(deployMessage(d).body).toMatch(/Fee \$16\.\d\d\.$/);
   });
   it('adds spare margin instead of trimming when it alone reaches the target', async () => {
     const h = harness({ spareCns: 10_000_000_000n });
