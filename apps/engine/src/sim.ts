@@ -92,6 +92,11 @@ export class SimChain {
   private lastLocal = 0;
   /** When Monad's heartbeat last arrived (or until when to wait for the first one). */
   private monadAt = 0;
+  /**
+   * Position ids for new paper accounts. Never reused, even across restarts, so a reset or a
+   * restart can't hand an old deploy the new account's position as if it were the same one.
+   */
+  private lastPid = Date.now() * 1_000;
 
   constructor(feed: MarketFeed, markets: Market[]) {
     this.feed = feed;
@@ -146,7 +151,7 @@ export class SimChain {
       wallet,
       accountId,
       balanceCns: SAMPLE_SPARE_CNS,
-      positions: samplePositions(accountId),
+      positions: samplePositions(accountId).map((p) => ({ ...p, pid: ++this.lastPid })),
       markets: this.markets,
       collateralDecimals: 6,
       markOf: (id) => view.mark(id),

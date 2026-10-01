@@ -296,6 +296,25 @@ describe('onboarding to a deploy, over HTTP', () => {
     expect((await btc(a)).mark).toBe(96_000);
   });
 
+  it('a reset starts new positions, so an earlier deploy freezes instead of re-attaching', async () => {
+    const { body: session } = await signIn();
+    const token = session.token;
+    const body = { apiKey: 'key-token-1111', apiSecret: secret(), ipLocked: true };
+    expect((await call('POST', '/v1/key', { token, body })).status).toBe(200);
+    await call('PUT', '/v1/settings', { token, body: { armed: true } });
+    await call('POST', '/v1/sim/price', { token, body: { symbol: 'BTC', price: 96_000 } });
+    await blocks(8);
+    const [first] = (await call('GET', '/v1/deploys', { token })).body;
+    expect(first).toMatchObject({ phase: 'done', outcome: 'pending', closedAt: null });
+    expect((await call('POST', '/v1/sim/reset', { token })).status).toBe(200);
+    // The fresh account's BTC reaches the first deploy's old liquidation price: not its save.
+    await call('POST', '/v1/sim/price', { token, body: { symbol: 'BTC', price: 94_000 } });
+    await blocks(8);
+    const after = (await call('GET', `/v1/deploys/${first.id}`, { token })).body;
+    expect(after.outcome).toBe('precaution');
+    expect(after.closedAt).not.toBeNull();
+  });
+
   it('streams dashboard state as server-sent events', async () => {
     const { body: session } = await signIn();
     const res = await fetch(`${base}/v1/stream`, {
