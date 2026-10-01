@@ -81,8 +81,9 @@ These are the ones that have cost real time. Each is enforced or tested somewher
 - **Four trading connections per wallet**, shared with the user's own browser tabs. The engine needs
   one; if the user has four Perpl tabs open, ours is refused. Surface it in key health.
 - **There is no key-introspection endpoint.** Scope and IP allow-list cannot be read back. Scope is
-  probed at link time with a high safe uint64 order id outside the open-order snapshot (a read key is
-  refused with 403 at the gateway). The IP lock cannot be checked from here, so the UI says what was
+  probed at link time with a high safe uint64 order id outside the open-order snapshot. The gateway
+  answers every `mt:22` with exactly one `mt:3` and refuses a Read key's with 403 there, so
+  admission (`code: 0`) is the proof; the engine does not wait for the chain to fail the cancel. The IP lock cannot be checked from here, so the UI says what was
   checked and asks the user to confirm the rest.
 - **Closes have fees.** Current [API fee documentation](https://github.com/PerplFoundation/api-docs/blob/main/README.md#fees--fee-tiers)
   charges on size added and removed. Taker rates are micros, selected by `Account.ft`, with a base

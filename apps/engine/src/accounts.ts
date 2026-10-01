@@ -33,7 +33,7 @@ export interface KeyCheck {
   accountId: number;
   forwarding: boolean;
   frozen: boolean;
-  /** The probe got past Perpl's gateway. False if Perpl never answered it. */
+  /** Perpl's gateway admitted the probe, which it refuses for Read keys. */
   tradeScope: boolean;
 }
 
@@ -88,29 +88,35 @@ export async function checkKey(
       'This wallet has no Perpl exchange account yet. Deposit on Perpl first, then link the key.',
     );
   }
-  const probe = client.submit((ids) =>
-    scopeProbe(
-      { ...ids, mkt: probeMarketId, acc: account.id, lb: 0 },
-      new Set(client.openOrders.keys()),
-    ),
-  );
-  const outcome = await Promise.race([probe, sleep(8_000).then(() => undefined)]);
-  if (outcome?.result === 'rejected' && outcome.code === 403) {
+  // Perpl's gateway answers every order frame with exactly one mt:3 and refuses a Read key's
+  // with 403 there, so admission (code 0) proves Trade scope. What the chain later says about
+  // cancelling an order that doesn't exist is irrelevant to the question.
+  const status = Promise.withResolvers<number | undefined>();
+  void client
+    .submit(
+      (ids) =>
+        scopeProbe(
+          { ...ids, mkt: probeMarketId, acc: account.id, lb: 0 },
+          new Set(client.openOrders.keys()),
+        ),
+      status.resolve,
+    )
+    .then(() => status.resolve(undefined));
+  const code = await Promise.race([status.promise, sleep(8_000).then(() => undefined)]);
+  if (code === 403) {
     throw new LinkError(
       400,
       'read_only',
       'This is a Read key. Airbag needs the Trade scope to trim. Create a Trade key on Perpl and paste that one.',
     );
   }
-  // A Read key is refused at the gateway; anything that reached the chain proves Trade scope.
-  const tradeScope = outcome !== undefined && !['lost', 'rejected'].includes(outcome.result);
-  if (!tradeScope)
+  if (code !== 0)
     throw new LinkError(
       504,
       'scope_unverified',
       'Perpl did not confirm Trade scope. No key was stored. Try again.',
     );
-  return { accountId: account.id, forwarding: account.fw, frozen: account.fr, tradeScope };
+  return { accountId: account.id, forwarding: account.fw, frozen: account.fr, tradeScope: true };
 }
 
 export interface AccountsDeps {

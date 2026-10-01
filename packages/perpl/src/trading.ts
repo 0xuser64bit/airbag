@@ -87,6 +87,7 @@ export interface OrderOutcome {
 
 interface Pending {
   frame: AllowedOrderFrame;
+  onStatus?: ((code: number) => void) | undefined;
   /** Settle as lost after this block. `lb: 0` means Perpl's max window, which we don't know. */
   deadline: number;
   sawNonFailure: boolean;
@@ -202,17 +203,20 @@ export class TradingClient {
    * Sends one allowlisted order. `build` gets the frame's `sn` and `rq`. Resolves with the
    * outcome from mt:3 and mt:24; `lost` means no final status arrived and the caller must
    * reconcile from positions. Retries once with a new `rq` on sr:32, as Perpl's docs advise.
+   * `onStatus` hears the gateway's admission code (mt:3) as soon as it arrives.
    */
   async submit(
     build: (ids: { sn: number; rq: number }) => AllowedOrderFrame,
+    onStatus?: (code: number) => void,
   ): Promise<OrderOutcome> {
-    const first = await this.sendOnce(build);
-    if (first.result === 'failed' && first.order?.sr === 32) return this.sendOnce(build);
+    const first = await this.sendOnce(build, onStatus);
+    if (first.result === 'failed' && first.order?.sr === 32) return this.sendOnce(build, onStatus);
     return first;
   }
 
   private async sendOnce(
     build: (ids: { sn: number; rq: number }) => AllowedOrderFrame,
+    onStatus?: (code: number) => void,
   ): Promise<OrderOutcome> {
     await this.bucket.take(this.stop.signal);
     const socket = this.socket;
@@ -224,7 +228,7 @@ export class TradingClient {
     const frame = build({ sn: this.sn, rq: this.rq });
     return new Promise<OrderOutcome>((resolve) => {
       const deadline = frame.lb > 0 ? frame.lb : this.head + MAX_WINDOW;
-      const p: Pending = { frame, deadline, sawNonFailure: false, resolve };
+      const p: Pending = { frame, onStatus, deadline, sawNonFailure: false, resolve };
       this.pending.set(frame.rq, p);
       this.bySn.set(frame.sn, p);
       try {
@@ -357,6 +361,7 @@ export class TradingClient {
       case MT.Status: {
         const s = m as unknown as StatusResponse;
         const p = s.cid === undefined ? undefined : this.bySn.get(s.cid);
+        p?.onStatus?.(s.status.code);
         if (p && s.status.code !== 0) {
           this.settle(p, {
             result: 'rejected',

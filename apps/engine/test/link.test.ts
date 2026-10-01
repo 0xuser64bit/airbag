@@ -13,6 +13,8 @@ function client(opts: {
   ready?: ConnectionState;
   wallet?: string;
   account?: typeof account | undefined;
+  /** The gateway's mt:3 code for the probe; undefined when none arrives. */
+  status?: number | undefined;
   probe?: OrderOutcome;
 }) {
   const sent: unknown[] = [];
@@ -27,8 +29,13 @@ function client(opts: {
       if (c.state !== 'live') throw new Error(c.state);
     },
     async close() {},
-    async submit(build: (ids: { sn: number; rq: number }) => unknown) {
+    async submit(
+      build: (ids: { sn: number; rq: number }) => unknown,
+      onStatus?: (code: number) => void,
+    ) {
       sent.push(build({ sn: 1, rq: 10 }));
+      const status = 'status' in opts ? opts.status : 0;
+      if (status !== undefined) onStatus?.(status);
       return opts.probe ?? { result: 'failed', rq: 10 };
     },
   };
@@ -56,13 +63,20 @@ describe('checkKey', () => {
     ]);
   });
 
+  it('needs only the gateway admitting the probe, whatever the chain makes of the cancel', async () => {
+    const { c } = client({ status: 0, probe: { result: 'lost', rq: 10 } });
+    await expect(checkKey(c, WALLET, 16)).resolves.toMatchObject({ tradeScope: true });
+  });
+
   it('refuses to store a key when Perpl never proved its Trade scope', async () => {
-    const { c } = client({ probe: { result: 'lost', rq: 10 } });
+    const { c } = client({ status: undefined, probe: { result: 'lost', rq: 10 } });
     await fails(checkKey(c, WALLET, 16), 'scope_unverified');
+    const refused = client({ status: 400, probe: { result: 'rejected', rq: 10, code: 400 } });
+    await fails(checkKey(refused.c, WALLET, 16), 'scope_unverified');
   });
 
   it('refuses a Read key', async () => {
-    const { c } = client({ probe: { result: 'rejected', rq: 10, code: 403 } });
+    const { c } = client({ status: 403, probe: { result: 'rejected', rq: 10, code: 403 } });
     await fails(checkKey(c, WALLET, 16), 'read_only');
   });
 

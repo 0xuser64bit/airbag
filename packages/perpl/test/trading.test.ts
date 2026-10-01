@@ -121,7 +121,8 @@ describe('TradingClient', () => {
     client = t.client;
     client.start();
     await snapshots(t.server);
-    const outcome = client.submit(close);
+    const codes: number[] = [];
+    const outcome = client.submit(close, (code) => codes.push(code));
     await flush();
     const frame = t.server.last.sent.at(-1);
     t.server.last.push({
@@ -130,6 +131,20 @@ describe('TradingClient', () => {
       status: { code: 403, error: 'api key lacks trade scope' },
     });
     await expect(outcome).resolves.toMatchObject({ result: 'rejected', code: 403 });
+    expect(codes).toEqual([403]);
+  });
+
+  it('reports admission as soon as the gateway accepts, before any order update', async () => {
+    const t = setup();
+    client = t.client;
+    client.start();
+    await snapshots(t.server);
+    const codes: number[] = [];
+    void client.submit(close, (code) => codes.push(code));
+    await flush();
+    t.server.last.push({ mt: 3, cid: t.server.last.sent.at(-1)?.sn, status: { code: 0 } });
+    await flush();
+    expect(codes).toEqual([0]);
   });
 
   it('retries once with a new rq on sr:32', async () => {
