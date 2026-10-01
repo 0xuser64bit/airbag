@@ -75,7 +75,8 @@ These are the ones that have cost real time. Each is enforced or tested somewher
   `premium = −s · (fundingSum_now − efs) · size / (div · 10^pd)` with
   `div = 10^funding_sum_scaling_exp`. Funding is realized on every size change. If the funding
   seed fails at boot, the live engine refuses to start. It also refuses to act until a funding
-  event valid at the current head is known.
+  event valid at the current head is known for every covered market. Only those: a market Perpl
+  has just listed has no funding event yet and must not stall protection elsewhere.
 - **The idle timeout is 5 s on mainnet, 10 s on testnet, and applies before sign-in too.** Send
   `mt:29` immediately on open.
 - **Four trading connections per wallet**, shared with the user's own browser tabs. The engine needs

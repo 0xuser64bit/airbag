@@ -90,6 +90,24 @@ describe('MarketFeed', () => {
     expect(f.staleness(10_100)).toMatchObject({ stale: false, lagBlocks: 3 });
   });
 
+  it('needs funding only for the markets it protects, so a new listing cannot stall them', () => {
+    const listed = { ...btc, id: 99, funding: undefined as unknown as Market['funding'] };
+    const make = (requireFundingFor: number[]) =>
+      new MarketFeed({
+        url: 'wss://perpl.test/ws/v1/market-data',
+        chainId: 10143,
+        markets: [btc, listed],
+        staleBlocks: 3,
+        requireFundingFor,
+      });
+    const covered = make([16]);
+    covered.apply({ mt: 100, h: 1_000 }, 10_000);
+    expect(covered.staleness(10_100).stale).toBe(false);
+    const both = make([16, 99]);
+    both.apply({ mt: 100, h: 1_000 }, 10_000);
+    expect(both.staleness(10_100)).toMatchObject({ stale: true, reason: 'no-funding' });
+  });
+
   it('subscribes to heartbeat, market-state, funding and market-config in one frame', async () => {
     const server = fakeServer();
     open = new MarketFeed({

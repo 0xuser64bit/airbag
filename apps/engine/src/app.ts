@@ -93,7 +93,7 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
     chainId: cfg.network.chainId,
     markets: ctx.markets,
     staleBlocks: cfg.staleBlocks,
-    requireFunding: live,
+    ...(live ? { requireFundingFor: [...covered] } : {}),
     ...(live ? { monadWsUrl: cfg.network.rpcWsUrl } : {}),
     onBlock: (h) => engine?.tick(h),
     onState: (up, reason) => log[up ? 'info' : 'warn']('feed.state', { up, reason }),
