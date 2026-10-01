@@ -57,6 +57,10 @@ for (const accountId of ids.length ? ids : [1, 2]) {
     });
   }
 }
+if (rows.length === 0) {
+  console.log('No open positions on these accounts; pass ids of accounts that have some.');
+  process.exit(1);
+}
 console.table(rows);
 console.log(
   `${rows.length} positions on ${cfg.network}; largest PnL difference $${worst.toFixed(6)}.`,
