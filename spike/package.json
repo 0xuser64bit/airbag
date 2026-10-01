@@ -7,6 +7,7 @@
   "type": "module",
   "scripts": {
     "measure": "node --env-file-if-exists=../.env measure.ts",
+    "check": "node --env-file-if-exists=../.env check.ts",
     "account": "node --env-file-if-exists=../.env account.ts",
     "deploy": "node --env-file-if-exists=../.env deploy.ts"
   },

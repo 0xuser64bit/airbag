@@ -108,6 +108,8 @@ export interface ChainPosition {
   pricePns: bigint;
   residueQ16: bigint;
   lots: bigint;
+  /** Perpl's own unrealized PnL at the mark. */
+  deltaPnlCns: bigint;
   premiumPnlCns: bigint;
   markPns: bigint;
 }
@@ -165,6 +167,7 @@ export function perplChain(
         pricePns: p.pricePNS,
         residueQ16: p.priceResiduePNSQ16,
         lots: p.lotLNS,
+        deltaPnlCns: p.deltaPnlCNS,
         premiumPnlCns: p.premiumPnlCNS,
         markPns: mark,
       };

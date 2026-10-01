@@ -8,6 +8,22 @@ Endpoint measurements below are historical research, not a fresh execution proof
 context and a funded disposable account before launch. The 2026-09-27 audit re-read the current
 official API documentation and corrected fee handling; old zero-fee assumptions are obsolete.
 
+### Checked against testnet on 2026-10-01, without a key
+
+Everything that public data can prove was run against Perpl testnet and Monad testnet (head
+~67.2M). What still needs a funded account and a Trade key is unchanged: fills, `t:6`, the
+scope probe's admission and observed fees.
+
+| Check | Result |
+|---|---|
+| Live engine boot: context, fee schedules, funding seed, market-data and Monad `newHeads` | Ready in under a second, 1 block behind Monad, `/ready` 200 |
+| Wallet lookup of real accounts (8 markets each) | Works; needed Multicall3 batching under the public RPC's 15 requests/s |
+| Position math vs the contract: `pnpm --filter @airbag/spike check` | Side decoding, Q16 entry residue, sizes and decimals reproduce `getPositionV2`'s own `deltaPnlCNS` on 19 positions in 8 markets, longs and shorts, worst difference under $0.0001 |
+| Maintenance margin vs size: `getMarginFractions(perpId, lots)` | Flat per market at every size tried, 1e-2 to 1e4 BTC: BTC 2500 (4%), ETH 2000 (5%), matching context |
+| Trading sign-in with an unknown key | Closed with 3401 `unauthorized`; the client reports "rejected" |
+| `Amount` (`a` on `t:6`, `c`, `b`) | Documented as a decimal string of the scaled integer: `min_account_open_amount` is `"100000000"`, 100 AUSD at 6 dp. Airbag sends CNS as a decimal string; execution is still unverified |
+| Key enrollment from a non-Perpl origin | `POST /api/v1/api-key/payload` answers 400; one-click enrollment needs Perpl to whitelist Airbag's origin (ADR 0006) |
+
 Sources: Perpl `api-docs` (README, `authentication.md`, `websocket.md`, `rest-endpoints.md`,
 `types.md`, `integrations.md`), [docs.perpl.xyz](https://docs.perpl.xyz) (margin, liquidation,
 insurance and ADL, funding), `PerplFoundation/dex-sdk` (`state/position.rs`, bundled `Exchange.json`),
