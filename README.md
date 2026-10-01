@@ -58,9 +58,9 @@ the explorer.
 **Checked against Perpl and Monad testnet without a key** (2026-10-01,
 [details](docs/PERPL.md#checked-against-testnet-on-2026-10-01-without-a-key)): the live engine boots
 on Perpl's context, fees, funding and feeds and reports ready a block behind Monad; it reads real
-traders' accounts from the chain; and its position math reproduces the contract's own unrealized
-PnL to under $0.0001 on 19 testnet positions and on 37 real traders' positions on Perpl mainnet,
-in 10 markets. Three of those mainnet traders were under 3% from liquidation. And against Perpl's
+traders' accounts from the chain; and the guard's own position conversion reproduces the
+contract's unrealized PnL and funding to under $0.0001 on real testnet positions and on 42 real
+traders' positions on Perpl mainnet, in 10 markets. Three of those mainnet traders were under 3% from liquidation. And against Perpl's
 own liquidation engine: in **159 real mainnet liquidations**, Perpl never liquidated a position
 before the mark reached the liquidation price Airbag computes for it, and the trader got exactly
 80% of what was left every time, the figure Airbag's save reports assume. Both checks are

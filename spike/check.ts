@@ -1,21 +1,22 @@
-// Keyless check against the live chain: does Airbag's position math agree with Perpl's contract?
-// For each account, reads every market's position onchain and compares the unrealized PnL that
-// Airbag derives (side decoding, the Q16 entry residue, sizes and decimals) with the contract's
-// own deltaPnlCNS, then prints the liquidation price Airbag computes from the same inputs.
-// No key, no funds. Usage: pnpm --filter @airbag/spike check [accountId ...]
+// Keyless check against the live chain: does the engine's position math agree with Perpl's
+// contract? For each account it reads every market's position onchain, rebuilds the position the
+// way the live guard does (toRiskPosition: side decoding, the Q16 entry residue, decimals, and
+// funding from cumulative sums since the entry block), and compares the unrealized PnL and the
+// funding with the contract's own deltaPnlCNS and premiumPnlCNS. No key, no funds.
+// Usage: pnpm --filter @airbag/spike check [accountId ...]
 // Without ids it checks the first 25 accounts that hold a position. PERPL_NETWORK picks the chain.
 
 import {
   collateralDecimals,
-  effectiveEntryPrice,
   fetchContext,
-  maintenanceFraction,
   networkFromEnv,
+  type PerplPosition,
   perplChain,
   scaled,
   symbolOf,
+  toRiskPosition,
 } from '@airbag/perpl';
-import { distanceToLiquidation, liquidationPrice, type Position } from '@airbag/risk';
+import { distanceToLiquidation, liquidationPrice } from '@airbag/risk';
 
 const cfg = networkFromEnv();
 const ctx = await fetchContext(cfg.apiUrl);
@@ -36,40 +37,61 @@ async function withPositions(want: number): Promise<number[]> {
   return found;
 }
 
+const accounts = ids.length ? ids : await withPositions(25);
+const head = Number(await chain.head());
+// Everything is read at once, so Multicall3 batches it: public RPCs rate-limit hard.
+const pairs = accounts.flatMap((accountId) => ctx.markets.map((m) => ({ accountId, m })));
+const read = await Promise.all(
+  pairs.map(({ accountId, m }) => chain.position(m.perpetual_id, accountId)),
+);
+const open = pairs.map((x, i) => ({ ...x, p: read[i] })).filter((x) => x.p?.side);
+const sums = await Promise.all(
+  open.flatMap(({ m, p }) => [
+    chain.fundingSumAt(m.perpetual_id, Number(p?.entryBlock ?? 0)),
+    chain.fundingSumAt(m.perpetual_id, head),
+  ]),
+);
+
 const rows = [];
-let worst = 0;
-for (const accountId of ids.length ? ids : await withPositions(25)) {
-  const positions = await Promise.all(
-    ctx.markets.map(async (m) => ({ m, p: await chain.position(m.perpetual_id, accountId) })),
-  );
-  for (const { m, p } of positions) {
-    if (!p.side) continue;
-    const pd = m.config.price_decimals;
-    const risk: Position = {
-      side: p.side,
-      size: scaled(Number(p.lots), m.config.size_decimals),
-      entry: effectiveEntryPrice(p.side, Number(p.pricePns), Number(p.residueQ16), pd),
-      deposit: scaled(Number(p.depositCns), cd),
-      funding: scaled(Number(p.premiumPnlCns), cd),
-      maintenance: maintenanceFraction(m),
-    };
-    const mark = scaled(Number(p.markPns), pd);
-    const ours = (p.side === 'long' ? 1 : -1) * risk.size * (mark - risk.entry);
-    const perpl = scaled(Number(p.deltaPnlCns), cd);
-    worst = Math.max(worst, Math.abs(ours - perpl));
-    rows.push({
-      account: accountId,
-      market: symbolOf(m),
-      side: p.side,
-      size: risk.size,
-      entry: risk.entry.toFixed(pd + 2),
-      mark,
-      'pnl airbag': ours.toFixed(4),
-      'pnl perpl': perpl.toFixed(4),
-      liquidation: liquidationPrice(risk).toFixed(pd),
-      'to liq': `${(distanceToLiquidation(risk, mark) * 100).toFixed(2)}%`,
-    });
-  }
+let worstPnl = 0;
+let worstFunding = 0;
+for (const [i, { accountId, m, p }] of open.entries()) {
+  if (!p?.side) continue;
+  // The position as the trading socket reports it, with the entry funding sum from the chain.
+  const ws: PerplPosition = {
+    at: {},
+    mkt: m.id,
+    acc: accountId,
+    pid: 0,
+    st: 1,
+    sd: p.side === 'long' ? 1 : 2,
+    c: p.depositCns.toString(),
+    ep: Number(p.pricePns),
+    epr: Number(p.residueQ16),
+    s: Number(p.lots),
+    efs: sums[2 * i] ?? 0,
+    lv: 0,
+  };
+  const risk = toRiskPosition(ws, m, cd, sums[2 * i + 1] ?? 0);
+  const mark = scaled(Number(p.markPns), m.config.price_decimals);
+  const pnl = (p.side === 'long' ? 1 : -1) * risk.size * (mark - risk.entry);
+  const perplPnl = scaled(Number(p.deltaPnlCns), cd);
+  const perplFunding = scaled(Number(p.premiumPnlCns), cd);
+  worstPnl = Math.max(worstPnl, Math.abs(pnl - perplPnl));
+  worstFunding = Math.max(worstFunding, Math.abs(risk.funding - perplFunding));
+  rows.push({
+    account: accountId,
+    market: symbolOf(m),
+    side: p.side,
+    size: risk.size,
+    mark,
+    'pnl airbag': pnl.toFixed(4),
+    'pnl perpl': perplPnl.toFixed(4),
+    'funding airbag': risk.funding.toFixed(6),
+    'funding perpl': perplFunding.toFixed(6),
+    liquidation: liquidationPrice(risk).toFixed(m.config.price_decimals),
+    'to liq': `${(distanceToLiquidation(risk, mark) * 100).toFixed(2)}%`,
+  });
 }
 if (rows.length === 0) {
   console.log('No open positions on these accounts; pass ids of accounts that have some.');
@@ -77,6 +99,6 @@ if (rows.length === 0) {
 }
 console.table(rows);
 console.log(
-  `${rows.length} positions on ${cfg.network}; largest PnL difference $${worst.toFixed(6)}.`,
+  `${rows.length} positions on ${cfg.network}; largest difference: PnL $${worstPnl.toFixed(6)}, funding $${worstFunding.toFixed(6)}.`,
 );
-if (worst > 0.01) process.exitCode = 1;
+if (worstPnl > 0.01 || worstFunding > 0.01) process.exitCode = 1;

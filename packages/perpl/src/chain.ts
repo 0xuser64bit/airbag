@@ -137,6 +137,8 @@ export interface ChainPosition {
   pricePns: bigint;
   residueQ16: bigint;
   lots: bigint;
+  /** The block the position was opened or last resized at, where its funding sum starts. */
+  entryBlock: bigint;
   /** Perpl's own unrealized PnL at the mark. */
   deltaPnlCns: bigint;
   premiumPnlCns: bigint;
@@ -232,6 +234,7 @@ export function perplChain(
         pricePns: p.pricePNS,
         residueQ16: p.priceResiduePNSQ16,
         lots: p.lotLNS,
+        entryBlock: p.entryBlock,
         deltaPnlCns: p.deltaPnlCNS,
         premiumPnlCns: p.premiumPnlCNS,
         markPns: mark,
