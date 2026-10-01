@@ -1,0 +1,23 @@
+# The Airbag web app on the VM: `next start` on a build made with the public URLs baked in.
+# Server-side reads (save reports, share images) reach the engine directly on localhost.
+[Unit]
+Description=Airbag web app
+After=network-online.target airbag-engine.service
+Wants=network-online.target
+
+[Service]
+User=airbag
+Group=airbag
+WorkingDirectory=/opt/airbag/app/apps/web
+Environment=NODE_ENV=production
+Environment=ENGINE_URL=http://127.0.0.1:8789
+ExecStart=/opt/airbag/node/bin/node node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3089
+Restart=always
+RestartSec=3
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

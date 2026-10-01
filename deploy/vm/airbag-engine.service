@@ -1,0 +1,25 @@
+# The Airbag engine on the VM. Configuration: /etc/airbag/engine.env (written once by
+# provision.sh; edits survive deploys). Bound to localhost; Caddy is the only way in.
+[Unit]
+Description=Airbag engine
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=airbag
+Group=airbag
+WorkingDirectory=/opt/airbag/app
+EnvironmentFile=/etc/airbag/engine.env
+ExecStart=/opt/airbag/node/bin/node apps/engine/src/main.ts
+Restart=always
+RestartSec=3
+# SIGTERM lets the engine stop its guards and close SQLite; it exits within 10 s.
+TimeoutStopSec=15
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/airbag
+
+[Install]
+WantedBy=multi-user.target
