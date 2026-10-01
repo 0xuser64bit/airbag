@@ -39,3 +39,6 @@ indexer/envio-env.d.ts
 # Design-tool working files (review captures, question logs). The design system
 # itself is tracked in apps/web/DESIGN.md.
 .impeccable/
+
+# Local SQLite (the default DATABASE_PATH): sessions, sealed keys, receipts.
+data/
