@@ -26,7 +26,7 @@ import { requireEnv } from './env.ts';
 const cfg = networkFromEnv();
 const ctx = await fetchContext(cfg.apiUrl);
 const cd = collateralDecimals(ctx);
-const onchain = perplChain(cfg.rpcUrl, ctx.instances[0]?.address ?? '');
+const onchain = perplChain(cfg.rpcUrl, ctx.instances[0]?.address ?? '', cfg.chainId);
 const key = ed25519Key(requireEnv('PERPL_API_SECRET'));
 
 const ws = await openSocket(`${cfg.wsUrl}/ws/v1/trading`, () =>

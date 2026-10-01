@@ -2,6 +2,7 @@
 // PerplFoundation/dex-sdk crates/sdk/abi/dex/Exchange.json (MIT).
 
 import { createPublicClient, http, isAddress } from 'viem';
+import { monad, monadTestnet } from 'viem/chains';
 
 const u256 = <N extends string>(name: N) => ({ type: 'uint256', name }) as const;
 
@@ -113,10 +114,21 @@ export interface ChainPosition {
 
 export type PerplChain = ReturnType<typeof perplChain>;
 
-export function perplChain(rpcUrl: string, exchange: string) {
+export function perplChain(
+  rpcUrl: string,
+  exchange: string,
+  chainId: number,
+  fetchFn?: typeof fetch,
+) {
   if (!isAddress(exchange)) throw new Error(`exchange address is not an address: ${exchange}`);
+  const chain = [monad, monadTestnet].find((c) => c.id === chainId);
+  if (!chain) throw new Error(`no Monad chain with id ${chainId}`);
+  // Monad's public RPCs allow 15 requests a second. Reads awaited together, like a lookup's
+  // position in every market, go out as one Multicall3 eth_call instead of one call each.
   const client = createPublicClient({
-    transport: http(rpcUrl, { timeout: 10_000, retryCount: 2 }),
+    chain,
+    batch: { multicall: true },
+    transport: http(rpcUrl, { timeout: 10_000, retryCount: 2, ...(fetchFn ? { fetchFn } : {}) }),
   });
   const read = { address: exchange, abi: exchangeAbi } as const;
   return {

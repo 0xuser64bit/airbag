@@ -54,7 +54,7 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
   if (live && ctx.chain.chain_id !== cfg.network.chainId)
     throw new Error('Perpl context chain does not match PERPL_NETWORK');
   const exchange = ctx.instances[0]?.address ?? '';
-  const chain = live ? perplChain(cfg.network.rpcUrl, exchange) : undefined;
+  const chain = live ? perplChain(cfg.network.rpcUrl, exchange, cfg.network.chainId) : undefined;
 
   const byId = new Map(ctx.markets.map((m) => [m.id, m]));
   const covered = new Set<number>();

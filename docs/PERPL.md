@@ -188,6 +188,11 @@ What follows from it:
   blocks can be abandoned. Public endpoints: `wss://rpc.monad.xyz`, `wss://testnet-rpc.monad.xyz`
   (QuickNode, 50 rps), `wss://rpc-testnet.monadinfra.com` (20 rps). Use a provider plan in
   production. MonadVision and Monadscan are both official explorers.
+- Measured 2026-10-01: `https://testnet-rpc.monad.xyz` refuses bursts with "requests limited to
+  15/sec" and limits `eth_getLogs` to a 100-block range. A wallet lookup reads a position in
+  every market (eight on testnet), so `perplChain` batches concurrent reads into one Multicall3
+  `eth_call` (`0xcA11bde05977b3631167028862bE2a173976CA11`, deployed on both networks). Before
+  that, three of five back-to-back lookups of real testnet accounts failed.
 - Envio HyperIndex supports Monad over HyperSync (`https://143.hypersync.xyz`,
   `https://10143.hypersync.xyz`). The Perpl exchange ABI is not verified on explorers, but
   `dex-sdk` (MIT) ships `crates/sdk/abi/dex/Exchange.json` including `PositionLiquidated`, so

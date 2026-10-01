@@ -57,7 +57,7 @@ if (cfg.network !== 'testnet') throw new Error('the spike only runs on testnet')
 const ctx = await fetchContext(cfg.apiUrl);
 const market = marketBySymbol(ctx, values.market);
 const cd = collateralDecimals(ctx);
-const onchain = perplChain(cfg.rpcUrl, ctx.instances[0]?.address ?? '');
+const onchain = perplChain(cfg.rpcUrl, ctx.instances[0]?.address ?? '', cfg.chainId);
 const usd = (cns: bigint) => scaled(Number(cns), cd);
 
 // Live state from the trading socket. Every message is kept with its receive time for the timeline.
