@@ -255,7 +255,7 @@ a demo-day runbook (`144ef71`), and documentation of what is verified (`fee893a`
 Unchanged launch gates: a funded testnet trim and re-add (now one runbook away), independent
 review, a deployed engine's egress allow-list and alerts, real push delivery, and the optional
 log and indexer. No contract was deployed and no order was sent to Perpl. The simulation demo was
-then hosted on the owner's free VM at https://airbag.92-4-67-109.sslip.io
+then hosted on the owner's free VM at https://airbag.user64bit.world
 ([ADR 0015](adr/0015-free-shared-vm.md)), deployed with `deploy/vm/deploy.sh` and checked end to
 end over HTTPS: a deploy and its save on live Monad testnet blocks, the save report and its share
 image, and the other sites on the VM left as they were.

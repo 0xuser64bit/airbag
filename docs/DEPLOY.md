@@ -10,8 +10,8 @@ Commands assume the repo root.
 
 ## Public demo (simulation)
 
-**Live at https://airbag.92-4-67-109.sslip.io** (engine:
-https://airbag-engine.92-4-67-109.sslip.io/health). What a visitor can click through with no
+**Live at https://airbag.user64bit.world** (engine: https://airbag.user64bit.world/engine/health,
+the API on the app's own origin). What a visitor can click through with no
 wallet extension, funds or key: the real engine, guard and web app on the paper exchange,
 scripted prices on Monad testnet's real blocks ([ADR 0014](adr/0014-simulation-on-monad-blocks.md)).
 It never holds a real key and sends nothing to Perpl, so it needs no master key or egress IP.
@@ -105,9 +105,9 @@ the VM as root. The VM serves other projects too, so Airbag keeps to its own cor
 | Releases, one per commit (the three newest kept) | `/opt/airbag/releases/<sha>`, current one at `/opt/airbag/app` |
 | Node 24, Airbag's own (the system Node is 20) | `/opt/airbag/node` |
 | Engine and web, as user `airbag`, on localhost | `airbag-engine.service` (8789), `airbag-web.service` (3089) |
-| Engine configuration, written once, never overwritten | `/etc/airbag/engine.env` (root:airbag, 0640) |
+| Engine configuration, written once; deploys only sync `WEB_ORIGIN` | `/etc/airbag/engine.env` (root:airbag, 0640) |
 | SQLite | `/var/lib/airbag/airbag-simulation-testnet.db` |
-| TLS and routing | Airbag's marked block in `/etc/caddy/Caddyfile`; backups beside it as `Caddyfile.bak-airbag-*` |
+| TLS and routing: `/engine/*` to the engine, the rest to the web app | Airbag's marked block in `/etc/caddy/Caddyfile`; backups beside it as `Caddyfile.bak-airbag-*` |
 
 ```bash
 ssh ubuntu@92.4.67.109
@@ -116,9 +116,9 @@ curl -s localhost:8789/health                  # mode, head, staleness, accounts
 sudo ln -sfn /opt/airbag/releases/<sha> /opt/airbag/app && sudo systemctl restart airbag-engine airbag-web   # roll back
 ```
 
-The public URLs are baked into each web build. Another hostname means
-`AIRBAG_DOMAIN=... AIRBAG_ENGINE_DOMAIN=... deploy/vm/deploy.sh` and a matching `WEB_ORIGIN` in
-`engine.env` (its first entry is the SIWE domain).
+The public URLs are baked into each web build, and each deploy sets `engine.env`'s `WEB_ORIGIN`
+(the sign-in domain) to match. Another hostname is an A record for the VM and
+`AIRBAG_DOMAIN=<name> deploy/vm/deploy.sh`; Caddy fetches its certificate on the reload.
 
 ### Live mode on the VM
 

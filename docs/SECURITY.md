@@ -41,7 +41,7 @@ A user's Perpl API key. It can't withdraw or transfer (Perpl refuses that for ev
 
 ### Master key
 
-Generate with `openssl rand -base64 32` and keep it only on the engine's host: on the VM, in `/etc/airbag/engine.env` (root:airbag, 0640), which deploys never overwrite. Losing it means every user must link their key again; leaking it together with the database file exposes every stored key. The VM is shared with other projects that have root on it ([ADR 0015](adr/0015-free-shared-vm.md)): acceptable for testnet keys, not for real funds.
+Generate with `openssl rand -base64 32` and keep it only on the engine's host: on the VM, in `/etc/airbag/engine.env` (root:airbag, 0640), where deploys only ever touch `WEB_ORIGIN`. Losing it means every user must link their key again; leaking it together with the database file exposes every stored key. The VM is shared with other projects that have root on it ([ADR 0015](adr/0015-free-shared-vm.md)): acceptable for testnet keys, not for real funds.
 
 ### Rotating the master key
 

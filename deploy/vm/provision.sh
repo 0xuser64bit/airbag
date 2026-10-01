@@ -5,7 +5,7 @@
 # nothing outside /opt/airbag, /var/lib/airbag, /etc/airbag, its two systemd units and its own
 # marked block in /etc/caddy/Caddyfile.
 set -euo pipefail
-: "${SHA:?}" "${DOMAIN:?}" "${ENGINE_DOMAIN:?}" "${NODE_VERSION:?}"
+: "${SHA:?}" "${DOMAIN:?}" "${NODE_VERSION:?}"
 REL=/opt/airbag/releases/$SHA
 NODE=/opt/airbag/node
 
@@ -30,7 +30,7 @@ fi
 # Install and build the release as airbag. The public URLs are baked into the web build.
 sudo -u airbag env HOME=/var/lib/airbag PATH="$NODE/bin:$PATH" COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
   NEXT_TELEMETRY_DISABLED=1 \
-  NEXT_PUBLIC_ENGINE_URL="https://$ENGINE_DOMAIN" NEXT_PUBLIC_SITE_URL="https://$DOMAIN" \
+  NEXT_PUBLIC_ENGINE_URL="https://$DOMAIN/engine" NEXT_PUBLIC_SITE_URL="https://$DOMAIN" \
   bash -c "cd '$REL' &&
     corepack pnpm install --frozen-lockfile --filter '@airbag/engine...' --filter '@airbag/web...' &&
     corepack pnpm --filter @airbag/web build"
@@ -52,6 +52,8 @@ EOF
   chown root:airbag /etc/airbag/engine.env
   chmod 640 /etc/airbag/engine.env
 fi
+# The one setting that follows the deploy: sign-in checks the public hostname as its domain.
+sed -i "s|^WEB_ORIGIN=.*|WEB_ORIGIN=https://$DOMAIN|" /etc/airbag/engine.env
 
 # Switch to the new release and restart.
 install -m 644 "$REL/deploy/vm/airbag-engine.service" "$REL/deploy/vm/airbag-web.service" \
@@ -64,7 +66,7 @@ systemctl restart airbag-engine airbag-web
 # Airbag's Caddy block, between its markers; the other sites stay as they are.
 cf=/etc/caddy/Caddyfile
 block=$(sed -n '/^# >>> airbag/,/^# <<< airbag/p' "$REL/deploy/vm/Caddyfile" |
-  sed "s/AIRBAG_ENGINE_DOMAIN/$ENGINE_DOMAIN/; s/AIRBAG_DOMAIN/$DOMAIN/")
+  sed "s/AIRBAG_DOMAIN/$DOMAIN/")
 others=$(awk '/^# >>> airbag/{skip=1} !skip{print} /^# <<< airbag/{skip=0}' "$cf")
 printf '%s\n\n%s\n' "$others" "$block" >"$cf.airbag"
 if cmp -s "$cf" "$cf.airbag"; then

@@ -14,17 +14,18 @@ which serves the same purpose.
 
 - **Engine and web both run on that VM**, as an unprivileged `airbag` user under two sandboxed
   systemd units bound to localhost (engine 8789, web 3089). Caddy terminates TLS for Airbag's own
-  hostnames, `airbag.92-4-67-109.sslip.io` and `airbag-engine.92-4-67-109.sslip.io`, in a marked
-  block of the shared Caddyfile that is validated and backed up before every reload. sslip.io
-  stands in until there is a real domain: any name pointing at the VM works.
+  hostname, `airbag.user64bit.world`, in a marked block of the shared Caddyfile that is validated
+  and backed up before every reload. The engine's API is served under `/engine` on that same
+  origin: one DNS record (the rest of `*.user64bit.world` points elsewhere) and no CORS preflights.
 - **Airbag brings its own Node 24** in `/opt/airbag/node`; the system Node belongs to the other
   projects.
 - **`deploy/vm/deploy.sh` ships the committed HEAD** with `git archive`. On the VM each commit is
   built in its own release directory and the `app` symlink only moves once install and build
   succeed, so a failed build never takes the running demo down, and rolling back is moving the
   symlink. The three newest releases are kept.
-- Configuration lives in `/etc/airbag/engine.env` (root:airbag, 0640), written once and never
-  overwritten by a deploy. The public URLs are baked into each web build.
+- Configuration lives in `/etc/airbag/engine.env` (root:airbag, 0640), written once; a deploy
+  only keeps its `WEB_ORIGIN` in step with the hostname. The public URLs are baked into each web
+  build.
 - What runs there today is the public **simulation** demo. A live engine can use the VM's IP as
   the egress address on users' key allow-lists.
 

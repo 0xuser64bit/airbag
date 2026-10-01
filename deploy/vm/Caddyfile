@@ -1,19 +1,21 @@
-# Airbag's site blocks, spliced into the VM's /etc/caddy/Caddyfile between the markers by
-# provision.sh. AIRBAG_DOMAIN and AIRBAG_ENGINE_DOMAIN are replaced there; nothing outside the
-# markers is touched.
+# Airbag's site block, spliced into the VM's /etc/caddy/Caddyfile between the markers by
+# provision.sh, with AIRBAG_DOMAIN replaced. Nothing outside the markers is touched.
 # >>> airbag (managed by deploy/vm in the airbag repo)
 AIRBAG_DOMAIN {
-	encode gzip zstd
-	reverse_proxy 127.0.0.1:3089
-}
-
-AIRBAG_ENGINE_DOMAIN {
-	reverse_proxy 127.0.0.1:8789 {
-		# The engine rate-limits per client IP (CLIENT_IP_HEADER=x-real-ip); Caddy sets it from
-		# the connection, so a client can't choose its own.
-		header_up X-Real-IP {remote_host}
-		# The dashboard is a server-sent event stream: no buffering.
-		flush_interval -1
+	# The engine's API under /engine on the app's own origin, so the browser needs no CORS
+	# preflight for it.
+	handle_path /engine/* {
+		reverse_proxy 127.0.0.1:8789 {
+			# The engine rate-limits per client IP (CLIENT_IP_HEADER=x-real-ip); Caddy sets it
+			# from the connection, so a client can't choose its own.
+			header_up X-Real-IP {remote_host}
+			# The dashboard is a server-sent event stream: no buffering.
+			flush_interval -1
+		}
+	}
+	handle {
+		encode gzip zstd
+		reverse_proxy 127.0.0.1:3089
 	}
 }
 # <<< airbag

@@ -4,14 +4,13 @@
 #
 #   deploy/vm/deploy.sh
 #
-# Overrides: AIRBAG_VM (ssh target), AIRBAG_VM_KEY (ssh key), AIRBAG_DOMAIN and
-# AIRBAG_ENGINE_DOMAIN (the public hostnames; any name pointing at the VM works).
+# Overrides: AIRBAG_VM (ssh target), AIRBAG_VM_KEY (ssh key), AIRBAG_DOMAIN (the public
+# hostname, any name pointing at the VM; the engine is served under /engine on it).
 set -euo pipefail
 
 VM=${AIRBAG_VM:-ubuntu@92.4.67.109}
 KEY=${AIRBAG_VM_KEY:-$HOME/.ssh/ssh-key-2026-02-26.key}
-DOMAIN=${AIRBAG_DOMAIN:-airbag.92-4-67-109.sslip.io}
-ENGINE_DOMAIN=${AIRBAG_ENGINE_DOMAIN:-airbag-engine.92-4-67-109.sslip.io}
+DOMAIN=${AIRBAG_DOMAIN:-airbag.user64bit.world}
 NODE_VERSION=24.21.0
 
 cd "$(git rev-parse --show-toplevel)"
@@ -28,15 +27,15 @@ git archive --format=tar HEAD |
     sudo mkdir -p /opt/airbag/releases/$SHA &&
     sudo tar -x -C /opt/airbag/releases/$SHA"
 
-vm "sudo SHA=$SHA DOMAIN=$DOMAIN ENGINE_DOMAIN=$ENGINE_DOMAIN NODE_VERSION=$NODE_VERSION \
+vm "sudo SHA=$SHA DOMAIN=$DOMAIN NODE_VERSION=$NODE_VERSION \
   bash /opt/airbag/releases/$SHA/deploy/vm/provision.sh"
 
 # From outside, through Caddy and its certificates.
 for _ in $(seq 1 30); do
-  curl -fsS -o /dev/null "https://$ENGINE_DOMAIN/ready" 2>/dev/null &&
+  curl -fsS -o /dev/null "https://$DOMAIN/engine/ready" 2>/dev/null &&
     curl -fsS -o /dev/null "https://$DOMAIN/" 2>/dev/null && break
   sleep 2
 done
-curl -fsS "https://$ENGINE_DOMAIN/ready"
+curl -fsS "https://$DOMAIN/engine/ready"
 echo
 echo "Live: https://$DOMAIN"

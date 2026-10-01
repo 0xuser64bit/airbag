@@ -8,7 +8,7 @@ position's margin cushion, it trims with a reduce-only order and puts the net re
 in to move liquidation further away. Trading fees, slippage and outages still matter; protection
 is not guaranteed. It acts through a Perpl API key that cannot withdraw.
 
-**Try it: https://airbag.92-4-67-109.sslip.io** — the simulation, no wallet extension needed:
+**Try it: https://airbag.user64bit.world** — the simulation, no wallet extension needed:
 "Connect a test wallet", "Use a test key", arm, then "Play a wick on BTC" on the dashboard. The
 exchange is paper and the prices are scripted; the blocks are Monad testnet's own.
 
