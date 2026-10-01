@@ -163,6 +163,8 @@ export function createApi(deps: ApiDeps): Server {
       staleReason: st.reason ?? null,
       lagBlocks: st.lagBlocks,
       lastTickMsAgo: engine.lastTickAt ? Date.now() - engine.lastTickAt : null,
+      // Simulation: whether the newest block is Monad's own or the local clock's.
+      ...(deps.sim ? { blocks: deps.sim.onchain ? 'monad' : 'local' } : {}),
       accounts: accounts.length,
       accountsLive: accounts.filter((s) => s === 'live').length,
     };

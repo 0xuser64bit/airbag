@@ -79,6 +79,10 @@ describe('public endpoints', () => {
     const health = await call('GET', '/health');
     expect(health.status).toBe(200);
     expect(health.body).toMatchObject({ ok: true, mode: 'simulation', stale: false });
+    // The test steps the local clock; a real Monad head would read 'monad'.
+    expect(health.body.blocks).toBe('local');
+    app.sim?.onMonadHead(app.feed.head + 1);
+    expect((await call('GET', '/health')).body.blocks).toBe('monad');
     const cfg = await call('GET', '/v1/config');
     expect(cfg.body).toMatchObject({ mode: 'simulation', chainId: 10143 });
     expect(cfg.body.markets.map((m: { symbol: string }) => m.symbol)).toEqual(['BTC', 'ETH']);
