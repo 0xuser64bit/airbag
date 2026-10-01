@@ -200,7 +200,8 @@ Accepted for now, and worth knowing before changing anything near them.
 - The dashboard stream sends the whole state every block to every open tab. Fine for tens of users,
   not thousands.
 - The scope probe uses a high safe uint64 id outside the snapshot, avoiding the old low-id race.
-  Its live acceptance is still unverified; there is no authoritative scope-introspection API.
+  Its proof is the gateway's admission (`mt:3` code 0), which Perpl documents as refused with 403
+  for Read keys. There is no scope-introspection API, and a funded run still has to confirm it.
 - Live startup requires funding and fee schedules. Unknown data blocks protection rather than
   silently valuing funding or fees as zero. Fee estimates can still change at execution time.
 - Pausing mid-deploy leaves recovery pending until re-armed. Target, trim cap and spare policy
