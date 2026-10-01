@@ -350,9 +350,10 @@ describe('abuse', () => {
     expect(big.status).toBe(413);
   });
 
-  it('rate-limits sign-in attempts per address', async () => {
+  it('rate-limits sign-in attempts per address, ten times as loosely in simulation', async () => {
     const statuses: number[] = [];
-    for (let i = 0; i < 25; i++) statuses.push((await call('POST', '/v1/auth/nonce')).status);
+    for (let i = 0; i < 210; i++) statuses.push((await call('POST', '/v1/auth/nonce')).status);
+    expect(statuses.slice(0, 150)).not.toContain(429);
     expect(statuses).toContain(429);
   });
 });

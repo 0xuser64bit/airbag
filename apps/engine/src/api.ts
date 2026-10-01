@@ -96,6 +96,9 @@ const str = (v: unknown, name: string, max = 512): string => {
 export function createApi(deps: ApiDeps): Server {
   const { cfg, store, engine, auth, accounts, log } = deps;
   const limiter = new Limiter();
+  // Per-IP limits protect Perpl's gateway and Monad's RPC, which simulation never calls. A demo
+  // audience on one venue Wi-Fi shares an IP, so simulation allows ten times as much.
+  const scale = cfg.mode === 'simulation' ? 10 : 1;
   const routes: {
     method: string;
     pattern: RegExp;
@@ -121,7 +124,7 @@ export function createApi(deps: ApiDeps): Server {
       method,
       pattern,
       keys,
-      limit: opts.limit ?? 120,
+      limit: (opts.limit ?? 120) * scale,
       auth: opts.auth ?? false,
       handler,
     });
