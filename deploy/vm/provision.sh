@@ -70,7 +70,11 @@ printf '%s\n\n%s\n' "$others" "$block" >"$cf.airbag"
 if cmp -s "$cf" "$cf.airbag"; then
   rm "$cf.airbag"
 else
-  caddy validate --adapter caddyfile --config "$cf.airbag" >/dev/null
+  if ! out=$(caddy validate --adapter caddyfile --config "$cf.airbag" 2>&1); then
+    echo "$out" >&2
+    rm "$cf.airbag"
+    exit 1
+  fi
   cp -a "$cf" "$cf.bak-airbag-$(date +%Y%m%d%H%M%S)"
   mv "$cf.airbag" "$cf"
   systemctl reload caddy
