@@ -43,6 +43,8 @@ const ex = {
   back: fmt.usd(equity(trim.position, 100_000)),
   realized: fmt.usd(-trim.realizedPnl),
   liqLoss: fmt.usd(btc.deposit - returned),
+  // If the move keeps going to the new liquidation price, the smaller position goes too.
+  returnedLater: fmt.usd(counterfactualReturn(trim.position)),
 };
 
 const SAFETY = [
@@ -77,6 +79,10 @@ const FAQ = [
   [
     'Why trim instead of adding margin?',
     'It does both. If your spare margin is enough to push liquidation back to your target, Airbag adds it. If it isn’t, Airbag keeps your spare margin and trims, so you don’t feed a position that’s still in danger.',
+  ],
+  [
+    'What if the price keeps going?',
+    `Then the smaller position can be liquidated too, at its new liquidation price. Because the released margin went back in, that returns less than the first liquidation would have: in the example above, ${ex.returnedLater} at ${ex.newLiq} instead of ${ex.returned} at ${ex.liq}. Airbag pays off when a wick turns before the new line.`,
   ],
   [
     'Will it close my whole position?',

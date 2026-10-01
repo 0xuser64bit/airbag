@@ -98,6 +98,11 @@ account.
   at, the liquidation price.
 - Save value = the current value of the Airbag path − the counterfactual return. Live while the
   position is open, frozen when it closes. The share card snapshots it.
+- **When it costs.** A move that keeps going to the new liquidation price liquidates the smaller
+  position too. The released margin went back in, so that returns `0.8 × MMR'` on the smaller
+  size: less than the first liquidation's `0.8 × MMR`. In the golden example, $1,635 at $87,300
+  instead of $3,200 at $94,000. Airbag pays off when a wick turns before the new line, and the
+  product says so rather than implying a falling market gets cheaper.
 
 ## Golden vectors
 
@@ -127,6 +132,7 @@ BTC long, `n = 1.000`, `E = 100,000`, `M = 10,000`, `r = 4%`, `F = 0`, spare mar
 | Late with 50% cap | capped: 0.500 BTC, liq $88,500 (7.33%) |
 | If mark later hits $94,000: without Airbag | liquidated, $3,200 returned (80% of $4,000 residual) |
 | If mark later hits $94,000: with Airbag | open, equity $5,467 |
+| If mark keeps falling to $87,300: with Airbag | liquidated too, $1,635 returned (80% of the smaller position's residual) |
 | Back at $100,000: without / with | $3,200 / **$8,533** → "kept $5,333" |
 
 ETH long, `n = 2`, `E = 3,000`, `M = 1,200`, `r = 5%`: liquidation $2,550, Balanced line $2,775,

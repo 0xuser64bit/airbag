@@ -138,6 +138,12 @@ describe('golden vectors: save versus liquidation', () => {
     expect(usd(saveValue(withAirbag, 0, counterfactual))).toBe('5,333');
   });
 
+  it('if BTC keeps falling to $87,300, the smaller position is liquidated too: $1,635', () => {
+    // The released margin went back in, so this liquidation returns less than the first.
+    expect(usd(liquidationPrice(position))).toBe('87,300');
+    expect(usd(counterfactualReturn(position))).toBe('1,635');
+  });
+
   it('spare margin Airbag added is not counted as kept', () => {
     expect(saveValue(5_000, 300, 3_200)).toBe(1_500);
   });
