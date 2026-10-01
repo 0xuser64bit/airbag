@@ -198,6 +198,16 @@ describe('deploy paths', () => {
     expect(h.paper.positions.get(BTC)?.s).toBe(100_000);
   });
 
+  it('trims next block when a spare margin add is refused, instead of cooling down', async () => {
+    const h = harness({ spareCns: 10_000_000_000n, failAdds: 1 });
+    await h.run(Array(8).fill(97_000));
+    const d = only(h.store);
+    expect(h.paper.sent.map((f) => f.t)).toEqual([6, 3, 6]);
+    expect(d).toMatchObject({ kind: 'trim', phase: 'done' });
+    expect(d.data.after?.distance).toBeGreaterThanOrEqual(0.0999);
+    expect(d.data.timeline.some((e) => e.text.includes('Trimming instead next block'))).toBe(true);
+  });
+
   it('retries the rest of a partial fill next block', async () => {
     const h = harness({ fillShare: (_lots, attempt) => (attempt === 1 ? 0.5 : 1) });
     await h.run([98_000, 97_000, 97_000, 97_000, 97_000, 97_000, 97_000]);

@@ -55,7 +55,8 @@ A deploy is **two orders**, not one ([ADR 0002](adr/0002-deploy-is-close-then-re
 1. **Spare margin first, only if it is enough.** With the account's unallocated balance `S`, if
    adding `S` alone puts the liquidation price at least `d` away from `T`, send
    `IncreasePositionCollateral` (`t:6`) for the smallest amount that does it. Otherwise add nothing
-   and keep the balance.
+   and keep the balance. If Perpl refuses or fails that add, nothing moved, so the next block
+   trims instead of waiting out a failure cooldown with the position past its line.
 2. **Trim the smallest amount** that puts liquidation at least `d` (default 10%) from the trigger.
    For a long with remaining fraction `s`:
    ```

@@ -525,7 +525,13 @@ export class AccountGuard {
       }
       // A recovered spare-margin deploy must never turn into an unplanned close.
       if (d.kind === 'margin' && d.data.marginAttempt)
-        return await this.addSpare(mkt, d, m, fromCns(d.data.marginAttempt.amount, this.cd), mark);
+        return await this.addSpare(
+          mkt,
+          episode,
+          m,
+          fromCns(d.data.marginAttempt.amount, this.cd),
+          mark,
+        );
       const risk = this.risk(p, m, head);
       const spare = this.spare();
       const policy = {
@@ -546,7 +552,7 @@ export class AccountGuard {
       if (plan.kind === 'none' || (plan.kind === 'trim' && plan.fraction <= 0)) {
         return this.finish(mkt, d, head, 'done', mark);
       }
-      if (plan.kind === 'margin') return await this.addSpare(mkt, d, m, plan.amount, mark);
+      if (plan.kind === 'margin') return await this.addSpare(mkt, episode, m, plan.amount, mark);
       await this.trim(mkt, episode, m, p, risk, plan.fraction, plan.capped, head, mark);
     } catch (err) {
       if (err instanceof DeferredDeploy || d.data.pendingOrder) {
@@ -564,7 +570,8 @@ export class AccountGuard {
     }
   }
 
-  private async addSpare(mkt: number, d: Deploy, m: Market, amount: number, mark: number) {
+  private async addSpare(mkt: number, episode: Episode, m: Market, amount: number, mark: number) {
+    const d = episode.deploy;
     const cns = toCnsFloor(Math.min(amount, this.spare()), this.cd);
     const acc = this.exchange.account?.id ?? 0;
     const before = BigInt(this.exchange.positions.get(mkt)?.c ?? '0');
@@ -576,11 +583,20 @@ export class AccountGuard {
     await this.until(() => BigInt(this.exchange.positions.get(mkt)?.c ?? '0') > before);
     const added = fromCns(BigInt(this.exchange.positions.get(mkt)?.c ?? '0') - before, this.cd);
     if (added <= 0) {
-      this.entry(
-        d,
-        this.exchange.head,
-        `Adding spare margin failed (${outcome.result}${outcome.order ? `, reason ${outcome.order.sr}` : ''}).`,
-      );
+      const why = `${outcome.result}${outcome.order ? `, reason ${outcome.order.sr}` : ''}`;
+      // Refused or failed outright, so nothing moved: trim next block rather than leave the
+      // position past its line through a failure cooldown. An add Perpl reports executed but
+      // the position doesn't show is an inconsistency to check, not something to trim over.
+      if (outcome.result === 'failed' || outcome.result === 'rejected') {
+        delete d.data.marginAttempt;
+        d.kind = 'trim';
+        return this.retryOrStop(
+          mkt,
+          episode,
+          `Adding spare margin failed (${why}). Trimming instead next block.`,
+        );
+      }
+      this.entry(d, this.exchange.head, `Adding spare margin failed (${why}).`);
       return this.finish(mkt, d, this.exchange.head, 'failed');
     }
     d.data.spareAdded += added;
@@ -833,7 +849,7 @@ export class AccountGuard {
     this.entry(
       d,
       this.exchange.head,
-      `${text.replace(/ ?(Trying again|Trimming the rest|Will retry)[^.]*\./, '')} Stopped after ${episode.attempts} attempts.`.trim(),
+      `${text.replace(/ ?(Trying again|Trimming the rest|Trimming instead|Will retry)[^.]*\./, '')} Stopped after ${episode.attempts} attempts.`.trim(),
     );
     const anyFill = (d.data.close?.filledLots ?? 0) > 0 || d.data.spareAdded > 0;
     if (anyFill && !episode.readd)
