@@ -144,7 +144,7 @@ export default async function SavePage({ params }: Props) {
               )}
               <div>
                 <dt>Fee</dt>
-                <dd className="num">$0</dd>
+                <dd className="num">{fmt.fee(save.fee)}</dd>
               </div>
             </dl>
           </section>
