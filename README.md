@@ -8,6 +8,15 @@ position's margin cushion, it trims with a reduce-only order and puts the net re
 in to move liquidation further away. Trading fees, slippage and outages still matter; protection
 is not guaranteed. It acts through a Perpl API key that cannot withdraw.
 
+![The dashboard just after a deploy: the trim, the re-add and the save in the block log, on Monad testnet blocks](docs/img/dashboard-deploy.png)
+
+*A simulated deploy on Monad testnet's real blocks: the line is crossed in block 67,239,006, the
+reduce-only close fills in the next block, the released margin goes back in the one after, and
+the old liquidation price is reached while the trimmed position is still open. The public save
+report it produced:*
+
+![A public save report: $5,333 kept versus a liquidation](docs/img/save-report.png)
+
 ## Why it works
 
 - Perpl can liquidate all or part of a position; the default split of remaining proceeds is 80% to the
