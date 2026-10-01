@@ -37,14 +37,22 @@ Every number in that example is a golden test vector in
 
 ## Status
 
-The product runs end to end against a simulated exchange, in CI and in a browser. It has **not yet
-traded on Perpl**: the testnet verification run needs a funded testnet account and a Trade key (see
-[docs/DEPLOY.md](docs/DEPLOY.md)). Nothing is deployed, and no contract is deployed yet.
+**Works end to end in simulation**, in CI and in a browser: connect, sign in, link a key, arm, and
+a wick through the real engine that trims, re-adds, re-arms and records a save. The prices are
+scripted; the blocks are Monad testnet's own, so a simulated deploy's block log can be opened on
+the explorer.
 
-The 2026-09-27 audit hardened authentication, key changes, order dispatch/recovery, fee handling,
-storage isolation, readiness and browser failure states. It is **demo-ready**, with a credible
-MVP implementation that still needs funded live verification and independent review before users
-rely on it. Full findings, backlog, results and a manual checklist: [docs/MVP-AUDIT.md](docs/MVP-AUDIT.md).
+**Checked against Perpl and Monad testnet without a key** (2026-10-01,
+[details](docs/PERPL.md#checked-against-testnet-on-2026-10-01-without-a-key)): the live engine boots
+on Perpl's context, fees, funding and feeds and reports ready a block behind Monad; it reads real
+traders' accounts from the chain; and its position math reproduces the contract's own unrealized
+PnL on 19 real positions in 8 markets, to under $0.0001. Anyone can rerun that last one:
+`pnpm --filter @airbag/spike check`.
+
+**Not done yet:** Airbag has **not traded on Perpl**. A real trim and re-add needs a disposable
+funded testnet wallet and a Trade key ([runbook](docs/DEPLOY.md#demo-day-a-real-deploy-on-perpl-testnet)).
+Nothing is hosted and no contract is deployed. Independent review comes before anyone relies on
+it with real money. Audit history, backlog and launch gates: [docs/MVP-AUDIT.md](docs/MVP-AUDIT.md).
 
 ## What's here
 
@@ -57,7 +65,7 @@ rely on it. Full findings, backlog, results and a manual checklist: [docs/MVP-AU
 | `contracts/` | `AirbagLog`, a public append-only log of deploys and saves (Foundry). |
 | `indexer/` | Envio HyperIndex over AirbagLog and Perpl's liquidations. |
 | `e2e/` | Playwright journeys with axe accessibility checks. |
-| `spike/` | Scripts for the one-off testnet verification run. |
+| `spike/` | Testnet scripts: a keyless check of the position math against the contract, feed measurements, and the funded verification run. |
 | `design/` | The approved design, as reference artboards. |
 
 ## Run it
@@ -123,6 +131,7 @@ This project is built with AI coding tools, as the hackathon rules allow. What w
 | Research, ADRs, and the documentation in `docs/`, [apps/web/DESIGN.md](apps/web/DESIGN.md) | Claude Code (Anthropic, Claude Opus 5.5) | Pending |
 | Original code, tests and CI through `46d3a4b` | Claude Code (Anthropic, Claude Opus 5.5) | Pending |
 | 2026-09-27 audit, security/reliability/fee corrections, browser resilience, tests and operations documentation | Codex (OpenAI, GPT-6) | Pending |
+| 2026-10-01 live checks against testnet, live-path fixes, per-wallet simulation on Monad's block clock, demo deployment and docs | Claude Code (Anthropic, Claude Opus 5.5) | Pending |
 
 Commits carry no co-author trailer, at the owner's request, so the table above is the disclosure of
 record. It is updated as the owner reviews each part.
