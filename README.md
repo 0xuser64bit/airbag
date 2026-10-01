@@ -34,7 +34,9 @@ liquidation price where it was. A deploy is therefore two orders: the reduce-onl
 ([ADR 0002](docs/adr/0002-deploy-is-close-then-readd.md)). The zero-fee simulation example: a 1 BTC long from
 $100,000 at 10x trims 0.489 BTC at $97,000, liquidation moves from $94,000 to $87,300, and if BTC
 then wicks to $94,000 and back, the trader holds $8,533 instead of the $3,200 a liquidation returns.
-Every number in that example is a golden test vector in
+If instead it keeps falling to $87,300, the smaller position is liquidated too and returns $1,635,
+less than the first liquidation would have, because the released margin went back in: Airbag pays
+off when a wick turns. Every number in that example is a golden test vector in
 [docs/RISK-MODEL.md](docs/RISK-MODEL.md).
 
 ## Why Monad
