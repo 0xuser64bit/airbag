@@ -66,7 +66,7 @@ Node 24 and pnpm 11. Docker is only needed for the contract tests.
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm dev:engine    # the engine in simulation mode on :8787
+pnpm dev:engine    # the engine on :8787: .env.example's defaults (simulation), then your .env
 pnpm dev:web       # the app on :3000
 ```
 

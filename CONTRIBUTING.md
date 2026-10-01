@@ -15,7 +15,7 @@ pnpm format       # biome check --write
 pnpm typecheck    # tsc --noEmit: the workspace packages, the engine, apps/web, e2e
 pnpm test         # vitest run (excludes indexer/ and e2e/)
 
-pnpm dev:engine   # engine on :8787, simulation mode unless ENGINE_MODE=live
+pnpm dev:engine   # engine on :8787: .env.example's defaults (simulation), then your .env
 pnpm dev:web      # web app on :3000
 
 pnpm e2e          # Playwright + axe; starts the engine (simulation) and web if not running
