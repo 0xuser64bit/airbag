@@ -18,6 +18,8 @@ export interface EngineDeps {
   pollMs?: number;
   settleMs?: number;
   staleBlocks?: number;
+  /** Simulation: each wallet's own prices over the shared feed. */
+  feedFor?: (wallet: string) => Feed;
 }
 
 export interface TapeEntry {
@@ -50,7 +52,11 @@ export class Engine {
   }
 
   add(wallet: string, exchange: Exchange): AccountGuard {
-    const guard = new AccountGuard(wallet, exchange, this.deps.store.settings(wallet), this.deps);
+    const feed = this.deps.feedFor?.(wallet) ?? this.deps.feed;
+    const guard = new AccountGuard(wallet, exchange, this.deps.store.settings(wallet), {
+      ...this.deps,
+      feed,
+    });
     this.guards.set(wallet, guard);
     return guard;
   }

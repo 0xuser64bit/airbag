@@ -144,6 +144,8 @@ Enforced in code and covered by tests.
 - **Simulation** (`ENGINE_MODE=simulation`): the same engine, guard and API on paper accounts and
   scripted prices ([ADR 0012](adr/0012-exchange-port-and-simulation.md)). Every screen says so. CI
   and the end-to-end tests run here. The simulation's `POST /v1/sim/*` controls 404 in live mode.
+  Blocks are shared; prices are per wallet (`SimChain.feedFor`), so one visitor's wick or reset
+  never moves another visitor's positions on a public demo engine.
 
 SQLite is bound to mode and chain id. Local default files are
 `data/airbag-<mode>-<network>.db`; an explicit path still must match the stored identity.

@@ -270,6 +270,32 @@ describe('onboarding to a deploy, over HTTP', () => {
     expect(me.body).toMatchObject({ link: null, settings: { armed: false } });
   });
 
+  it("keeps each wallet's simulated prices to itself", async () => {
+    const [a, b] = await Promise.all([signIn(), signIn()]).then((r) => r.map((s) => s.body.token));
+    for (const token of [a, b]) {
+      const body = { apiKey: 'key-token-0000', apiSecret: secret(), ipLocked: true };
+      expect((await call('POST', '/v1/key', { token, body })).status).toBe(200);
+      await call('PUT', '/v1/settings', { token, body: { armed: true } });
+    }
+    const btc = async (token: string) =>
+      (await call('GET', '/v1/state', { token })).body.positions.find(
+        (p: { symbol: string }) => p.symbol === 'BTC',
+      );
+    // A's BTC falls through its line; B's doesn't move and B's airbag stays quiet.
+    await call('POST', '/v1/sim/price', { token: a, body: { symbol: 'BTC', price: 96_000 } });
+    await blocks(6);
+    expect((await btc(a)).mark).toBe(96_000);
+    expect((await btc(b)).mark).toBe(99_420);
+    expect((await call('GET', '/v1/deploys', { token: a })).body).toHaveLength(1);
+    expect((await call('GET', '/v1/deploys', { token: b })).body).toHaveLength(0);
+    // B's reset puts B back to the start and leaves A where it is.
+    await call('POST', '/v1/sim/price', { token: b, body: { symbol: 'BTC', price: 98_000 } });
+    expect((await call('POST', '/v1/sim/reset', { token: b })).status).toBe(200);
+    await blocks(1);
+    expect((await btc(b)).mark).toBe(99_420);
+    expect((await btc(a)).mark).toBe(96_000);
+  });
+
   it('streams dashboard state as server-sent events', async () => {
     const { body: session } = await signIn();
     const res = await fetch(`${base}/v1/stream`, {

@@ -12,7 +12,7 @@ const webUrl = `http://localhost:${webPort}`;
 export default defineConfig({
   testDir: 'e2e',
   testMatch: '*.e2e.ts',
-  // The simulated chain is shared, and a wick moves everyone's BTC: run one test at a time.
+  // Prices are per wallet, but the journeys share one engine and one dev server: one at a time.
   workers: 1,
   fullyParallel: false,
   retries: CI ? 1 : 0,

@@ -357,28 +357,30 @@ export function createApi(deps: ApiDeps): Server {
 
   // ---- Simulation controls (ENGINE_MODE=simulation only) ---------------------------------
 
-  // Lookups are cached 15 s below; a reset moves the shared prices, so it drops the cache.
+  // Lookups are cached 15 s below; a reset moves the wallet's prices, so it drops its entry.
   const lookupCache = new Map<string, { at: number; value: unknown }>();
 
+  // Prices are per wallet: a visitor's wick or reset never moves anyone else's positions.
   route('POST', '/v1/sim/price', { auth: true, limit: 120 }, async (ctx) => {
-    wallet(ctx);
+    const w = wallet(ctx);
     const sim = simOnly();
     const body = await readJson(ctx.req);
     const id = marketId(str(body.symbol, 'symbol', 16));
     const price = Number(body.price);
     if (!Number.isFinite(price) || price <= 0) throw bad('price must be a positive number.');
-    sim.setPrice(id, price);
+    sim.setPrice(id, price, w);
     return { ok: true };
   });
 
   route('POST', '/v1/sim/wick', { auth: true, limit: 20 }, async (ctx) => {
-    wallet(ctx);
+    const w = wallet(ctx);
     const sim = simOnly();
     const body = await readJson(ctx.req);
     const id = marketId(str(body.symbol, 'symbol', 16));
     // The landing page's wick, scaled to the market's sample entry price.
     const entry = id === 16 ? 100_000 : 3_000;
     sim.play(
+      w,
       id,
       LANDING_PATH.map((p) => (p / 100_000) * entry),
     );
@@ -394,10 +396,9 @@ export function createApi(deps: ApiDeps): Server {
     engine.remove(w);
     store.deleteReference(w, 16);
     store.deleteReference(w, 32);
+    sim.reset(w);
     engine.add(w, sim.paper(w, link.accountId));
-    sim.setPrice(16, 99_420);
-    sim.setPrice(32, 3_060);
-    lookupCache.clear();
+    lookupCache.delete(w);
     return { ok: true };
   });
 
@@ -454,7 +455,7 @@ export function createApi(deps: ApiDeps): Server {
       },
       positions: samplePositions(0).flatMap((p) => {
         const m = engine.markets.byId.get(p.mkt);
-        const mark = engine.feed.mark(p.mkt);
+        const mark = deps.sim?.feedFor(address).mark(p.mkt);
         if (!m || mark === undefined) return [];
         const pd = m.config.price_decimals;
         const risk: Position = {

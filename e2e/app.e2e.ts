@@ -31,8 +31,8 @@ test('onboarding to a deploy and a save, as a trader would', async ({ page, wall
   await page.getByRole('button', { name: 'Verify key' }).click();
   await expect(page.getByText(/Key verified/)).toBeVisible();
 
-  // 2b. Reset the shared simulation to its baseline. A wick from an earlier run (or a
-  // retry of this journey) leaves BTC at $100,000; only a fresh engine sits at $99,420.
+  // 2b. Reset puts this wallet's paper account and prices back to the start. Prices are per
+  // wallet, so nothing another journey played can move them; this exercises the reset.
   // A signed-in wallet counts as connected, so connect shows the baseline right away.
   await page.evaluate(async (engineUrl) => {
     const s = JSON.parse(localStorage.getItem('airbag.session') ?? '{}') as { token?: string };

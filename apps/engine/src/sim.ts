@@ -1,9 +1,13 @@
 // Simulation mode (ADR 0012): the real engine, guard and API against a paper exchange and a
 // scripted price feed. Used for development, CI and demos without funds. Everything it shows
 // is labelled as simulated; no transaction hashes are invented.
+//
+// Blocks are shared; prices are per wallet. Each wallet sees the shared marks until it sets or
+// plays its own, so one visitor's wick or reset never moves another visitor's positions.
 
 import type { Context, Market, MarketFeed, PerplPosition } from '@airbag/perpl';
 import { PaperExchange } from './exchange.ts';
+import type { Feed } from './guard.ts';
 
 const market = (
   id: number,
@@ -66,20 +70,48 @@ export const LANDING_PATH = [
   98200, 98600, 98900, 99200, 99100, 99400, 99600, 99500, 99800, 99900, 100000, 100000, 100000,
 ];
 
+interface WalletPrices {
+  /** Scaled marks this wallet has set or played; other markets follow the shared feed. */
+  marks: Map<number, number>;
+  script?: { marketId: number; prices: number[]; i: number };
+}
+
 /** A block clock and scripted marks for the simulated markets. */
 export class SimChain {
   head = 1_000_000;
   readonly feed: MarketFeed;
   private readonly markets: Map<number, Market>;
+  private readonly wallets = new Map<string, WalletPrices>();
   private timer: ReturnType<typeof setInterval> | undefined;
-  private script: { marketId: number; prices: number[]; i: number } | undefined;
 
   constructor(feed: MarketFeed, markets: Market[]) {
     this.feed = feed;
     this.markets = new Map(markets.map((m) => [m.id, m]));
   }
 
+  private prices(wallet: string): WalletPrices {
+    const p = this.wallets.get(wallet) ?? { marks: new Map<number, number>() };
+    this.wallets.set(wallet, p);
+    return p;
+  }
+
+  /** The market as one wallet sees it: the shared feed, with that wallet's own prices. */
+  feedFor(wallet: string): Feed {
+    const { feed } = this;
+    const own = this.prices(wallet).marks;
+    return {
+      get head() {
+        return feed.head;
+      },
+      configs: feed.configs,
+      fundingAt: (id, block) => feed.fundingAt(id, block),
+      staleness: (now) => feed.staleness(now),
+      mark: (id) => own.get(id) ?? feed.mark(id),
+    };
+  }
+
   paper(wallet: string, accountId: number): PaperExchange {
+    const view = this.feedFor(wallet);
     return new PaperExchange({
       wallet,
       accountId,
@@ -87,34 +119,45 @@ export class SimChain {
       positions: samplePositions(accountId),
       markets: this.markets,
       collateralDecimals: 6,
-      markOf: (id) => this.feed.mark(id),
+      markOf: (id) => view.mark(id),
     });
   }
 
-  /** Sets a market's mark, in dollars. It lands with the next block. */
-  setPrice(marketId: number, price: number): void {
+  /** Sets a market's mark in dollars, for one wallet or (without one) the shared feed. */
+  setPrice(marketId: number, price: number, wallet?: string): void {
     const m = this.markets.get(marketId);
     if (!m) throw new Error(`no simulated market ${marketId}`);
     const mrk = Math.round(price * 10 ** m.config.price_decimals);
+    if (wallet !== undefined) {
+      this.prices(wallet).marks.set(marketId, mrk);
+      return;
+    }
     this.feed.apply({
       mt: 9,
       d: { [marketId]: { at: { b: this.head }, orl: mrk, mrk, lst: mrk, bid: mrk, ask: mrk } },
     });
   }
 
-  /** Plays one price per block, like the landing page's replay. */
-  play(marketId: number, prices: number[]): void {
-    this.script = { marketId, prices, i: 0 };
+  /** Plays one price per block for one wallet, like the landing page's replay. */
+  play(wallet: string, marketId: number, prices: number[]): void {
+    this.prices(wallet).script = { marketId, prices, i: 0 };
   }
 
-  /** One block: the next scripted price (if any), then the heartbeat that drives the tick. */
+  /** Back to the shared prices, with no script playing. */
+  reset(wallet: string): void {
+    const p = this.prices(wallet);
+    p.marks.clear();
+    delete p.script;
+  }
+
+  /** One block: each wallet's next scripted price, then the heartbeat that drives the tick. */
   step(): number {
     this.head += 1;
-    const s = this.script;
-    if (s) {
+    for (const [wallet, { script: s }] of this.wallets) {
+      if (!s) continue;
       const p = s.prices[s.i++];
-      if (p !== undefined) this.setPrice(s.marketId, p);
-      if (s.i >= s.prices.length) this.script = undefined;
+      if (p !== undefined) this.setPrice(s.marketId, p, wallet);
+      if (s.i >= s.prices.length) delete this.prices(wallet).script;
     }
     this.feed.apply({ mt: 100, sn: this.head, h: this.head });
     return this.head;

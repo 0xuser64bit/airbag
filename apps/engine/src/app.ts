@@ -114,6 +114,7 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
     (cfg.airbagLog
       ? airbagLog({ ...cfg.airbagLog, chainId: cfg.network.chainId }, byId, store, log)
       : undefined);
+  const sim = live ? undefined : new SimChain(feed, ctx.markets);
   engine = new Engine({
     store,
     log,
@@ -124,8 +125,8 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
     maxAttempts: cfg.maxAttempts,
     demoMove: cfg.demoMove,
     staleBlocks: cfg.staleBlocks,
+    ...(sim ? { feedFor: (wallet: string) => sim.feedFor(wallet) } : {}),
   });
-  const sim = live ? undefined : new SimChain(feed, ctx.markets);
   const alerted = new Map<string, number>();
   const accounts = new Accounts({
     store,

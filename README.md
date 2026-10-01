@@ -74,8 +74,9 @@ Open http://localhost:3000/connect. In simulation, "Connect a test wallet" is a 
 by the page, so the whole flow can be clicked through without a browser extension; an injected
 wallet such as Rabby or MetaMask works too. Sign in, use "Use a test key", arm, and press "Play a
 wick on BTC" on the dashboard: the engine trims, re-adds, re-arms and records a save, and the save
-report has a share card. Everything is labelled as simulated. The simulated prices are shared by
-every account on the engine, and "Reset account" puts them back to the start.
+report has a share card. Everything is labelled as simulated. Each wallet has its own simulated
+prices, so visitors to one engine never move each other's positions, and "Reset account" puts
+that wallet back to the start.
 
 Configuration is `.env` (copy `.env.example`); nothing is needed for simulation. To point the engine
 at Perpl testnet, set `ENGINE_MODE=live`, a `MASTER_KEY` and `PERPL_NETWORK=testnet`, then link a

@@ -746,7 +746,7 @@ export function SimControls({ symbols }: { symbols: string[] }) {
       </div>
       <p className="muted">
         Plays the landing page’s crash-test wick, one price per block, through the real engine on a
-        paper exchange.
+        paper exchange. Only your account’s prices move.
       </p>
       <div className={s.simButtons}>
         {symbols.map((sym) => (
