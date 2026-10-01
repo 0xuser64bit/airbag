@@ -23,6 +23,9 @@ part of that claim simulation can show for real, without funds or keys, is Monad
   already shown only keeps the local clock out.
 - The dashboard marks whether its head is a real Monad block (`block.onchain`) and links real ones
   to the explorer. `SIM_CLOCK=local` keeps the old offline clock; the end-to-end tests use it.
+- Blocks are shared, prices are per wallet (`SimChain.feedFor`): a wallet's set prices and played
+  wicks are its own, and paper accounts never reuse position ids, so visitors to a public demo
+  engine can't move each other's positions or inherit each other's deploys.
 
 ## Consequences
 

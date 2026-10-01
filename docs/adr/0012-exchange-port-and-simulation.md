@@ -1,5 +1,8 @@
 # 0012. One exchange port, a paper exchange, and simulation mode
 
+> **Amended by [0014](0014-simulation-on-monad-blocks.md):** simulation's blocks follow Monad
+> testnet's real heartbeat, with the local clock as a fallback; prices are per wallet.
+
 Date: 23 Sep 2026
 
 ## Context
