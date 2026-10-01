@@ -68,7 +68,7 @@ pnpm --filter @airbag/spike account                            # sign in, read p
 pnpm --filter @airbag/spike deploy add --market BTC --amount 1 --send
 pnpm --filter @airbag/spike deploy trim --market BTC --fraction 0.3 --send
 pnpm --filter @airbag/spike measure 60                         # block time and feed lag, public data only
-pnpm --filter @airbag/spike check 1 2                          # Airbag's position math vs the contract, no key
+pnpm --filter @airbag/spike check                              # Airbag's position math vs the contract, no key
 ```
 
 `account` prints the liquidation price derived from the trading WS beside the one derived from the

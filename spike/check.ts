@@ -2,7 +2,8 @@
 // For each account, reads every market's position onchain and compares the unrealized PnL that
 // Airbag derives (side decoding, the Q16 entry residue, sizes and decimals) with the contract's
 // own deltaPnlCNS, then prints the liquidation price Airbag computes from the same inputs.
-// No key, no funds. Usage: pnpm --filter @airbag/spike check [accountId ...]   (default: 1 2)
+// No key, no funds. Usage: pnpm --filter @airbag/spike check [accountId ...]
+// Without ids it checks the first 25 accounts that hold a position. PERPL_NETWORK picks the chain.
 
 import {
   collateralDecimals,
@@ -22,9 +23,22 @@ const cd = collateralDecimals(ctx);
 const chain = perplChain(cfg.rpcUrl, ctx.instances[0]?.address ?? '', cfg.chainId);
 const ids = process.argv.slice(2).map(Number);
 
+/** The first `want` exchange accounts, by id, that hold a position. */
+async function withPositions(want: number): Promise<number[]> {
+  const found: number[] = [];
+  for (let start = 1; found.length < want && start < 10_000; start += 100) {
+    const batch = await Promise.all(
+      Array.from({ length: 100 }, (_, i) => chain.accountById(start + i)),
+    );
+    if (batch.every((a) => a === null)) break;
+    for (const a of batch) if (a?.hasPositions && found.length < want) found.push(a.id);
+  }
+  return found;
+}
+
 const rows = [];
 let worst = 0;
-for (const accountId of ids.length ? ids : [1, 2]) {
+for (const accountId of ids.length ? ids : await withPositions(25)) {
   const positions = await Promise.all(
     ctx.markets.map(async (m) => ({ m, p: await chain.position(m.perpetual_id, accountId) })),
   );

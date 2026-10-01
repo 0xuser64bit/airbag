@@ -6,30 +6,37 @@ import { monad, monadTestnet } from 'viem/chains';
 
 const u256 = <N extends string>(name: N) => ({ type: 'uint256', name }) as const;
 
+const accountInfo = {
+  type: 'tuple',
+  name: 'accountInfo',
+  components: [
+    u256('accountId'),
+    u256('balanceCNS'),
+    u256('lockedBalanceCNS'),
+    { type: 'uint8', name: 'frozen' },
+    { type: 'address', name: 'accountAddr' },
+    {
+      type: 'tuple',
+      name: 'positions',
+      components: [u256('bank1'), u256('bank2'), u256('bank3'), u256('bank4')],
+    },
+  ],
+} as const;
+
 export const exchangeAbi = [
   {
     type: 'function',
     name: 'getAccountByAddr',
     stateMutability: 'view',
     inputs: [{ type: 'address', name: 'accountAddress' }],
-    outputs: [
-      {
-        type: 'tuple',
-        name: 'accountInfo',
-        components: [
-          u256('accountId'),
-          u256('balanceCNS'),
-          u256('lockedBalanceCNS'),
-          { type: 'uint8', name: 'frozen' },
-          { type: 'address', name: 'accountAddr' },
-          {
-            type: 'tuple',
-            name: 'positions',
-            components: [u256('bank1'), u256('bank2'), u256('bank3'), u256('bank4')],
-          },
-        ],
-      },
-    ],
+    outputs: [accountInfo],
+  },
+  {
+    type: 'function',
+    name: 'getAccountById',
+    stateMutability: 'view',
+    inputs: [u256('accountId')],
+    outputs: [accountInfo],
   },
   {
     type: 'function',
@@ -151,6 +158,21 @@ export function perplChain(
         };
       } catch (err) {
         // The contract reverts for wallets without an account.
+        if (err instanceof Error && /revert/i.test(err.message)) return null;
+        throw err;
+      }
+    },
+    /** An exchange account by id, and whether it holds any position; null if there is none. */
+    async accountById(id: number): Promise<{ id: number; hasPositions: boolean } | null> {
+      try {
+        const a = await client.readContract({
+          ...read,
+          functionName: 'getAccountById',
+          args: [BigInt(id)],
+        });
+        const { bank1, bank2, bank3, bank4 } = a.positions;
+        return { id: Number(a.accountId), hasPositions: (bank1 | bank2 | bank3 | bank4) !== 0n };
+      } catch (err) {
         if (err instanceof Error && /revert/i.test(err.message)) return null;
         throw err;
       }
