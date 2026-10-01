@@ -1,5 +1,7 @@
 # 0004. Hosting: engine on Fly.io with static egress, web on Vercel, Postgres on Neon
 
+> **Superseded by [0015](0015-free-shared-vm.md)** on 1 Oct 2026: engine and web on one free VM.
+
 > **Amended by [0010](0010-engine-owns-state-in-sqlite.md):** no Neon; the engine keeps its state on a Fly volume.
 
 

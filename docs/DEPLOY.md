@@ -1,31 +1,33 @@
 # Deploying Airbag
 
-What lives here: a public simulation demo, a real deploy on testnet for demo day, proving the live
-trading path on testnet, and putting the engine and web app on their hosts. The testnet run has not
-happened yet — Airbag has never traded on Perpl, and it is the gate on shipping live. The steps that
-need an account or funds are the owner's.
+What lives here: the public simulation demo on the free VM, a real deploy on testnet for demo day,
+proving the live trading path on testnet, and operating the VM. The testnet run has not happened
+yet — Airbag has never traded on Perpl, and it is the gate on shipping live. The steps that need an
+account or funds are the owner's. Hosting is one free, shared VM
+([ADR 0015](adr/0015-free-shared-vm.md)).
 
 Commands assume the repo root.
 
 ## Public demo (simulation)
 
-What a visitor can click through with no wallet extension, funds or key: the real engine, guard
-and web app on the paper exchange, scripted prices on Monad testnet's real blocks
-([ADR 0014](adr/0014-simulation-on-monad-blocks.md)). It never holds a real key and sends nothing
-to Perpl, so it needs no master key or egress IP. `fly.demo.toml` is the engine's config.
+**Live at https://airbag.92-4-67-109.sslip.io** (engine:
+https://airbag-engine.92-4-67-109.sslip.io/health). What a visitor can click through with no
+wallet extension, funds or key: the real engine, guard and web app on the paper exchange,
+scripted prices on Monad testnet's real blocks ([ADR 0014](adr/0014-simulation-on-monad-blocks.md)).
+It never holds a real key and sends nothing to Perpl, so it needs no master key or egress IP.
 
-```bash
-fly launch --no-deploy --copy-config --config fly.demo.toml   # pick a unique app name
-fly volumes create airbag_demo_data --size 1 --config fly.demo.toml
-fly secrets set WEB_ORIGIN=https://<web domain> --config fly.demo.toml
-fly deploy --config fly.demo.toml
-curl --fail https://<demo app>.fly.dev/ready
-```
-
-Then deploy the web app as in step 3 with `NEXT_PUBLIC_ENGINE_URL=https://<demo app>.fly.dev`.
 A visitor opens `/connect`, picks "Connect a test wallet", signs in, uses "Use a test key", arms
 and presses "Play a wick on BTC". Each wallet has its own prices, so visitors can't disturb each
 other, and a room sharing one Wi-Fi IP gets ten times the live rate limits.
+
+To deploy a commit, from a clean working tree:
+
+```bash
+deploy/vm/deploy.sh    # about a minute: ships HEAD, builds it on the VM, switches, checks /ready
+```
+
+It needs SSH to the VM (`AIRBAG_VM`, default `ubuntu@92.4.67.109`, key `AIRBAG_VM_KEY`). The first
+run installs everything; later runs only add a release. See step 2 for what it puts where.
 
 ## Demo day: a real deploy on Perpl testnet
 
@@ -93,36 +95,47 @@ trigger, send, fill, re-add, new liquidation.
 
 Nothing goes to mainnet without the owner's explicit approval.
 
-## 2. Engine on Fly.io
+## 2. Operating the VM
+
+`deploy/vm/deploy.sh` ships the committed tree with `git archive`; `deploy/vm/provision.sh` runs on
+the VM as root. The VM serves other projects too, so Airbag keeps to its own corner:
+
+| What | Where |
+|---|---|
+| Releases, one per commit (the three newest kept) | `/opt/airbag/releases/<sha>`, current one at `/opt/airbag/app` |
+| Node 24, Airbag's own (the system Node is 20) | `/opt/airbag/node` |
+| Engine and web, as user `airbag`, on localhost | `airbag-engine.service` (8789), `airbag-web.service` (3089) |
+| Engine configuration, written once, never overwritten | `/etc/airbag/engine.env` (root:airbag, 0640) |
+| SQLite | `/var/lib/airbag/airbag-simulation-testnet.db` |
+| TLS and routing | Airbag's marked block in `/etc/caddy/Caddyfile`; backups beside it as `Caddyfile.bak-airbag-*` |
 
 ```bash
-fly launch --no-deploy --copy-config          # uses fly.toml; pick a unique app name
-fly volumes create airbag_data --size 1       # the SQLite file lives here
-fly ips allocate-egress                       # a static IPv4 + IPv6 pair for the key allow-list
-fly secrets set MASTER_KEY="$(openssl rand -base64 32)"
-fly secrets set WEB_ORIGIN=https://<web domain> ENGINE_EGRESS_IPS=<egress IPv4>/32
-fly secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:<you>
-fly deploy
-curl --fail https://<app>.fly.dev/ready
+ssh ubuntu@92.4.67.109
+journalctl -u airbag-engine -f                 # JSON-lines logs; also airbag-web
+curl -s localhost:8789/health                  # mode, head, staleness, accounts, which clock
+sudo ln -sfn /opt/airbag/releases/<sha> /opt/airbag/app && sudo systemctl restart airbag-engine airbag-web   # roll back
 ```
 
-- Pick the region with the lowest round trip to `app.perpl.xyz` (`fly ping` from a few regions) and
-  set `primary_region` in `fly.toml`.
-- `ENGINE_MODE` defaults to `live`. For a public demo without funds, set `ENGINE_MODE=simulation`
-  on a separate app; the UI labels everything as simulated.
-- VAPID keys: `npx web-push generate-vapid-keys`. Without them, push is off and the UI says so.
-- Keep one machine: the engine is a single process by design
-  ([ADR 0003](adr/0003-engine-runtime.md)). `min_machines_running = 1` and auto-stop are already
-  set in `fly.toml`, because protection must never sleep.
-- Verify your provider's volume snapshot policy. Before migration or key rotation, make a
-  consistent SQLite snapshot using the native backup command described below. Copying only
-  the live `.db` file can omit committed rows still in its WAL.
+The public URLs are baked into each web build. Another hostname means
+`AIRBAG_DOMAIN=... AIRBAG_ENGINE_DOMAIN=... deploy/vm/deploy.sh` and a matching `WEB_ORIGIN` in
+`engine.env` (its first entry is the SIWE domain).
+
+### Live mode on the VM
+
+The VM's public IP is fixed for the instance's life, so it can be the egress address on users' key
+allow-lists. Set in `/etc/airbag/engine.env`: `ENGINE_MODE=live`, a `MASTER_KEY`
+(`openssl rand -base64 32`), `ENGINE_EGRESS_IPS=92.4.67.109/32`, a new `DATABASE_PATH` (a
+simulation file is refused in live mode), optionally the VAPID keys
+(`npx web-push generate-vapid-keys`), then `sudo systemctl restart airbag-engine`. The VM is shared
+with other projects that administer it as root: fine for testnet, not for real funds
+([ADR 0015](adr/0015-free-shared-vm.md)). Put an uptime check on `/ready` either way; while the engine
+is down, nothing is trimmed.
 
 ### Database binding, backup and restore
 
-Default local files are `data/airbag-<mode>-<network>.db`. Fly sets an explicit
-`/data/airbag.db`; the file records mode and chain id and rejects a mismatch. Separate live and
-simulation deployments need separate files/volumes. Live mode refuses `:memory:`.
+Default local files are `data/airbag-<mode>-<network>.db`; the VM sets an explicit path. The file
+records mode and chain id and rejects a mismatch. Separate live and simulation deployments need
+separate files. Live mode refuses `:memory:`.
 
 For an existing populated file created before environment binding, stop the engine, inspect its
 source environment and take a backup. Then adopt it explicitly; this command is an assertion by
@@ -138,41 +151,40 @@ file. Select that same `DATABASE_PATH` when starting the engine; never switch id
 past a rejection. Do not reuse a mainnet file for tests.
 
 The `backup` command uses SQLite's online backup API, works while the engine is running and
-refuses to overwrite an existing destination. On the Fly image, run from `/app/apps/engine`:
+refuses to overwrite an existing destination. Copying only the live `.db` file can omit committed
+rows still in its WAL. On the VM:
 
 ```bash
-DATABASE_PATH=/data/airbag.db node src/cli.ts backup /data/airbag-backup-2026-09-27.db
+# on the VM
+sudo -u airbag env DATABASE_PATH=/var/lib/airbag/airbag-simulation-testnet.db \
+  /opt/airbag/node/bin/node /opt/airbag/app/apps/engine/src/cli.ts backup /var/lib/airbag/backup-2026-10-01.db
+sudo install -m 600 -o ubuntu /var/lib/airbag/backup-2026-10-01.db ~ubuntu/
+# from your machine
+scp -i <key> ubuntu@92.4.67.109:backup-2026-10-01.db .
 ```
 
-Download the resulting backup with `fly ssh sftp get /data/airbag-backup-2026-09-27.db` and keep an
-encrypted copy off the engine volume. Restore with the engine stopped: preserve the existing DB,
-WAL and SHM files together, restore the backup to a clean target path, set `DATABASE_PATH`, keep
-the matching master keys, and start once. Check `/ready`, linked accounts, settings and receipts.
+Keep an encrypted copy off the VM. Restore with the engine stopped: preserve the existing DB, WAL
+and SHM files together, restore the backup to a clean target path, set `DATABASE_PATH`, keep the
+matching master keys, and start once. Check `/ready`, linked accounts, settings and receipts.
 A restore retains pending orders; restart waits out their recorded execution window before
 reconciliation. File migration and backup/reopen are automated tests; a host disaster-recovery
 drill is still required.
 
-## 3. Web on Vercel
-
-- Import the repo, set the root directory to `apps/web`. Install command
-  `pnpm install --frozen-lockfile`; build command `pnpm build`.
-- Environment: `NEXT_PUBLIC_ENGINE_URL=https://<app>.fly.dev`,
-  `NEXT_PUBLIC_SITE_URL=https://<web domain>`, optionally `INDEXER_URL` (step 5).
-- Add the web domain to the engine's `WEB_ORIGIN` (step 2). The first entry is the SIWE domain.
-
-## 4. AirbagLog (optional)
+## 3. AirbagLog (optional)
 
 See `contracts/README.md`. Deploy with a funded deployer, use a separate low-value wallet as the
-writer, then `fly secrets set AIRBAG_LOG_ADDRESS=... AIRBAG_LOG_PRIVATE_KEY=...`. Record the
-address and deploy transaction in the root README.
+writer, then add `AIRBAG_LOG_ADDRESS` and `AIRBAG_LOG_PRIVATE_KEY` to a live engine's
+`/etc/airbag/engine.env` (simulation refuses a real log). Record the address and deploy transaction
+in the root README.
 
-## 5. Indexer on Envio Cloud (optional)
+## 4. Indexer on Envio Cloud (optional)
 
 See `indexer/README.md`. Needs an `ENVIO_API_TOKEN`. Set `ENVIO_CHAIN_ID`,
-`ENVIO_AIRBAG_LOG_ADDRESS` and, for mainnet, `ENVIO_PERPL_EXCHANGE`, then set the web app's
-`INDEXER_URL` to the GraphQL endpoint.
+`ENVIO_AIRBAG_LOG_ADDRESS` and, for mainnet, `ENVIO_PERPL_EXCHANGE`, then give the web app
+`INDEXER_URL`, the GraphQL endpoint: `sudo systemctl edit airbag-web`, add
+`[Service]` and `Environment=INDEXER_URL=...`, and restart it.
 
-## 6. Before inviting users
+## 5. Before inviting users
 
 - Step 1 passed: liquidation price matches Perpl's UI, a close fills, `t:6` re-adds, and the
   liquidation price moves.

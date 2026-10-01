@@ -14,14 +14,11 @@ flowchart LR
     B["Browser / PWA<br/>injected wallet (EIP-6963)"]
   end
 
-  subgraph Vercel
+  subgraph VM["One VM (Oracle Cloud free tier) · Caddy TLS · fixed public IP"]
     W["apps/web · Next.js<br/>landing, onboarding, dashboard,<br/>save report + share image"]
-  end
-
-  subgraph Fly["Fly.io · one machine · static egress IP"]
     E["apps/engine · Node 24<br/>market feed, one guard per account,<br/>per-block checks and deploys"]
     API["HTTP API · SIWE bearer sessions<br/>key link · settings · SSE · receipts"]
-    DB[("SQLite on a volume<br/>sessions, settings,<br/>sealed keys, deploys")]
+    DB[("SQLite<br/>sessions, settings,<br/>sealed keys, deploys")]
     E --- API
     E --- DB
   end
@@ -56,7 +53,8 @@ flowchart LR
   IDX -- "HyperSync" --> LOG
 ```
 
-The web app has no database and no secrets: everything goes through the engine's API
+Both run on one free, shared VM behind Caddy ([ADR 0015](adr/0015-free-shared-vm.md)). The web
+app has no database and no secrets: everything goes through the engine's API
 ([ADR 0010](adr/0010-engine-owns-state-in-sqlite.md)). The engine is the only process that can
 decrypt a Perpl key ([ADR 0006](adr/0006-api-key-custody.md)).
 
@@ -153,7 +151,7 @@ SQLite is bound to mode and chain id. Local default files are
 `data/airbag-<mode>-<network>.db`; an explicit path still must match the stored identity.
 Populated legacy files require an operator backup and explicit binding. `/health` provides
 process diagnostics; `/ready` returns 503 when the engine/feed cannot protect positions.
-Fly, Docker and CI use readiness. It is a service-wide check; individual key problems remain
+The VM deploy, Docker and CI use readiness. It is a service-wide check; individual key problems remain
 visible in each account's status.
 
 ## The web app

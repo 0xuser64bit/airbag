@@ -34,7 +34,7 @@ export interface Config {
   vapid?: { publicKey: string; privateKey: string; subject: string };
   airbagLog?: { address: `0x${string}`; privateKey: `0x${string}`; rpcUrl: string };
   logLevel: 'debug' | 'info' | 'warn' | 'error';
-  /** Header with the client IP behind a proxy (rate limits), e.g. fly-client-ip. */
+  /** Header with the client IP behind a proxy (rate limits), e.g. x-real-ip set by Caddy. */
   clientIpHeader?: string;
 }
 

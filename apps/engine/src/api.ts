@@ -25,7 +25,7 @@ export interface ApiDeps {
   chain?: PerplChain;
   sim?: SimChain;
   vapidPublicKey?: string;
-  /** Header that carries the client IP behind a proxy, e.g. fly-client-ip. */
+  /** Header that carries the client IP behind a proxy, e.g. x-real-ip set by Caddy. */
   clientIpHeader?: string;
 }
 

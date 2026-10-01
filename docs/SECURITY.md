@@ -41,14 +41,14 @@ A user's Perpl API key. It can't withdraw or transfer (Perpl refuses that for ev
 
 ### Master key
 
-Generate with `openssl rand -base64 32` and keep it only in the host's secret store (`fly secrets set MASTER_KEY=...`). Losing it means every user must link their key again; leaking it together with the database file exposes every stored key.
+Generate with `openssl rand -base64 32` and keep it only on the engine's host: on the VM, in `/etc/airbag/engine.env` (root:airbag, 0640), which deploys never overwrite. Losing it means every user must link their key again; leaking it together with the database file exposes every stored key. The VM is shared with other projects that have root on it ([ADR 0015](adr/0015-free-shared-vm.md)): acceptable for testnet keys, not for real funds.
 
 ### Rotating the master key
 
-1. Generate a new key. Set `MASTER_KEY` to it, `MASTER_KEY_VERSION` to the next version, and keep the old one as `MASTER_KEY_<old version>`. Deploy.
+1. Generate a new key. Set `MASTER_KEY` to it, `MASTER_KEY_VERSION` to the next version, and keep the old one as `MASTER_KEY_<old version>`. Restart the engine.
 2. Take a SQLite backup (see DEPLOY), then run `node --env-file-if-exists=.env apps/engine/src/cli.ts rotate-master-key`. It re-wraps each stored key's data key under the new master key, proving each new envelope opens before replacing the old one. The ciphertexts don't change.
 3. Run `node --env-file-if-exists=.env apps/engine/src/cli.ts check-keys`: every key should report the new version. Set `DATABASE_PATH` to the existing target file for both commands.
-4. Remove `MASTER_KEY_<old version>` and deploy.
+4. Remove `MASTER_KEY_<old version>` and restart the engine.
 
 ### If the database or a key may have leaked
 
