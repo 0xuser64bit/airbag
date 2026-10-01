@@ -18,7 +18,7 @@ scope probe's admission and observed fees.
 |---|---|
 | Live engine boot: context, fee schedules, funding seed, market-data and Monad `newHeads` | Ready in under a second, 1 block behind Monad, `/ready` 200 |
 | Wallet lookup of real accounts (8 markets each) | Works; needed Multicall3 batching under the public RPC's 15 requests/s |
-| Position math vs the contract: `pnpm --filter @airbag/spike check` | Side decoding, Q16 entry residue, sizes and decimals reproduce `getPositionV2`'s own `deltaPnlCNS` on 19 positions in 8 markets, longs and shorts, worst difference under $0.0001 |
+| Position math vs the contract: `pnpm --filter @airbag/spike check` | Side decoding, Q16 entry residue, sizes and decimals reproduce `getPositionV2`'s own `deltaPnlCNS` on 19 testnet positions in 8 markets and, with `PERPL_NETWORK=mainnet`, 37 real mainnet traders' positions in 10 markets, longs and shorts, worst difference under $0.0001. Three of those mainnet positions were 1.75–2.65% from liquidation |
 | Maintenance margin vs size: `getMarginFractions(perpId, lots)` | Flat per market at every size tried, 1e-2 to 1e4 BTC: BTC 2500 (4%), ETH 2000 (5%), matching context |
 | Trading sign-in with an unknown key | Closed with 3401 `unauthorized`; the client reports "rejected" |
 | `Amount` (`a` on `t:6`, `c`, `b`) | Documented as a decimal string of the scaled integer: `min_account_open_amount` is `"100000000"`, 100 AUSD at 6 dp. Airbag sends CNS as a decimal string; execution is still unverified |
@@ -39,7 +39,7 @@ insurance and ADL, funding), `PerplFoundation/dex-sdk` (`state/position.rs`, bun
 | RPC | `https://rpc.monad.xyz` | `https://testnet-rpc.monad.xyz` |
 | Exchange | `0x34B6552d57a35a1D042CcAe1951BD1C370112a6F` | `0x1964C32f0bE608E7D29302AFF5E61268E72080cc` |
 | Collateral | AUSD `0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a` (6 dp) | AUSD `0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC` (6 dp) |
-| Markets | BTC 1, MON 10, ETH 20, SOL 31, HYPE 40, ZEC 50, LIT 60, PUMP 90 | BTC 16, ETH 32, SOL 48, MON 64, ZEC 256, LIT 272, PUMP 320 |
+| Markets | BTC 1, MON 10, ETH 20, SOL 31, HYPE 40, ZEC 50, LIT 60, VVV 70, PUMP 90, NEAR 100 | BTC 16, ETH 32, SOL 48, MON 64, ZEC 256, LIT 272, PUMP 320, NEAR 336 |
 
 The api-docs README's testnet collateral address is stale; the live context is correct. Read
 everything network-specific from `GET /api/v1/pub/context` at startup anyway
@@ -48,8 +48,8 @@ everything network-specific from `GET /api/v1/pub/context` at startup anyway
 `order_ttl_blocks`.**
 
 `config.maintenance_margin` is **leverage in hundredths** (2500 = 25x = 4%), not a percentage, so
-`r = 100 / maintenance_margin`. Mainnet today: BTC 4%, ETH 5%, SOL 5%, MON 5%, HYPE 5%, ZEC 5.56%,
-LIT 10%, PUMP 10%. Testnet differs (MON 20%, ZEC 10%).
+`r = 100 / maintenance_margin`. Mainnet on 2026-10-01: BTC 4%, ETH 5%, SOL 5%, MON 5%, HYPE 5%,
+ZEC 5.56%, LIT, VVV, PUMP and NEAR 10%. Testnet differs (MON 20%, ZEC 10%).
 
 ## Three things a key needs
 

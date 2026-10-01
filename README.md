@@ -55,8 +55,9 @@ the explorer.
 [details](docs/PERPL.md#checked-against-testnet-on-2026-10-01-without-a-key)): the live engine boots
 on Perpl's context, fees, funding and feeds and reports ready a block behind Monad; it reads real
 traders' accounts from the chain; and its position math reproduces the contract's own unrealized
-PnL on 19 real positions in 8 markets, to under $0.0001. Anyone can rerun that last one:
-`pnpm --filter @airbag/spike check`.
+PnL to under $0.0001 on 19 testnet positions and on 37 real traders' positions on Perpl mainnet,
+in 10 markets. Three of those mainnet traders were under 3% from liquidation. Anyone can rerun the
+check: `pnpm --filter @airbag/spike check` (add `PERPL_NETWORK=mainnet` and account ids).
 
 **Not done yet:** Airbag has **not traded on Perpl**. A real trim and re-add needs a disposable
 funded testnet wallet and a Trade key ([runbook](docs/DEPLOY.md#demo-day-a-real-deploy-on-perpl-testnet)).
