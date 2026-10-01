@@ -22,6 +22,8 @@ pnpm e2e          # Playwright + axe; starts the engine (simulation) and web if 
 pnpm contracts:test   # Foundry via its Docker image
 
 pnpm --filter @airbag/indexer codegen && pnpm --filter @airbag/indexer test
+
+pnpm --filter @airbag/spike check   # position math vs Perpl's contract on testnet, no key
 ```
 
 Operator commands, on the machine that has the engine's environment:
