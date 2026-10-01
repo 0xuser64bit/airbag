@@ -71,22 +71,41 @@ export const LANDING_PATH = [
 ];
 
 interface WalletPrices {
-  /** Scaled marks this wallet has set or played; other markets follow the shared feed. */
+  /** Scaled marks this wallet has set; other markets follow the shared feed. */
   marks: Map<number, number>;
-  script?: { marketId: number; prices: number[]; i: number };
+  /** A scripted path: one scaled price per block from `start`, the last one holding. */
+  script?: { marketId: number; prices: number[]; start: number };
 }
 
-/** A block clock and scripted marks for the simulated markets. */
+/**
+ * The simulated markets' prices and their block clock. The clock is either local or Monad's
+ * own: Perpl's public heartbeat, the same blocks the live engine checks. Following Monad, the
+ * local clock steps in only while that heartbeat is quiet, continuing from its last head.
+ */
 export class SimChain {
-  head = 1_000_000;
   readonly feed: MarketFeed;
   private readonly markets: Map<number, Market>;
   private readonly wallets = new Map<string, WalletPrices>();
   private timer: ReturnType<typeof setInterval> | undefined;
+  /** Where the local clock starts when it has never seen a Monad head. */
+  private origin = 1_000_000;
+  private lastLocal = 0;
+  /** When Monad's heartbeat last arrived (or until when to wait for the first one). */
+  private monadAt = 0;
 
   constructor(feed: MarketFeed, markets: Market[]) {
     this.feed = feed;
     this.markets = new Map(markets.map((m) => [m.id, m]));
+  }
+
+  /** The newest head, whichever clock made it. */
+  get head(): number {
+    return Math.max(this.feed.head, this.origin);
+  }
+
+  /** True when the newest head is a real Monad block rather than one the local clock made. */
+  get onchain(): boolean {
+    return this.feed.head > 0 && this.feed.head !== this.lastLocal;
   }
 
   private prices(wallet: string): WalletPrices {
@@ -95,10 +114,16 @@ export class SimChain {
     return p;
   }
 
+  private scaled(marketId: number, price: number): number {
+    const m = this.markets.get(marketId);
+    if (!m) throw new Error(`no simulated market ${marketId}`);
+    return Math.round(price * 10 ** m.config.price_decimals);
+  }
+
   /** The market as one wallet sees it: the shared feed, with that wallet's own prices. */
   feedFor(wallet: string): Feed {
     const { feed } = this;
-    const own = this.prices(wallet).marks;
+    const own = this.prices(wallet);
     return {
       get head() {
         return feed.head;
@@ -106,7 +131,12 @@ export class SimChain {
       configs: feed.configs,
       fundingAt: (id, block) => feed.fundingAt(id, block),
       staleness: (now) => feed.staleness(now),
-      mark: (id) => own.get(id) ?? feed.mark(id),
+      mark: (id) => {
+        const s = own.script;
+        if (s?.marketId === id && feed.head >= s.start)
+          return s.prices[Math.min(feed.head - s.start, s.prices.length - 1)];
+        return own.marks.get(id) ?? feed.mark(id);
+      },
     };
   }
 
@@ -125,11 +155,11 @@ export class SimChain {
 
   /** Sets a market's mark in dollars, for one wallet or (without one) the shared feed. */
   setPrice(marketId: number, price: number, wallet?: string): void {
-    const m = this.markets.get(marketId);
-    if (!m) throw new Error(`no simulated market ${marketId}`);
-    const mrk = Math.round(price * 10 ** m.config.price_decimals);
+    const mrk = this.scaled(marketId, price);
     if (wallet !== undefined) {
-      this.prices(wallet).marks.set(marketId, mrk);
+      const p = this.prices(wallet);
+      p.marks.set(marketId, mrk);
+      if (p.script?.marketId === marketId) delete p.script;
       return;
     }
     this.feed.apply({
@@ -138,9 +168,10 @@ export class SimChain {
     });
   }
 
-  /** Plays one price per block for one wallet, like the landing page's replay. */
+  /** Plays one price per block for one wallet from the next block, like the landing's replay. */
   play(wallet: string, marketId: number, prices: number[]): void {
-    this.prices(wallet).script = { marketId, prices, i: 0 };
+    const path = prices.map((p) => this.scaled(marketId, p));
+    this.prices(wallet).script = { marketId, prices: path, start: this.head + 1 };
   }
 
   /** Back to the shared prices, with no script playing. */
@@ -150,21 +181,29 @@ export class SimChain {
     delete p.script;
   }
 
-  /** One block: each wallet's next scripted price, then the heartbeat that drives the tick. */
+  /** One local block after the newest head: the heartbeat that drives the engine's tick. */
   step(): number {
-    this.head += 1;
-    for (const [wallet, { script: s }] of this.wallets) {
-      if (!s) continue;
-      const p = s.prices[s.i++];
-      if (p !== undefined) this.setPrice(s.marketId, p, wallet);
-      if (s.i >= s.prices.length) delete this.prices(wallet).script;
-    }
-    this.feed.apply({ mt: 100, sn: this.head, h: this.head });
-    return this.head;
+    const h = this.head + 1;
+    this.lastLocal = h;
+    this.feed.apply({ mt: 100, sn: h, h });
+    return h;
   }
 
-  start(blockMs = 300): void {
-    this.timer ??= setInterval(() => this.step(), blockMs);
+  /** A head from Monad's heartbeat. Older than what is already shown, it only keeps the local clock out. */
+  onMonadHead(h: number): void {
+    this.monadAt = Date.now();
+    if (h > this.feed.head) this.feed.apply({ mt: 100, sn: h, h });
+  }
+
+  /**
+   * Runs the local clock. Following Monad, it waits up to 3 s for the first heartbeat and then
+   * steps only while the heartbeat has been quiet for a second.
+   */
+  start(blockMs = 300, followMonad = false): void {
+    if (followMonad) this.monadAt = Date.now() + 2_000;
+    this.timer ??= setInterval(() => {
+      if (Date.now() - this.monadAt >= 1_000) this.step();
+    }, blockMs);
   }
 
   stop(): void {

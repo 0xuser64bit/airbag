@@ -133,4 +133,21 @@ describe('MarketFeed', () => {
     server.last.push({ mt: 100, sn: 7, h: 7 });
     expect(open.head).toBe(7);
   });
+
+  it('can follow the heartbeat alone (the simulation clock)', async () => {
+    const server = fakeServer();
+    open = new MarketFeed({
+      url: 'wss://perpl.test/ws/v1/market-data',
+      chainId: 10143,
+      markets: [],
+      staleBlocks: 3,
+      streams: ['heartbeat'],
+      WebSocket: server.WebSocket,
+    });
+    open.start();
+    await flush();
+    expect(server.last.sent).toEqual([
+      { mt: 5, subs: [{ stream: 'heartbeat@10143', subscribe: true }] },
+    ]);
+  });
 });

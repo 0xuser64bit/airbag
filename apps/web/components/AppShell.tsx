@@ -149,7 +149,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 {reconnecting ? 'Reconnecting' : data.block.stale ? 'Stale' : 'Live'}
               </Annunciator>
               <span className={`num ${s.block}`}>
-                <Readout value={fmt.block(data.block.head)} />
+                {data.block.onchain ? (
+                  <a
+                    className={s.blockLink}
+                    href={`${data.explorerUrl}/block/${data.block.head}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    title="This Monad block on the explorer"
+                  >
+                    <Readout value={fmt.block(data.block.head)} />
+                  </a>
+                ) : (
+                  <Readout value={fmt.block(data.block.head)} />
+                )}
                 <span className={`faint ${s.age}`}>
                   {age === undefined ? '' : ` · ${age.toFixed(1)} s ago`}
                 </span>

@@ -39,6 +39,8 @@ export interface MarketFeedOptions {
   monadWsUrl?: string;
   /** Called on every Perpl heartbeat: the per-block tick. */
   onBlock?: (head: number) => void;
+  /** Streams to follow. Default: heartbeat, market-state, funding and market-config. */
+  streams?: readonly string[];
   onState?: (connected: boolean, reason?: string) => void;
   WebSocket?: WebSocketCtor;
 }
@@ -158,7 +160,7 @@ export class MarketFeed {
   }
 
   private async perplLoop() {
-    const streams = ['heartbeat', 'market-state', 'funding', 'market-config'];
+    const streams = this.opts.streams ?? ['heartbeat', 'market-state', 'funding', 'market-config'];
     const subscribe = () =>
       JSON.stringify({
         mt: MT.Subscribe,

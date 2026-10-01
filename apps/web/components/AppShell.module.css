@@ -83,6 +83,14 @@
   color: var(--text-2);
   white-space: nowrap;
 }
+.blockLink {
+  color: inherit;
+  text-decoration: none;
+}
+.blockLink:hover {
+  color: var(--bone);
+  text-decoration: underline;
+}
 
 .offline {
   padding: 10px var(--gutter);

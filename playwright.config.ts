@@ -37,6 +37,8 @@ export default defineConfig({
       reuseExistingServer: false,
       env: {
         ENGINE_MODE: 'simulation',
+        // A local 300 ms block clock: deterministic timing, and no network in CI.
+        SIM_CLOCK: 'local',
         DATABASE_PATH: ':memory:',
         WEB_ORIGIN: webUrl,
         HOST: '127.0.0.1',

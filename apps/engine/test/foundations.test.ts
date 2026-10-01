@@ -111,6 +111,9 @@ describe('config', () => {
     expect(cfg.markets).toEqual(['BTC', 'ETH', 'SOL']);
     expect(cfg.demoWallets.has(WALLET)).toBe(true);
     expect(cfg.network.network).toBe('testnet');
+    expect(cfg.simClock).toBe('monad');
+    expect(loadConfig({ ENGINE_MODE: 'simulation', SIM_CLOCK: 'local' }).simClock).toBe('local');
+    expect(() => loadConfig({ ENGINE_MODE: 'simulation', SIM_CLOCK: 'wall' })).toThrow(/SIM_CLOCK/);
     expect(() => loadConfig({ MASTER_KEY: KEY_A, WEB_ORIGIN: 'https://a.example/path' })).toThrow();
     expect(() => loadConfig({ MASTER_KEY: KEY_A, STALE_BLOCKS: '0' })).toThrow(/STALE_BLOCKS/);
     expect(() =>

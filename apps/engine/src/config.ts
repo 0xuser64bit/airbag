@@ -10,6 +10,11 @@ export interface Config {
   network: NetworkConfig;
   /** `simulation` runs the same engine against a paper exchange and scripted prices. */
   mode: 'live' | 'simulation';
+  /**
+   * Simulation's block clock: `monad` follows Perpl's public heartbeat (real Monad blocks) and
+   * falls back to a local clock while it is quiet; `local` never connects anywhere.
+   */
+  simClock: 'monad' | 'local';
   host: string;
   port: number;
   databasePath: string;
@@ -63,6 +68,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     // Simulation stores no real keys; an ephemeral master key keeps the code path identical.
     master = { current: 1, keys: new Map([[1, crypto.getRandomValues(Buffer.alloc(32))]]) };
   }
+  const simClock = env.SIM_CLOCK ?? 'monad';
+  if (simClock !== 'monad' && simClock !== 'local')
+    throw new Error(`SIM_CLOCK must be monad or local, got ${simClock}`);
   const webOrigins = list(env.WEB_ORIGIN ?? 'http://localhost:3000');
   if (webOrigins.length === 0) throw new Error('WEB_ORIGIN must contain at least one origin');
   for (const o of webOrigins) {
@@ -79,6 +87,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const cfg: Config = {
     network,
     mode,
+    simClock,
     host: env.HOST ?? '0.0.0.0',
     port: int(env, 'PORT', 8787, 1, 65_535),
     databasePath: env.DATABASE_PATH ?? `./data/airbag-${mode}-${network.network}.db`,

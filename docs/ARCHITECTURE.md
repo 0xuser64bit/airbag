@@ -145,7 +145,9 @@ Enforced in code and covered by tests.
   scripted prices ([ADR 0012](adr/0012-exchange-port-and-simulation.md)). Every screen says so. CI
   and the end-to-end tests run here. The simulation's `POST /v1/sim/*` controls 404 in live mode.
   Blocks are shared; prices are per wallet (`SimChain.feedFor`), so one visitor's wick or reset
-  never moves another visitor's positions on a public demo engine.
+  never moves another visitor's positions on a public demo engine. The blocks are Monad testnet's
+  own, from Perpl's public heartbeat, with a local clock filling in while it is quiet
+  ([ADR 0014](adr/0014-simulation-on-monad-blocks.md)); `SIM_CLOCK=local` never connects.
 
 SQLite is bound to mode and chain id. Local default files are
 `data/airbag-<mode>-<network>.db`; an explicit path still must match the stored identity.

@@ -630,6 +630,8 @@ export function createApi(deps: ApiDeps): Server {
       wallet: w,
       block: {
         head: engine.feed.head,
+        /** A real Monad block, which the explorer can show. */
+        onchain: cfg.mode === 'live' || !!deps.sim?.onchain,
         at: engine.lastTickAt,
         stale: st.stale,
         staleReason: st.reason ?? null,

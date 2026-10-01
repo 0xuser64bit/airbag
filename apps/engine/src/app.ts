@@ -115,6 +115,19 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
       ? airbagLog({ ...cfg.airbagLog, chainId: cfg.network.chainId }, byId, store, log)
       : undefined);
   const sim = live ? undefined : new SimChain(feed, ctx.markets);
+  // Simulation on Monad's real blocks: only Perpl's public heartbeat, never its prices.
+  const monadClock =
+    sim && cfg.simClock === 'monad'
+      ? new MarketFeed({
+          url: `${cfg.network.wsUrl}/ws/v1/market-data`,
+          chainId: cfg.network.chainId,
+          markets: [],
+          staleBlocks: cfg.staleBlocks,
+          streams: ['heartbeat'],
+          onBlock: (h) => sim.onMonadHead(h),
+          onState: (up, reason) => log[up ? 'info' : 'warn']('sim.clock', { up, reason }),
+        })
+      : undefined;
   engine = new Engine({
     store,
     log,
@@ -189,13 +202,15 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
       if (live) {
         feed.start();
       } else if (sim && !opts.manualClock) {
-        sim.start();
+        monadClock?.start();
+        sim.start(300, !!monadClock);
       }
       accounts.startAll();
       purge = setInterval(() => store.purgeSessions(), 3_600_000);
       log.info('engine.start', {
         covered: [...covered],
         stale: cfg.staleBlocks,
+        ...(sim ? { simClock: cfg.simClock } : {}),
         push: push.enabled,
         onchainLog: cfg.airbagLog?.address ?? null,
       });
@@ -203,6 +218,7 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
     async stop() {
       clearInterval(purge);
       sim?.stop();
+      await monadClock?.close();
       engine.stop();
       const closed = new Promise<void>((resolve) => api.close(() => resolve()));
       api.closeAllConnections(); // open dashboard streams never end on their own

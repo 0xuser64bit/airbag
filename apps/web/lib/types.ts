@@ -208,6 +208,8 @@ export interface Dashboard {
   wallet: string;
   block: {
     head: number;
+    /** A real Monad block (live, or simulation on Monad's clock), so the explorer can show it. */
+    onchain: boolean;
     at: number;
     stale: boolean;
     staleReason: string | null;

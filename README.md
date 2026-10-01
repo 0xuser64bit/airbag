@@ -78,6 +78,11 @@ report has a share card. Everything is labelled as simulated. Each wallet has it
 prices, so visitors to one engine never move each other's positions, and "Reset account" puts
 that wallet back to the start.
 
+The prices are scripted, but the blocks are real: simulation follows Monad testnet's own block
+clock through Perpl's public heartbeat (it never sends anything to Perpl), so each deploy's block
+log and the dashboard's block number are Monad blocks you can open on the explorer. If that feed
+goes quiet, a local clock fills in; `SIM_CLOCK=local` stays offline.
+
 Configuration is `.env` (copy `.env.example`); nothing is needed for simulation. To point the engine
 at Perpl testnet, set `ENGINE_MODE=live`, a `MASTER_KEY` and `PERPL_NETWORK=testnet`, then link a
 Trade key from the app whose IP allow-list includes the engine's egress IPs.

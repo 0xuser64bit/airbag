@@ -198,7 +198,7 @@ export function Positions({ data }: { data: Dashboard }) {
 }
 
 /** Every Monad block the engine checked, newest at the right; the strip feeds left each block. */
-export function BlockStrip({ tape }: { tape: Dashboard['tape'] }) {
+export function BlockStrip({ tape, onchain }: { tape: Dashboard['tape']; onchain: boolean }) {
   const missed = tape.filter((t) => !t.ok).length;
   const span = tape.length > 1 ? ((tape.at(-1)?.at ?? 0) - (tape[0]?.at ?? 0)) / 1000 : 0;
   const head = tape.at(-1)?.block ?? 0;
@@ -210,7 +210,7 @@ export function BlockStrip({ tape }: { tape: Dashboard['tape'] }) {
           Every block, checked
         </h2>
         <p className="muted">
-          Last {tape.length} Monad blocks
+          Last {tape.length} {onchain ? 'Monad' : 'simulated'} blocks
           {span > 0 ? ` · ${Math.round(span)} s` : ''} ·{' '}
           {missed === 0 ? 'no gaps' : `${missed} not checked (stale or missed)`}
         </p>

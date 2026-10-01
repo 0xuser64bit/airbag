@@ -58,7 +58,7 @@ export default function DashboardPage() {
           first && <FlightDisplay p={first} settings={data.settings} />
         )}
         <Positions data={data} />
-        <BlockStrip tape={data.tape} />
+        <BlockStrip tape={data.tape} onchain={data.block.onchain} />
       </div>
       <aside className={s.aside} aria-label="Airbag, key and deploys">
         {detail?.phase === 'done' && detail.kind === 'trim' && (
