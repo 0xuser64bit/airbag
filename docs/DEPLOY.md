@@ -1,10 +1,54 @@
 # Deploying Airbag
 
-Two things live here: proving the live trading path on testnet, and putting the engine and web app on
-their hosts. The testnet run has not happened yet — Airbag has never traded on Perpl, and it is the
-gate on shipping live. The steps that need an account or funds are the owner's.
+What lives here: a public simulation demo, a real deploy on testnet for demo day, proving the live
+trading path on testnet, and putting the engine and web app on their hosts. The testnet run has not
+happened yet — Airbag has never traded on Perpl, and it is the gate on shipping live. The steps that
+need an account or funds are the owner's.
 
 Commands assume the repo root.
+
+## Public demo (simulation)
+
+What a visitor can click through with no wallet extension, funds or key: the real engine, guard
+and web app on the paper exchange, scripted prices on Monad testnet's real blocks
+([ADR 0014](adr/0014-simulation-on-monad-blocks.md)). It never holds a real key and sends nothing
+to Perpl, so it needs no master key or egress IP. `fly.demo.toml` is the engine's config.
+
+```bash
+fly launch --no-deploy --copy-config --config fly.demo.toml   # pick a unique app name
+fly volumes create airbag_demo_data --size 1 --config fly.demo.toml
+fly secrets set WEB_ORIGIN=https://<web domain> --config fly.demo.toml
+fly deploy --config fly.demo.toml
+curl --fail https://<demo app>.fly.dev/ready
+```
+
+Then deploy the web app as in step 3 with `NEXT_PUBLIC_ENGINE_URL=https://<demo app>.fly.dev`.
+A visitor opens `/connect`, picks "Connect a test wallet", signs in, uses "Use a test key", arms
+and presses "Play a wick on BTC". Each wallet has its own prices, so visitors can't disturb each
+other, and a room sharing one Wi-Fi IP gets ten times the live rate limits.
+
+## Demo day: a real deploy on Perpl testnet
+
+The strongest demo is a real one: Airbag trimming a real testnet position and re-adding its
+margin, with Perpl transactions anyone can open. The code path exists; it needs the owner's
+disposable testnet wallet. About fifteen minutes, testnet only:
+
+1. Do the owner checklist in step 1 below: a new testnet wallet with MON and AUSD, a deposit,
+   **One-Click Trading on**, a small BTC long at about 10x, and a **Trade** key. Leave its IP
+   allow-list empty for a local run.
+2. In `.env`, set `ENGINE_MODE=live`, `PERPL_NETWORK=testnet`, `DEMO_WALLETS=<that wallet>` and a
+   stable `MASTER_KEY` (`openssl rand -base64 32`; a new one means relinking the key). Then:
+   ```bash
+   pnpm dev:engine    # .env overrides .env.example's simulation default
+   pnpm dev:web
+   ```
+3. At http://localhost:3000/connect connect that wallet (Rabby or MetaMask on Monad testnet),
+   sign in, paste the key and confirm the allow-list wording; the engine probes Trade scope
+   before storing anything. In "Set your airbag", turn on **Demo mode** (deploys after a 0.3%
+   move against the position, shown only to `DEMO_WALLETS`) and arm.
+4. Wait for BTC to move 0.3% against the position. The dashboard's block log shows the
+   reduce-only close and the margin re-add with their Perpl transactions; check the new
+   liquidation price against Perpl's UI. Turn demo mode off afterwards.
 
 ## 1. Verify on testnet first
 
