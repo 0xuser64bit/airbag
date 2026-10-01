@@ -205,3 +205,53 @@ occurred, and real push/log/indexer paths remain external. No mainnet activity o
 attempted. Existing local servers were preserved; isolated browser servers and the owned smoke
 container were stopped. The detailed launch gates above define the next work without pretending
 that a passing build proves financial safety.
+
+## Third pass: live checks and demo readiness (2026-10-01)
+
+Baseline `6bef263`, clean tree, Node 24.21.0, pnpm 11.24.0, 162 tests passing. Method: run the
+live engine and the web app against Perpl testnet and Monad testnet without a key, drive the
+simulated journey in a real browser, re-read Perpl's current API docs and the `dex-sdk` ABI, and
+review the guard for gaps that tests had not reached. Everything that needs a funded account or a
+Trade key is still a launch gate.
+
+### Findings and fixes
+
+| Finding | Effect | Fix |
+|---|---|---|
+| A wallet lookup read one position per market in parallel; Monad's public testnet RPC refuses bursts above 15 requests/s | Three of five back-to-back lookups of real testnet accounts failed with "Couldn't read this wallet" | `f8b1a85`: reads batch into one Multicall3 `eth_call` |
+| The live stale guard needed a funding event for every open market, covered or not | A newly listed Perpl market (no funding until its first interval, up to 43 min) would have held BTC/ETH protection for everyone | `8ec27a9`: only covered markets |
+| Trade scope was proven only by an `mt:24` for a cancel of an order that doesn't exist, matched by `rq`, within 8 s | That shape was never observed live; a different one would refuse every real key at onboarding | `e119e4f`: admission (`mt:3` code 0) is the proof, as Perpl documents a 403 for Read keys |
+| A refused or failed spare-margin add ended the deploy as failed with a 100-block cooldown | About 30 s past the line with no protection, at the worst moment | `b346dcb`: the episode continues next block as a trim |
+| Trim push alerts said "Fee $0." and the public save report hard-coded "$0" | Public and phone copy understated live costs | `3c622cd`, `13165af`: the observed fee, or "unconfirmed" |
+| Simulation shared one set of prices and one script across all accounts | On a public demo one visitor's wick moved everyone's BTC, a second wick stranded the first mid-path, a reset moved prices under other deploys | `f2db44d`: prices are per wallet; blocks stay shared |
+| Paper accounts reused position ids 1 and 2 | After a reset or restart, earlier deploys re-attached to the fresh position: save values changed and a precaution became a "save" | `cf4f698`: ids are never reused |
+| Simulation counted blocks from 1,000,000 on a local timer | Its block strip and deploy logs showed numbers nobody could look up | `9a3a532`: follows Monad testnet's heartbeat (Perpl's public stream, heartbeat only), local fallback while quiet ([ADR 0014](adr/0014-simulation-on-monad-blocks.md)) |
+| Per-IP limits sized for live applied to simulation | A demo audience on one venue Wi-Fi would mostly be refused | `e8bc07f`: ten times looser in simulation, which calls nothing upstream |
+| `pnpm dev:engine` set `ENGINE_MODE` inline, which `.env` can't override; `data/` was not ignored | Live settings in `.env` were silently ignored; the local database (sealed keys, sessions) was one `git add -A` from a commit | `6f7a4cd`, `5d6b854` |
+| A replayed wick after a deploy stops short of the re-armed line and nothing fires | Correct, but looks broken in a demo | `cd39838`: the controls say why |
+
+Also added: a keyless contract check (`666ba94`), `/health` reporting the simulation's clock
+(`b6c351b`), a property test of the deploy state machine (`5cc7cbf`), a public demo config and
+a demo-day runbook (`144ef71`), and documentation of what is verified (`fee893a`, `3cd7ffc`).
+
+### Verification results
+
+| Check | Result |
+|---|---|
+| `pnpm check` | Lint, typecheck, **176 tests in 18 files** pass. Every commit of this pass passes lint, typecheck and tests on its own. |
+| Property test of the guard | 25 random scenarios in CI; **400 passed locally**: random adverse paths, partial and missed fills, refused adds, pause and resume, longs and shorts, every cap, fees on and off, three spare balances. Only same-side closes and adds leave, nothing while paused, size only shrinks, no deploy passes its cap, trims never spend spare. |
+| `pnpm e2e` | 6 passed (Playwright + axe), local clock. |
+| `pnpm build` | Production Next build passes. |
+| Live engine on Perpl testnet, no key | Boots, `/ready` 200, one block behind Monad. A random key's trading sign-in is closed with 3401 and reported "rejected". |
+| Real accounts | Lookups of seven real testnet wallets concurrently all succeed; the web's live connect page renders a market maker's eight real positions. |
+| `pnpm --filter @airbag/spike check` | Airbag's side decoding, Q16 entry residue and decimals reproduce the contract's own `deltaPnlCNS` on 19 positions in 8 markets, worst difference under $0.0001. |
+| `getMarginFractions` | Maintenance is flat per market at any size tried (BTC 4%, ETH 5%), so the fixed-maintenance liquidation formula holds; it matches Perpl's current liquidation docs. |
+| Simulation on Monad's clock | The full journey in a browser: trigger, fill one block later, re-add, save, on real testnet block numbers at the chain's cadence. |
+| Testnet liquidation events | A scan of the most recent ~300,000+ testnet blocks found no `PositionLiquidated` event to compare liquidation prices against; HyperSync needs a token. Still open. |
+| Gitleaks | Full history, 104 commits, no leaks. |
+
+### Still open
+
+Unchanged launch gates: a funded testnet trim and re-add (now one runbook away), independent
+review, a deployed engine's egress allow-list and alerts, real push delivery, and the optional
+log and indexer. Nothing was hosted, no contract was deployed and no order was sent to Perpl.
