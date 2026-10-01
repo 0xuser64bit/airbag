@@ -8,6 +8,10 @@ position's margin cushion, it trims with a reduce-only order and puts the net re
 in to move liquidation further away. Trading fees, slippage and outages still matter; protection
 is not guaranteed. It acts through a Perpl API key that cannot withdraw.
 
+**Try it: https://airbag.92-4-67-109.sslip.io** — the simulation, no wallet extension needed:
+"Connect a test wallet", "Use a test key", arm, then "Play a wick on BTC" on the dashboard. The
+exchange is paper and the prices are scripted; the blocks are Monad testnet's own.
+
 ![The dashboard just after a deploy: the trim, the re-add and the save in the block log, on Monad testnet blocks](docs/img/dashboard-deploy.png)
 
 *A simulated deploy on Monad testnet's real blocks: the line is crossed in block 67,239,006, the
@@ -69,8 +73,8 @@ commands anyone can rerun: `pnpm --filter @airbag/spike check` and
 
 **Not done yet:** Airbag has **not traded on Perpl**. A real trim and re-add needs a disposable
 funded testnet wallet and a Trade key ([runbook](docs/DEPLOY.md#demo-day-a-real-deploy-on-perpl-testnet)).
-Nothing is hosted and no contract is deployed. Independent review comes before anyone relies on
-it with real money. Audit history, backlog and launch gates: [docs/MVP-AUDIT.md](docs/MVP-AUDIT.md).
+The demo above runs on a free VM ([ADR 0015](docs/adr/0015-free-shared-vm.md)); no contract is
+deployed. Independent review comes before anyone relies on it with real money. Audit history, backlog and launch gates: [docs/MVP-AUDIT.md](docs/MVP-AUDIT.md).
 
 ## What's here
 
@@ -134,7 +138,7 @@ of the engine image.
 | [docs/RISK-MODEL.md](docs/RISK-MODEL.md) | The arithmetic, the deploy algorithm, the golden test vectors |
 | [docs/PERPL.md](docs/PERPL.md) | Verified Perpl, Monad and Envio protocol facts, and the gotchas that have cost time |
 | [docs/SECURITY.md](docs/SECURITY.md) | The threat model, the controls, master-key rotation and a leak |
-| [docs/DEPLOY.md](docs/DEPLOY.md) | Testnet verification, then the engine on Fly and the web app on Vercel |
+| [docs/DEPLOY.md](docs/DEPLOY.md) | The demo on the free VM, a real testnet deploy, verification on testnet, operating the VM |
 | [docs/adr/](docs/adr/) | Why each major decision went the way it did |
 | [apps/web/DESIGN.md](apps/web/DESIGN.md) | The web app's design system and content contract |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Commands, conventions, and what not to weaken |
