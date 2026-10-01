@@ -167,11 +167,24 @@ export default async function Landing() {
             <h2 id="math-title" className={`display ${s.h2}`}>
               A liquidation shares its proceeds. A trim pays trading fees and keeps the rest open.
             </h2>
-            {liquidated !== null && (
+            {liquidated !== null ? (
               <p className={s.stat}>
                 <span className="num liq">{liquidated.toLocaleString('en-US')}</span> Perpl position
                 {liquidated === 1 ? ' was' : 's were'} liquidated in the last 30 days.{' '}
                 <span className="faint">Counted onchain by Airbag’s Envio indexer.</span>
+              </p>
+            ) : (
+              // A dated check anyone can rerun (spike/liquidations.ts), not a live count.
+              <p className={s.stat}>
+                <span className="num liq">159</span> Perpl mainnet liquidations, checked against
+                Airbag’s math: none came before the liquidation price it computes, and each returned
+                80% of what was left.{' '}
+                <a
+                  className="faint"
+                  href={`${SOURCE_URL}/blob/main/docs/PERPL.md#checked-against-testnet-on-2026-10-01-without-a-key`}
+                >
+                  Checked onchain, Oct 1, 2026.
+                </a>
               </p>
             )}
           </div>
