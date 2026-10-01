@@ -458,7 +458,7 @@ export function createApi(deps: ApiDeps): Server {
       },
       positions: samplePositions(0).flatMap((p) => {
         const m = engine.markets.byId.get(p.mkt);
-        const mark = deps.sim?.feedFor(address).mark(p.mkt);
+        const mark = engine.feed.mark(p.mkt);
         if (!m || mark === undefined) return [];
         const pd = m.config.price_decimals;
         const risk: Position = {

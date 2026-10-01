@@ -88,7 +88,7 @@ export class SimChain {
   private readonly wallets = new Map<string, WalletPrices>();
   private timer: ReturnType<typeof setInterval> | undefined;
   /** Where the local clock starts when it has never seen a Monad head. */
-  private origin = 1_000_000;
+  private readonly origin = 1_000_000;
   private lastLocal = 0;
   /** When Monad's heartbeat last arrived (or until when to wait for the first one). */
   private monadAt = 0;
@@ -194,7 +194,7 @@ export class SimChain {
     return h;
   }
 
-  /** A head from Monad's heartbeat. Older than what is already shown, it only keeps the local clock out. */
+  /** A head from Monad's heartbeat. One older than the head shown only keeps the local clock out. */
   onMonadHead(h: number): void {
     this.monadAt = Date.now();
     if (h > this.feed.head) this.feed.apply({ mt: 100, sn: h, h });
