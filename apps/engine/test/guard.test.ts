@@ -1,5 +1,6 @@
 import { MarketFeed } from '@airbag/perpl';
 import { liquidationPrice } from '@airbag/risk';
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS, type Deploy, openStore, type Settings } from '../src/db.ts';
 import { Engine } from '../src/engine.ts';
@@ -562,4 +563,79 @@ it('shutdown leaves a pending order recoverable and cannot send a continuation',
   expect(only(h.store).phase).toBe('closing');
   expect(only(h.store).data.pendingOrder).toBeDefined();
   h.store.close();
+});
+
+describe('the deploy state machine on random markets', () => {
+  const setArmed = (h: ReturnType<typeof harness>, armed: boolean) => {
+    h.store.putSettings(WALLET, { ...h.store.settings(WALLET), armed });
+    h.engine.reloadSettings(WALLET);
+  };
+
+  // Random adverse paths (never past bankruptcy), partial and missed fills, refused margin
+  // adds, a pause, either side, every cap, fees on or off, and no, some or plenty of spare.
+  it('only reduces, keeps to its cap, holds while paused and never spends spare by trimming', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.record({
+          prices: fc.array(fc.integer({ min: 91_000, max: 100_500 }), {
+            minLength: 8,
+            maxLength: 24,
+          }),
+          fills: fc.array(fc.constantFrom(0, 0.3, 1, 1), { minLength: 6, maxLength: 6 }),
+          failAdds: fc.integer({ min: 0, max: 2 }),
+          pauseAt: fc.integer({ min: 0, max: 40 }),
+          resumeAfter: fc.integer({ min: 1, max: 5 }),
+          spareCns: fc.constantFrom(0n, SAMPLE_SPARE_CNS, 10_000_000_000n),
+          short: fc.boolean(),
+          maxTrimPct: fc.constantFrom(25 as const, 50 as const, 75 as const, 100 as const),
+          feeMicros: fc.constantFrom(0, 345),
+        }),
+        async (c) => {
+          const h = harness({
+            short: c.short,
+            spareCns: c.spareCns,
+            failAdds: c.failAdds,
+            feeMicros: c.feeMicros,
+            settings: { maxTrimPct: c.maxTrimPct },
+            fillShare: (_lots, attempt) => c.fills[(attempt - 1) % c.fills.length] ?? 1,
+          });
+          const sentWhilePaused: number[] = [];
+          const push = h.paper.sent.push.bind(h.paper.sent);
+          h.paper.sent.push = (...frames) => {
+            if (!h.guard.settings.armed) sentWhilePaused.push(...frames.map((f) => f.t));
+            return push(...frames);
+          };
+          const sizes = [h.paper.positions.get(BTC)?.s ?? 0];
+          for (const [i, p] of c.prices.entries()) {
+            if (i === c.pauseAt) setArmed(h, false);
+            if (i === c.pauseAt + c.resumeAfter) setArmed(h, true);
+            await h.run([c.short ? 200_000 - p : p]);
+            sizes.push(h.paper.positions.get(BTC)?.s ?? 0);
+          }
+          await h.blocks(4);
+          sizes.push(h.paper.positions.get(BTC)?.s ?? 0);
+
+          // Only reduce-only closes for the position's own side, and collateral adds.
+          for (const f of h.paper.sent) expect([c.short ? 4 : 3, 6]).toContain(f.t);
+          // Nothing leaves while the trader has Airbag paused.
+          expect(sentWhilePaused).toEqual([]);
+          // The position only ever shrinks.
+          for (let i = 1; i < sizes.length; i++)
+            expect(sizes[i]).toBeLessThanOrEqual(sizes[i - 1] ?? 0);
+          const deploys = h.store.deploys(WALLET);
+          // No deploy trims more than its cap of the size it started from.
+          for (const d of deploys)
+            expect(d.data.close?.filledLots ?? 0).toBeLessThanOrEqual(
+              Math.floor(d.data.before.lots * d.data.maxTrim + 1e-9),
+            );
+          // Trims only put back what they released: spare goes only through a planned add.
+          const spareAdded = deploys.reduce((sum, d) => sum + d.data.spareAdded, 0);
+          expect(h.paper.spare()).toBeGreaterThanOrEqual(
+            Number(c.spareCns) / 1e6 - spareAdded - 1e-6,
+          );
+        },
+      ),
+      { numRuns: 25 },
+    );
+  }, 120_000);
 });
