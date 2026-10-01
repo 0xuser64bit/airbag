@@ -384,12 +384,9 @@ export function createApi(deps: ApiDeps): Server {
     const id = marketId(str(body.symbol, 'symbol', 16));
     // The landing page's wick, scaled to the market's sample entry price.
     const entry = id === 16 ? 100_000 : 3_000;
-    sim.play(
-      w,
-      id,
-      LANDING_PATH.map((p) => (p / 100_000) * entry),
-    );
-    return { ok: true, blocks: LANDING_PATH.length };
+    const path = LANDING_PATH.map((p) => (p / 100_000) * entry);
+    sim.play(w, id, path);
+    return { ok: true, blocks: path.length, low: Math.min(...path) };
   });
 
   route('POST', '/v1/sim/reset', { auth: true, limit: 20 }, async (ctx) => {

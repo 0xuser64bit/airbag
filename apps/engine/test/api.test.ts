@@ -225,9 +225,8 @@ describe('onboarding to a deploy, over HTTP', () => {
     expect(btc.atLine.fraction.toFixed(3)).toBe('0.489');
 
     // Play the landing page's wick on BTC through the simulated chain.
-    expect((await call('POST', '/v1/sim/wick', { token, body: { symbol: 'BTC' } })).status).toBe(
-      200,
-    );
+    const wick = await call('POST', '/v1/sim/wick', { token, body: { symbol: 'BTC' } });
+    expect(wick.body).toMatchObject({ ok: true, blocks: 41, low: 94_000 });
     // Mid-deploy, the key can't be removed or swapped.
     let status = '';
     for (let i = 0; i < 30 && status !== 'deploying'; i++) {

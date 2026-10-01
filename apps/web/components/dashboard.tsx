@@ -723,16 +723,30 @@ export function PausedBanner() {
 }
 
 /** Simulation only: drive the scripted chain from the dashboard. */
-export function SimControls({ symbols }: { symbols: string[] }) {
+export function SimControls({
+  symbols,
+  positions,
+}: {
+  symbols: string[];
+  positions: PositionView[];
+}) {
   const [note, setNote] = useState<string | undefined>();
-  const run = async (path: string, body: unknown, done: string) => {
+  const run = async (path: string, body: unknown, done: (res: { low?: number }) => string) => {
     setNote(undefined);
     try {
-      await api(path, { method: 'POST', body });
-      setNote(done);
+      setNote(done(await api<{ low?: number }>(path, { method: 'POST', body })));
     } catch (err) {
       setNote((err as Error).message);
     }
+  };
+  // After a deploy the line re-arms lower, so the same wick can stop short of it. Say so,
+  // rather than leave a price that moves while nothing happens looking broken.
+  const played = (sym: string, low: number | undefined) => {
+    const p = positions.find((x) => x.symbol === sym && x.covered);
+    const holds = low !== undefined && p?.side === 'long' && p.line !== undefined && low > p.line;
+    return holds && p?.line !== undefined
+      ? `Playing a wick on ${sym} down to ${fmt.usd(low)}. That stops short of your Airbag line at ${fmt.usd(p.line)}, so Airbag holds. Reset the account to start over.`
+      : `Playing a wick on ${sym}.`;
   };
   return (
     <section className={s.section} aria-labelledby="sim-controls">
@@ -754,7 +768,7 @@ export function SimControls({ symbols }: { symbols: string[] }) {
             key={sym}
             type="button"
             className="btn btn-secondary btn-sm"
-            onClick={() => run('/v1/sim/wick', { symbol: sym }, `Playing a wick on ${sym}.`)}
+            onClick={() => run('/v1/sim/wick', { symbol: sym }, (r) => played(sym, r.low))}
           >
             Play a wick on {sym}
           </button>
@@ -762,7 +776,7 @@ export function SimControls({ symbols }: { symbols: string[] }) {
         <button
           type="button"
           className="btn btn-ghost btn-sm"
-          onClick={() => run('/v1/sim/reset', {}, 'Account reset.')}
+          onClick={() => run('/v1/sim/reset', {}, () => 'Account reset.')}
         >
           Reset account
         </button>

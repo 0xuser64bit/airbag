@@ -68,7 +68,10 @@ export default function DashboardPage() {
         <KeyHealth data={data} now={now} perplUrl={config.data?.perplUrl} />
         <RecentDeploys deploys={data.deploys} />
         {data.mode === 'simulation' && (
-          <SimControls symbols={config.data?.markets.map((m) => m.symbol) ?? []} />
+          <SimControls
+            symbols={config.data?.markets.map((m) => m.symbol) ?? []}
+            positions={data.positions}
+          />
         )}
       </aside>
     </div>
