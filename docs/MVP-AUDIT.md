@@ -238,7 +238,7 @@ a demo-day runbook (`144ef71`), and documentation of what is verified (`fee893a`
 
 | Check | Result |
 |---|---|
-| `pnpm check` | Lint, typecheck, **176 tests in 18 files** pass. Every commit of this pass passes lint, typecheck and tests on its own. |
+| `pnpm check` | Lint, typecheck, **178 tests in 18 files** pass (from 162 in 16). Every commit of this pass passes lint, typecheck and tests on its own. |
 | Property test of the guard | 25 random scenarios in CI; **400 passed locally**: random adverse paths, partial and missed fills, refused adds, pause and resume, longs and shorts, every cap, fees on and off, three spare balances. Only same-side closes and adds leave, nothing while paused, size only shrinks, no deploy passes its cap, trims never spend spare. |
 | `pnpm e2e` | 6 passed (Playwright + axe), local clock. |
 | `pnpm build` | Production Next build passes. |
