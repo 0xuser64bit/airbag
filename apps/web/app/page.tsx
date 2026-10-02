@@ -103,6 +103,16 @@ const FAQ = [
   ['Which markets does it cover?', 'BTC and ETH at launch, then the rest of Perpl’s markets.'],
 ] as const;
 
+// A dated simulated deploy on Monad testnet's real blocks (the README's screenshot): the blocks
+// around it, and what Airbag did in each.
+const CHAIN = Array.from({ length: 12 }, (_, i) => 67_459_594 + i);
+const MOMENTS: Record<number, [long: string, short: string]> = {
+  67459596: ['Line crossed', 'Line'],
+  67459597: ['Close filled', 'Fill'],
+  67459598: ['Margin back', 'Margin'],
+  67459603: ['Saved', 'Saved'],
+};
+
 export const revalidate = 3_600;
 
 export default async function Landing() {
@@ -115,6 +125,7 @@ export default async function Landing() {
         <div className={s.navRight}>
           <div className={s.navLinks}>
             <a href="#how">How it works</a>
+            <a href="#monad">Why Monad</a>
             <a href="#safety">Safety</a>
             <a href="#faq">FAQ</a>
           </div>
@@ -346,6 +357,69 @@ export default async function Landing() {
               </div>
             </li>
           </ol>
+        </section>
+
+        <section id="monad" className={s.section} aria-labelledby="monad-title">
+          <div className={s.sectionHead}>
+            <h2 id="monad-title" className={`display ${s.h2}`}>
+              Built on 300 ms blocks.
+            </h2>
+            <p className={s.sectionLede}>
+              Checking every block only protects you when blocks are fast and fills are real. On
+              Monad they are: a line crossed in one block is acted on in the next, while the price
+              is still near the line rather than near liquidation.
+            </p>
+          </div>
+          <figure className={s.chain}>
+            <ol className={`well ${s.blocks}`}>
+              {CHAIN.map((b) => (
+                <li key={b} data-moment={MOMENTS[b] ? '' : undefined}>
+                  <span className={s.moment}>
+                    <span className={s.wide}>{MOMENTS[b]?.[0]}</span>
+                    <span className={s.narrow} aria-hidden="true">
+                      {MOMENTS[b]?.[1]}
+                    </span>
+                  </span>
+                  <span className={s.cell} aria-hidden="true" />
+                  <a
+                    className={`num ${s.blockNo}`}
+                    href={`https://testnet.monadvision.com/block/${b}`}
+                    aria-label={`Monad testnet block ${b.toLocaleString('en-US')} on MonadVision`}
+                  >
+                    <span className={s.wide}>{fmt.block(b)}</span>
+                    <span className={s.narrow} aria-hidden="true">
+                      ·{String(b).slice(-3)}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ol>
+            <figcaption className={s.footnote}>
+              One cell per Monad block. A simulated deploy on Monad testnet’s own blocks, Oct 2,
+              2026: the line was crossed in {fmt.block(CHAIN[2] ?? 0)}, the reduce-only close filled
+              in the next block, the released margin went back in the one after, and the old
+              liquidation price came five blocks later with the position still open. The exchange
+              was paper; the blocks are real, so each one opens on MonadVision.
+            </figcaption>
+          </figure>
+          <div className={s.why}>
+            <div>
+              <h3>Every block, checked</h3>
+              <p>
+                Monad makes a block about every 303 ms, measured on testnet and mainnet, and Perpl’s
+                market data trails its head by about one. Airbag values every position on each of
+                them, so a wick has to beat a block to beat the line.
+              </p>
+            </div>
+            <div>
+              <h3>A trim is a real fill</h3>
+              <p>
+                Perpl runs its order book onchain on Monad. A trim is a reduce-only fill on that
+                book, with a transaction anyone can open on MonadVision, not a promise from a
+                server.
+              </p>
+            </div>
+          </div>
         </section>
 
         <section id="safety" className={s.section} aria-labelledby="safety-title">
