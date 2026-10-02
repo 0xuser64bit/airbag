@@ -259,3 +259,45 @@ then hosted on the owner's free VM at https://airbag.user64bit.world
 ([ADR 0015](adr/0015-free-shared-vm.md)), deployed with `deploy/vm/deploy.sh` and checked end to
 end over HTTPS: a deploy and its save on live Monad testnet blocks, the save report and its share
 image, and the other sites on the VM left as they were.
+
+## Fourth pass: the product as a visitor meets it (2026-10-02)
+
+Baseline `c0eea45`, clean tree, 178 tests passing. Method: run the simulation on Monad testnet's
+clock with the web app and walk every page in Chrome at 390, 1000, 1440 and 1920 px, from the
+landing through a deploy, a save and sharing it; act on the owner's list (the FAQ's width, one
+layout for every page, a loader, a share button that does nothing); then read the engine wherever
+a screen looked wrong.
+
+### Findings and fixes
+
+| Finding | Effect | Fix |
+|---|---|---|
+| "Share save card" called `navigator.share`, which desktop Chrome and Brave expose and then never resolve on macOS | The button looked dead: no sheet, no copied link, no error | `6f6353b`: a dialog with the card itself, Post on X, Copy link, Download PNG; phones also get their share sheet with the PNG |
+| Each page had its own skeleton: connect a centred 720 px column, link-key and setup full-bleed with differently sized asides, settings and deploys left-aligned at three widths, the save report centred at 1120 px | The mark and every left edge moved between pages | `01ac385`: one 1280 px column for every page, padded in by `--inset`, and one main-plus-side-bay layout with the rule in the same place; `892072a`, `70bc251` for the deploy log and the FAQ |
+| No loader; link-key drew the paste form for a moment to traders who had already linked a key | Blank or wrong states while the engine answered | `253b5cb`: the crash-test mark, its quadrants turning a quarter at a time, for every wait |
+| "Play a wick on ETH" bottomed at $2,820, above ETH's Airbag line at $2,775; a second BTC wick stopped short of the re-armed line | Half the demo did nothing, with advice to reset that didn't help | `5e58931`: the engine shapes each wick to the position, through its own line to its own liquidation price and back |
+| A save's value subtracted only its own deploy's spare margin | When a falling price drew a second spare-margin add to the same position, the first save counted the trader's own money as kept: the ETH demo's first report showed $1,377, not $1,080 | `d74ca7d`: every spare add on the position from that deploy on is subtracted; a guard test pins it |
+| The settings preview's fee row was the literal "$0" | Understated live costs next to a plan that already netted them out | `25426ba`: the planned close's estimated taker fee |
+| The share image's comma ran into "kept versus a liquidation"; the site had no share image; simulated saves weren't labelled in link previews | Unfinished-looking shares | `ff6fd1e`, `446cfaf`, `6f6353b` |
+| The Simulation banner arrived after a browser fetch | Every onboarding and app page dropped 37 px after it painted | `3fa25c4`: the layouts read the engine's mode on the server |
+| The wick controls sat below the fold; the landing never said the demo needs no wallet | A visitor couldn't find the one button that shows Airbag work | `d08ddb5`, `164f76f` |
+| Smaller: every app page titled "Positions"; link-key's Back orphaned and its checkbox yellow; no way back from your own save report; push enabled on a server with no VAPID key | | `029d427`, `3d8e966`, `03696ef`, `23aa140` |
+
+Also recorded: Perpl testnet's market-data socket sometimes closes every client at once with
+`1008 ping timeout`, pinging or not (`1ddac76`, [PERPL.md](PERPL.md)); the feed's reconnect
+handles it.
+
+### Verification results
+
+| Check | Result |
+|---|---|
+| `pnpm check` | Lint, typecheck, **181 tests in 18 files** pass (from 178): the wick's shape for longs, shorts and off-tick levels; ETH's spare-margin save and a re-armed BTC's second save over HTTP; the save value with a later spare add. |
+| `pnpm e2e` | 6 passed (Playwright + axe), now also the share dialog (copy, download, the X intent, axe) and the site's share image. |
+| `pnpm build` | Production Next build passes; onboarding and app pages prerender with the simulation label. |
+| Browser | Every page at 390, 1000, 1440 and 1920 px: the mark and content edges line up across pages, no horizontal scroll. The share dialog in Chrome on desktop and as a touch phone. |
+
+### Still open
+
+Unchanged: a funded testnet trim and re-add, independent review, the deployed engine's egress
+allow-list and alerts, push on the demo (it needs VAPID keys in the VM's `engine.env`), and the
+optional log and indexer. Nothing was sent to Perpl and nothing was deployed in this pass.
