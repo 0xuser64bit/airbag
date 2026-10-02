@@ -9,7 +9,7 @@
   align-items: center;
   justify-content: space-between;
   height: 64px;
-  padding: 0 var(--gutter);
+  padding: 0 var(--inset);
   border-bottom: 1px solid var(--line);
 }
 .main {
@@ -19,8 +19,7 @@
   align-items: flex-start;
   justify-content: center;
   gap: var(--s-5);
-  max-width: 880px;
-  padding: var(--s-8) var(--gutter);
+  padding: var(--s-8) var(--inset);
 }
 .title {
   font-size: clamp(40px, 6vw, 72px);

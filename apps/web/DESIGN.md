@@ -91,7 +91,9 @@ spacing:
   s-7: "48px"
   s-8: "64px"
   s-9: "96px"
-  gutter: "clamp(16px, 3vw, 32px)"
+  gutter: "clamp(16px, 4vw, 48px)"
+  frame: "1280px"
+  bay: "clamp(300px, 27vw, 380px)"
 components:
   button-primary:
     backgroundColor: "{colors.airbag}"
@@ -293,11 +295,13 @@ A near-black warm graphite panel with bone ink, and exactly two signal hues that
 
 ## Layout
 
-The app is one panel. Masthead (64px, 56px on phones) holds the mark, wordmark, tabs and account. Under it, the annunciator strip: a well-coloured rail, 48px min, ruled top and bottom, lamps spaced 8px by 28px. The body pads 28px top and the gutter (clamp(16px, 3vw, 32px)) at the sides.
+**One frame on every page.** Every page, from the landing to a save report, sets its content in the same column: at most 1280px (`--max`), centred, never closer to the edge than the gutter (clamp(16px, 4vw, 48px)). Full-width bands (a masthead, the annunciator strip, a page body, a landing section, a footer) keep their rules edge to edge and pad their content in by `--inset`, `max(gutter, (100% − max) / 2)`. So the mark, the first letter of every heading and the last control on the right sit on the same two lines on every screen, and moving between pages never shifts them.
 
-The dashboard is a grid of a main bay and a side bay (clamp(272px, 26vw, 360px)), split by a 1px rule with 32px padding either side. Sections within a bay are separated by a 1px top rule and 32px above and below. In the main bay, the primary flight display is one well: the tape column (min 280px, 38%) on the left behind a rule, readouts on the right. Other positions follow as runway rows in a single well, rows split by rules; then the per-block strip.
+The app is one panel. Masthead (64px, 56px on phones) holds the mark, wordmark, tabs and account. Under it, the annunciator strip: a well-coloured rail, 48px min, ruled top and bottom, lamps spaced 8px by 28px. The body pads 28px top.
 
-Below 900px the side bay moves under the main one, still cut by a rule. Below 760px the masthead drops nav and account, a fixed three-tab bar (72px plus safe area) takes navigation, and the flight display restacks: distance and gauge first, the tape full width under them, the memo last. A narrow side bay (container under 320px) stacks each label over its value.
+**Two bays** (`.bays` in globals.css) are the page layout wherever there is more than one thing to read: a main bay and a side bay `--bay` wide (clamp(300px, 27vw, 380px)), split by a 1px rule with 32px either side, so the rule falls in the same place on the dashboard, each onboarding step, settings and the deploy log. The side bay says what the main one can't: on connect and link-key what this step can and can't touch, on setup and settings the live preview, on the dashboard mode, key and deploys, on the deploy log what the saves add up to and what each lamp means. Sections within a bay are separated by a 1px top rule and 32px above and below. In the dashboard's main bay, the primary flight display is one well: the tape column (min 280px, 38%) on the left behind a rule, readouts on the right. Other positions follow as runway rows in a single well, rows split by rules; then the per-block strip.
+
+Below 1000px the side bay moves under the main one, still cut by a rule (the settings preview moves between the heading and the form). Below 760px the masthead drops nav and account, a fixed three-tab bar (72px plus safe area) takes navigation, and the flight display restacks: distance and gauge first, the tape full width under them, the memo last. A narrow side bay (container under 320px) stacks each label over its value.
 
 Spacing runs on 4px steps (s-1 to s-9); section gaps are 24 to 32px, row padding 12px.
 

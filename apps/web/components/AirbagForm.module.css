@@ -1,15 +1,18 @@
+/* The platform's two bays (globals.css .bays), with the heading and the form in the main bay and
+   the live preview in the side bay, beside them both. */
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 400px;
+  grid-template-columns: minmax(0, 1fr) var(--bay);
+  grid-template-rows: auto 1fr;
   grid-template-areas:
-    "heading heading"
-    "form preview";
-  column-gap: var(--s-7);
+    "heading side"
+    "form side";
   row-gap: var(--s-6);
-  align-items: start;
 }
 .heading {
   grid-area: heading;
+  min-width: 0;
+  padding-right: var(--s-6);
 }
 .form {
   grid-area: form;
@@ -17,7 +20,13 @@
   flex-direction: column;
   gap: 28px;
   min-width: 0;
-  max-width: 720px;
+  padding-right: var(--s-6);
+}
+.side {
+  grid-area: side;
+  min-width: 0;
+  padding-left: var(--s-6);
+  border-left: 1px solid var(--line);
 }
 .group {
   display: flex;
@@ -175,7 +184,6 @@
 
 /* The preview: a display unit, the same tape as the dashboard, drawn from the draft. */
 .preview {
-  grid-area: preview;
   position: sticky;
   top: 24px;
   display: flex;
@@ -226,19 +234,27 @@
   color: var(--text-3);
 }
 
-@media (max-width: 1100px) {
+/* One bay under 1000px: the preview between the heading and the form, so a choice and its
+   effect stay close. */
+@media (max-width: 1000px) {
   .layout {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
     grid-template-areas:
       "heading"
-      "preview"
+      "side"
       "form";
+  }
+  .heading,
+  .form {
+    padding-right: 0;
+  }
+  .side {
+    padding-left: 0;
+    border-left: 0;
   }
   .preview {
     position: static;
-  }
-  .form {
-    max-width: none;
   }
 }
 @media (max-width: 560px) {

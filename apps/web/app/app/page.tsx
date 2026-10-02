@@ -47,9 +47,9 @@ export default function DashboardPage() {
   const deployed = detail ? data.positions.find((p) => p.marketId === detail.marketId) : undefined;
 
   return (
-    <div className={s.grid}>
+    <div className="bays">
       <h1 className="visually-hidden">Positions</h1>
-      <div className={s.main}>
+      <div className={`bay-main ${s.main}`}>
         <StatusBanner data={data} />
         {data.status === 'paused' && <PausedBanner />}
         {detail ? (
@@ -60,7 +60,7 @@ export default function DashboardPage() {
         <Positions data={data} />
         <BlockStrip tape={data.tape} onchain={data.block.onchain} />
       </div>
-      <aside className={s.aside} aria-label="Airbag, key and deploys">
+      <aside className={`bay-side ${s.aside}`} aria-label="Airbag, key and deploys">
         {detail?.phase === 'done' && detail.kind === 'trim' && (
           <KeepsFalling d={detail} p={deployed} />
         )}

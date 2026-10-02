@@ -322,91 +322,93 @@ export function AirbagForm(props: AirbagFormProps) {
         </div>
       </form>
 
-      <aside className={`well ${s.preview}`} aria-live="polite">
-        <div className={s.previewHead}>
-          <h2 className="title">
-            {sample ? 'Preview on a sample position' : `Preview on your ${symbol} ${pos.side}`}
-          </h2>
-          <p className="num muted">
-            {fmt.size(pos.size, sd)} {symbol} ·{' '}
-            {Math.round(view?.nominalLeverage ?? SAMPLE.nominalLeverage)}x · mark {fmt.usd(mark)}
+      <div className={s.side}>
+        <aside className={`well ${s.preview}`} aria-live="polite">
+          <div className={s.previewHead}>
+            <h2 className="title">
+              {sample ? 'Preview on a sample position' : `Preview on your ${symbol} ${pos.side}`}
+            </h2>
+            <p className="num muted">
+              {fmt.size(pos.size, sd)} {symbol} ·{' '}
+              {Math.round(view?.nominalLeverage ?? SAMPLE.nominalLeverage)}x · mark {fmt.usd(mark)}
+            </p>
+          </div>
+          <div className={s.tapeWell}>
+            <Tape
+              side={pos.side}
+              liquidation={liq}
+              line={line.price}
+              mark={mark}
+              projected={plan.kind === 'none' ? undefined : liqAfter}
+              near={past}
+              height={280}
+            />
+          </div>
+          <dl className={s.dl}>
+            <div>
+              <dt>Deploys at</dt>
+              <dd className="num">
+                <span className="airbag">{fmt.usd(line.price)}</span>{' '}
+                <span className="muted">
+                  ({fmt.pct(Math.abs(down))}{' '}
+                  {down >= 0 ? (pos.side === 'long' ? 'down' : 'up') : 'past'})
+                </span>
+              </dd>
+            </div>
+            <div>
+              <dt>Would trim</dt>
+              <dd className="num">
+                {plan.kind === 'trim' ? (
+                  <>
+                    {fmt.size(plan.fraction * pos.size, sd)} {symbol}{' '}
+                    <span className="muted">({fmt.pct(plan.fraction, 1)})</span>
+                  </>
+                ) : plan.kind === 'margin' ? (
+                  'Nothing: spare margin covers it'
+                ) : (
+                  'Nothing: already far enough'
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Liquidation after</dt>
+              <dd className="num">
+                {liqAfter === null ? 'Closed' : fmt.usd(liqAfter)}{' '}
+                {away !== null && <span className="muted">({fmt.pct(away)} away)</span>}
+              </dd>
+            </div>
+            <div>
+              <dt>Spare margin</dt>
+              <dd>
+                {!draft.useSpare
+                  ? 'Off'
+                  : plan.kind === 'margin'
+                    ? `Adds ${fmt.usd(plan.amount)} instead of trimming`
+                    : `${fmt.usd(spare)} isn’t enough here`}
+              </dd>
+            </div>
+            <div>
+              <dt>Fee</dt>
+              <dd className="num">$0</dd>
+            </div>
+            <div>
+              <dt>Worst fill</dt>
+              <dd>{worst}</dd>
+            </div>
+          </dl>
+          {plan.kind === 'trim' && plan.capped && (
+            <p className="notice" data-tone="airbag">
+              Capped at {draft.maxTrimPct}%. Liquidation ends up {fmt.pct(away)} away, short of your{' '}
+              {draft.targetPct}% target.
+            </p>
+          )}
+          <p className={s.rules}>
+            Uses Perpl’s {symbol} rules: {fmt.pct(r, Number.isInteger(r * 100) ? 0 : 2)} maintenance
+            margin, {fmt.pct(pos.closeFeeRate ?? 0, 4)} estimated taker fee on closes.
+            {sample ? ' Sample position: no open position to preview on yet.' : ''}
           </p>
-        </div>
-        <div className={s.tapeWell}>
-          <Tape
-            side={pos.side}
-            liquidation={liq}
-            line={line.price}
-            mark={mark}
-            projected={plan.kind === 'none' ? undefined : liqAfter}
-            near={past}
-            height={280}
-          />
-        </div>
-        <dl className={s.dl}>
-          <div>
-            <dt>Deploys at</dt>
-            <dd className="num">
-              <span className="airbag">{fmt.usd(line.price)}</span>{' '}
-              <span className="muted">
-                ({fmt.pct(Math.abs(down))}{' '}
-                {down >= 0 ? (pos.side === 'long' ? 'down' : 'up') : 'past'})
-              </span>
-            </dd>
-          </div>
-          <div>
-            <dt>Would trim</dt>
-            <dd className="num">
-              {plan.kind === 'trim' ? (
-                <>
-                  {fmt.size(plan.fraction * pos.size, sd)} {symbol}{' '}
-                  <span className="muted">({fmt.pct(plan.fraction, 1)})</span>
-                </>
-              ) : plan.kind === 'margin' ? (
-                'Nothing: spare margin covers it'
-              ) : (
-                'Nothing: already far enough'
-              )}
-            </dd>
-          </div>
-          <div>
-            <dt>Liquidation after</dt>
-            <dd className="num">
-              {liqAfter === null ? 'Closed' : fmt.usd(liqAfter)}{' '}
-              {away !== null && <span className="muted">({fmt.pct(away)} away)</span>}
-            </dd>
-          </div>
-          <div>
-            <dt>Spare margin</dt>
-            <dd>
-              {!draft.useSpare
-                ? 'Off'
-                : plan.kind === 'margin'
-                  ? `Adds ${fmt.usd(plan.amount)} instead of trimming`
-                  : `${fmt.usd(spare)} isn’t enough here`}
-            </dd>
-          </div>
-          <div>
-            <dt>Fee</dt>
-            <dd className="num">$0</dd>
-          </div>
-          <div>
-            <dt>Worst fill</dt>
-            <dd>{worst}</dd>
-          </div>
-        </dl>
-        {plan.kind === 'trim' && plan.capped && (
-          <p className="notice" data-tone="airbag">
-            Capped at {draft.maxTrimPct}%. Liquidation ends up {fmt.pct(away)} away, short of your{' '}
-            {draft.targetPct}% target.
-          </p>
-        )}
-        <p className={s.rules}>
-          Uses Perpl’s {symbol} rules: {fmt.pct(r, Number.isInteger(r * 100) ? 0 : 2)} maintenance
-          margin, {fmt.pct(pos.closeFeeRate ?? 0, 4)} estimated taker fee on closes.
-          {sample ? ' Sample position: no open position to preview on yet.' : ''}
-        </p>
-      </aside>
+        </aside>
+      </div>
     </div>
   );
 }

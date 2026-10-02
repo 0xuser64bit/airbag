@@ -76,8 +76,8 @@ export default function LinkKeyPage() {
   if (!session || (!me.data && !me.error)) return <Loader label="Checking for a linked key" />;
 
   return (
-    <div className={s.withAside}>
-      <div className={s.content}>
+    <div className="bays">
+      <div className={`bay-main ${s.content}`}>
         {(config.error || me.error) && (
           <div className="notice" data-tone="alert" role="alert">
             <span>{config.error?.message ?? me.error?.message}</span>
@@ -272,7 +272,7 @@ export default function LinkKeyPage() {
         )}
       </div>
 
-      <aside className={s.sideCard} aria-labelledby="can-do">
+      <aside className={`bay-side ${s.side}`} aria-labelledby="can-do">
         <h2 id="can-do" className="title">
           What this key can do
         </h2>

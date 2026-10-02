@@ -8,11 +8,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { EIP1193Provider } from 'viem';
-import { Check, Chevron, Wallet } from '@/components/icons.tsx';
+import { Check, Chevron, Cross, External, Wallet } from '@/components/icons.tsx';
 import { Annunciator } from '@/components/instruments.tsx';
 import { Spinner } from '@/components/Loader.tsx';
 import { Runway } from '@/components/Runway.tsx';
 import { ApiError, api, useEngineConfig } from '@/lib/api.ts';
+import { SOURCE_URL } from '@/lib/config.ts';
 import { clearSession, useSession } from '@/lib/session.ts';
 import type { Lookup } from '@/lib/types.ts';
 import {
@@ -100,151 +101,191 @@ export default function ConnectPage() {
   const riskiest = [...covered].sort((a, b) => a.distance - b.distance)[0];
 
   return (
-    <div className={s.content}>
-      <div className={s.head}>
-        <h1 className={`display ${s.h1}`}>Connect the wallet you trade on Perpl</h1>
-        <p className={s.lede}>
-          Airbag reads your Perpl account from this address. Connecting doesn’t approve anything or
-          move funds.
-        </p>
-      </div>
-      {config.error && (
-        <div className="notice" data-tone="alert" role="alert">
-          <span>{config.error.message}</span>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={config.reload}>
-            Try again
-          </button>
+    <div className="bays">
+      <div className={`bay-main ${s.content}`}>
+        <div className={s.head}>
+          <h1 className={`display ${s.h1}`}>Connect the wallet you trade on Perpl</h1>
+          <p className={s.lede}>
+            Airbag reads your Perpl account from this address. Connecting doesn’t approve anything
+            or move funds.
+          </p>
         </div>
-      )}
-
-      {!address ? (
-        <WalletPicker
-          wallets={
-            config.data?.mode === 'simulation' && wallets ? [...wallets, testWallet] : wallets
-          }
-          busy={busy}
-          onPick={connect}
-        />
-      ) : (
-        <div className={s.connected}>
-          <div className={s.connectedWho}>
-            <Check size={18} />
-            <span className="num">{fmt.short(address)}</span>
-            <Annunciator state="on" size="sm">
-              {session ? 'Signed in' : 'Connected'}
-            </Annunciator>
+        {config.error && (
+          <div className="notice" data-tone="alert" role="alert">
+            <span>{config.error.message}</span>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={config.reload}>
+              Try again
+            </button>
           </div>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={change}>
-            Change wallet
-          </button>
-        </div>
-      )}
+        )}
 
-      {address && lookup.loading && (
-        <p className={s.looking} role="status">
-          Looking up your Perpl account onchain
-        </p>
-      )}
-      {address && lookup.error && (
-        <div className="notice" data-tone="alert" role="alert">
-          <span>{lookup.error}</span>
-        </div>
-      )}
-
-      {data && !data.account && (
-        <div className={`well ${s.panel}`}>
-          <div className={s.panelBody}>
-            <h2 className="title">No Perpl account for this wallet</h2>
-            <p className="muted">
-              Airbag protects positions on Perpl. Deposit on Perpl to open an account, then come
-              back. If you trade from another wallet, connect that one.
-            </p>
-            {config.data && (
-              <a className="btn btn-secondary btn-sm" href={config.data.perplUrl}>
-                Open Perpl
-              </a>
-            )}
-          </div>
-        </div>
-      )}
-
-      {data?.account && (
-        <section className={`well ${s.panel}`} aria-labelledby="found">
-          <div className={s.panelHead}>
-            <h2 id="found" className="title">
-              Found your Perpl account <span className="num faint">#{data.account.id}</span>
-            </h2>
-            <p className="muted">
-              <span className="num">{data.positions.length}</span> open position
-              {data.positions.length === 1 ? '' : 's'} ·{' '}
-              <span className="num">{fmt.usd(data.account.spare)}</span> spare margin
-            </p>
-          </div>
-          {data.positions.length === 0 && (
-            <p className={`muted ${s.panelBody}`}>
-              No open positions right now. Once armed, Airbag covers anything you open in{' '}
-              {config.data?.markets.map((m) => m.symbol).join(' or ') ?? 'covered markets'}.
-            </p>
-          )}
-          {data.positions.map((p) => (
-            <div key={p.marketId} className={s.row}>
-              <span className={s.rowName}>
-                <span className={s.symbol}>{p.symbol}</span>{' '}
-                <span className="muted">
-                  {p.side} · <span className="num">{fmt.size(p.size, p.sizeDecimals)}</span> ·{' '}
-                  <span className="num">{Math.round(p.nominalLeverage)}x</span>
-                </span>
-              </span>
-              <span className={s.rowTrack}>
-                <Runway liquidation={p.liquidation} mark={p.mark} size="sm" />
-              </span>
-              <span className={`num ${s.rowDistance}`}>
-                {fmt.pct(p.distance)} <span className="faint">to liq</span>
-              </span>
-              <span className={s.rowLamp}>
-                <Annunciator state="off" size="sm">
-                  {p.covered ? 'No airbag' : 'Not covered yet'}
-                </Annunciator>
-              </span>
+        {!address ? (
+          <WalletPicker
+            wallets={
+              config.data?.mode === 'simulation' && wallets ? [...wallets, testWallet] : wallets
+            }
+            busy={busy}
+            onPick={connect}
+          />
+        ) : (
+          <div className={s.connected}>
+            <div className={s.connectedWho}>
+              <Check size={18} />
+              <span className="num">{fmt.short(address)}</span>
+              <Annunciator state="on" size="sm">
+                {session ? 'Signed in' : 'Connected'}
+              </Annunciator>
             </div>
-          ))}
-        </section>
-      )}
+            <button type="button" className="btn btn-ghost btn-sm" onClick={change}>
+              Change wallet
+            </button>
+          </div>
+        )}
 
-      {riskiest && (
-        <p className={s.risk}>
-          Your {riskiest.symbol} {riskiest.side} is{' '}
-          <span className="num">{fmt.pct(riskiest.distance)}</span> from liquidation. A wick that
-          size closes all of it and keeps a fifth of what’s left.
-        </p>
-      )}
+        {address && lookup.loading && (
+          <p className={s.looking} role="status">
+            Looking up your Perpl account onchain
+          </p>
+        )}
+        {address && lookup.error && (
+          <div className="notice" data-tone="alert" role="alert">
+            <span>{lookup.error}</span>
+          </div>
+        )}
 
-      {error && (
-        <div className="notice" data-tone="alert" role="alert">
-          {error}
+        {data && !data.account && (
+          <div className={`well ${s.panel}`}>
+            <div className={s.panelBody}>
+              <h2 className="title">No Perpl account for this wallet</h2>
+              <p className="muted">
+                Airbag protects positions on Perpl. Deposit on Perpl to open an account, then come
+                back. If you trade from another wallet, connect that one.
+              </p>
+              {config.data && (
+                <a className="btn btn-secondary btn-sm" href={config.data.perplUrl}>
+                  Open Perpl
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {data?.account && (
+          <section className={`well ${s.panel}`} aria-labelledby="found">
+            <div className={s.panelHead}>
+              <h2 id="found" className="title">
+                Found your Perpl account <span className="num faint">#{data.account.id}</span>
+              </h2>
+              <p className="muted">
+                <span className="num">{data.positions.length}</span> open position
+                {data.positions.length === 1 ? '' : 's'} ·{' '}
+                <span className="num">{fmt.usd(data.account.spare)}</span> spare margin
+              </p>
+            </div>
+            {data.positions.length === 0 && (
+              <p className={`muted ${s.panelBody}`}>
+                No open positions right now. Once armed, Airbag covers anything you open in{' '}
+                {config.data?.markets.map((m) => m.symbol).join(' or ') ?? 'covered markets'}.
+              </p>
+            )}
+            {data.positions.map((p) => (
+              <div key={p.marketId} className={s.row}>
+                <span className={s.rowName}>
+                  <span className={s.symbol}>{p.symbol}</span>{' '}
+                  <span className="muted">
+                    {p.side} · <span className="num">{fmt.size(p.size, p.sizeDecimals)}</span> ·{' '}
+                    <span className="num">{Math.round(p.nominalLeverage)}x</span>
+                  </span>
+                </span>
+                <span className={s.rowTrack}>
+                  <Runway liquidation={p.liquidation} mark={p.mark} size="sm" />
+                </span>
+                <span className={`num ${s.rowDistance}`}>
+                  {fmt.pct(p.distance)} <span className="faint">to liq</span>
+                </span>
+                <span className={s.rowLamp}>
+                  <Annunciator state="off" size="sm">
+                    {p.covered ? 'No airbag' : 'Not covered yet'}
+                  </Annunciator>
+                </span>
+              </div>
+            ))}
+          </section>
+        )}
+
+        {riskiest && (
+          <p className={s.risk}>
+            Your {riskiest.symbol} {riskiest.side} is{' '}
+            <span className="num">{fmt.pct(riskiest.distance)}</span> from liquidation. A wick that
+            size closes all of it and keeps a fifth of what’s left.
+          </p>
+        )}
+
+        {error && (
+          <div className="notice" data-tone="alert" role="alert">
+            {error}
+          </div>
+        )}
+
+        <div className={s.actions}>
+          <button
+            type="button"
+            className="btn btn-primary btn-lg"
+            onClick={next}
+            disabled={!data?.account || busy === 'sign' || !config.data}
+          >
+            {busy === 'sign' ? <Spinner /> : null}
+            {busy === 'sign' ? 'Sign in your wallet' : 'Link a Perpl key'}
+          </button>
+          <Link href="/" className="btn btn-ghost btn-lg">
+            Back
+          </Link>
         </div>
-      )}
-
-      <div className={s.actions}>
-        <button
-          type="button"
-          className="btn btn-primary btn-lg"
-          onClick={next}
-          disabled={!data?.account || busy === 'sign' || !config.data}
-        >
-          {busy === 'sign' ? <Spinner /> : null}
-          {busy === 'sign' ? 'Sign in your wallet' : 'Link a Perpl key'}
-        </button>
-        <Link href="/" className="btn btn-ghost btn-lg">
-          Back
-        </Link>
+        {address && !session && data?.account && (
+          <p className={s.note}>
+            Next, your wallet asks you to sign a message so Airbag knows it’s you. It doesn’t move
+            funds.
+          </p>
+        )}
       </div>
-      {address && !session && data?.account && (
-        <p className={s.note}>
-          Next, your wallet asks you to sign a message so Airbag knows it’s you. It doesn’t move
-          funds.
-        </p>
-      )}
+
+      <aside className={`bay-side ${s.side}`} aria-labelledby="connect-does">
+        <h2 id="connect-does" className="title">
+          What connecting does
+        </h2>
+        <ul className={s.can}>
+          {[
+            'Reads this wallet’s address',
+            'Finds its Perpl account onchain',
+            'Shows how far each position is from liquidation',
+          ].map((t) => (
+            <li key={t}>
+              <Check />
+              {t}
+            </li>
+          ))}
+        </ul>
+        <h2 className="title">What it can’t do</h2>
+        <ul className={s.cant}>
+          {[
+            ['Move funds or approve spending', 'Connecting only asks for your address'],
+            ['Send a transaction', 'Airbag never asks your wallet for one'],
+            ['Trade on Perpl', 'Only an API key can, and you link one next'],
+          ].map(([t, why]) => (
+            <li key={t}>
+              <Cross />
+              <span>
+                {t}
+                <span className="faint">{why}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+        <a href={`${SOURCE_URL}/blob/main/apps/web/lib/wallet.ts`} className={s.source}>
+          Read the wallet code
+          <External size={13} />
+        </a>
+      </aside>
     </div>
   );
 }

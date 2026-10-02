@@ -7,7 +7,7 @@
 .masthead {
   height: 64px;
   flex-shrink: 0;
-  padding: 0 var(--gutter);
+  padding: 0 var(--inset);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -61,7 +61,7 @@
   align-items: center;
   gap: 8px 28px;
   min-height: 48px;
-  padding: 10px var(--gutter);
+  padding: 10px var(--inset);
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   background: var(--well);
@@ -93,7 +93,7 @@
 }
 
 .offline {
-  padding: 10px var(--gutter);
+  padding: 10px var(--inset);
   border-bottom: 1px solid var(--line);
   background: var(--raised);
   font-size: 13px;
@@ -102,7 +102,7 @@
 
 .body {
   flex-grow: 1;
-  padding: 28px var(--gutter) var(--s-8);
+  padding: 28px var(--inset) var(--s-8);
   min-width: 0;
 }
 
@@ -131,7 +131,7 @@
     display: inline;
   }
   .body {
-    padding: 16px 16px calc(96px + env(safe-area-inset-bottom));
+    padding: 16px var(--inset) calc(96px + env(safe-area-inset-bottom));
   }
   .tabs {
     position: fixed;

@@ -6,7 +6,7 @@
 
 .masthead {
   min-height: 64px;
-  padding: 10px var(--gutter);
+  padding: 10px var(--inset);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -67,14 +67,14 @@
 
 .main {
   flex-grow: 1;
-  padding: clamp(32px, 5vw, 64px) var(--gutter) var(--s-8);
+  padding: clamp(32px, 5vw, 64px) var(--inset) var(--s-8);
   min-width: 0;
 }
 .foot {
   display: flex;
   gap: var(--s-3);
   align-items: baseline;
-  padding: var(--s-4) var(--gutter);
+  padding: var(--s-4) var(--inset);
   border-top: 1px solid var(--line);
   font-size: 13px;
   color: var(--text-2);
@@ -93,36 +93,26 @@
     flex-direction: column;
     align-items: flex-start;
     gap: var(--s-3);
-    padding: 14px 16px;
+    padding: 14px var(--inset);
   }
   .main {
-    padding: 28px 16px 48px;
+    padding: 28px var(--inset) 48px;
   }
   .foot {
     flex-direction: column;
     gap: 4px;
-    padding: 14px 16px;
+    padding: 14px var(--inset);
   }
 }
 
 /* ---- Step content ---- */
 
+/* Every step has the same two bays (globals.css .bays): the step in the main one, and in the
+   side one what this step can and can't touch, or on the last step the live preview. */
 .content {
   display: flex;
   flex-direction: column;
   gap: var(--s-6);
-  max-width: 720px;
-  min-width: 0;
-}
-/* A one-column step (connect) sits in the middle of the page. */
-main > .content {
-  margin-inline: auto;
-}
-.withAside {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: var(--s-7);
-  align-items: start;
 }
 .head {
   display: flex;
@@ -399,13 +389,11 @@ main > .content {
   font-size: 13px;
 }
 
-/* What the key can and can't do: a side bay behind a rule. */
-.sideCard {
+/* What this step can and can't do. */
+.side {
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
-  padding-left: var(--s-6);
-  border-left: 1px solid var(--line);
 }
 .can,
 .cant {
@@ -455,18 +443,6 @@ main > .content {
   color: var(--bone);
 }
 
-@media (max-width: 1100px) {
-  .withAside {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .sideCard {
-    max-width: 720px;
-    padding-left: 0;
-    padding-top: var(--s-6);
-    border-left: 0;
-    border-top: 1px solid var(--line);
-  }
-}
 @media (max-width: 640px) {
   .row {
     grid-template-columns: minmax(0, 1fr) auto;

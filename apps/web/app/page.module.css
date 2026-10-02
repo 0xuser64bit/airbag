@@ -2,7 +2,7 @@
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  --pad: clamp(16px, 7vw, 112px);
+  --pad: var(--inset);
 }
 
 .nav {

@@ -58,7 +58,17 @@
   --s-7: 48px;
   --s-8: 64px;
   --s-9: 96px;
-  --gutter: clamp(16px, 3vw, 32px);
+
+  /* The frame every page shares: one content column, centred, with the same gutter. Full-width
+     bands (mastheads, the annunciator strip, page bodies, landing sections) keep their rules
+     edge to edge and pad their content in by --inset, so the mark, the first letter of every
+     page and the last control on the right line up on every screen of the platform. */
+  --gutter: clamp(16px, 4vw, 48px);
+  --max: 1280px;
+  --inset: max(var(--gutter), calc((100% - var(--max)) / 2));
+  /* A side bay beside the main one, split from it by a rule: the dashboard's, onboarding's, the
+     settings preview's, the deploy log's. */
+  --bay: clamp(300px, 27vw, 380px);
 
   /* Motion: instrument physics. Needles and bugs are damped, lamps switch at once. */
   --ease: cubic-bezier(0.2, 0, 0, 1);
@@ -520,6 +530,39 @@ legend {
   text-transform: uppercase;
   color: var(--bone);
   margin-right: 6px;
+}
+
+/* ---- Bays ----------------------------------------------------------------------------- */
+
+/* The platform's page layout: a main bay and a side bay split by a rule, the side bay always
+   --bay wide, so the rule sits in the same place on every page that has one. Under 1000px the
+   side bay moves below the main one, still cut by a rule. */
+.bays {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--bay);
+}
+.bay-main {
+  min-width: 0;
+  padding-right: var(--s-6);
+}
+.bay-side {
+  min-width: 0;
+  padding-left: var(--s-6);
+  border-left: 1px solid var(--line);
+}
+@media (max-width: 1000px) {
+  .bays {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .bay-main {
+    padding-right: 0;
+  }
+  .bay-side {
+    margin-top: var(--s-6);
+    padding: var(--s-6) 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
 }
 
 /* ---- Surfaces ------------------------------------------------------------------------- */

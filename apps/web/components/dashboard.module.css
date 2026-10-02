@@ -1,22 +1,12 @@
-/* The dashboard is one panel. A main bay and a side bay are split by a rule, sections within a
-   bay by rules, and instruments are dark glass set into the face. Nothing floats on it. */
+/* The dashboard is one panel: the platform's two bays (globals.css .bays), sections within a
+   bay cut by rules, and instruments as dark glass set into the face. Nothing floats on it. */
 
-.grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(272px, 26vw, 360px);
-}
 .main,
 .aside {
   display: flex;
   flex-direction: column;
-  min-width: 0;
-}
-.main {
-  padding-right: var(--s-6);
-  border-right: 1px solid var(--line);
 }
 .aside {
-  padding-left: var(--s-6);
   container-type: inline-size;
 }
 .main > * + * {
@@ -515,23 +505,6 @@
   .paths dd {
     flex-direction: column;
     align-items: flex-start;
-  }
-}
-
-/* One bay below 900px: the side bay moves under the main one, still cut by a rule. */
-@media (max-width: 900px) {
-  .grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .main {
-    padding-right: 0;
-    border-right: 0;
-  }
-  .aside {
-    margin-top: var(--s-6);
-    padding-top: var(--s-6);
-    padding-left: 0;
-    border-top: 1px solid var(--line);
   }
 }
 
