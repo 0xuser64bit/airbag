@@ -610,6 +610,8 @@ export function createApi(deps: ApiDeps): Server {
       sizeDecimals: sizeDecimals(d.marketId),
       spareAdded: d.data.spareAdded,
       fillPrice: d.data.close?.fillPrice ?? null,
+      // The mark when the line was crossed: where a margin add happened, which has no fill.
+      triggerMark: d.data.trigger.mark,
       fee: d.kind === 'margin' ? 0 : (d.data.close?.fee ?? null),
       oldLiquidation: d.data.before.liquidation,
       lineToFillMs: filled ? filled.at - d.data.trigger.at : null,

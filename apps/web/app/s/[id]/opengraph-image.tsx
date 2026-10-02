@@ -177,7 +177,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
                 label:
                   save.kind === 'trim'
                     ? `Trimmed by Airbag at ${fmt.usd(save.fillPrice)}`
-                    : 'Margin added by Airbag',
+                    : `Margin added by Airbag at ${fmt.usd(save.triggerMark)}`,
                 value: save.withAirbag,
                 color: C.airbag,
               },

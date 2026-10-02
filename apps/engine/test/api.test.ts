@@ -265,6 +265,7 @@ describe('onboarding to a deploy, over HTTP', () => {
     expect(Math.round(save.body.counterfactual)).toBe(3_200);
     expect(Math.round(save.body.withAirbag)).toBe(8_533);
     expect(save.body.measuredAt).toBe(100_000);
+    expect(save.body.triggerMark).toBe(97_000);
     expect(save.body.nominalLeverage).toBe(10);
 
     // Unlink disarms and stops protection.

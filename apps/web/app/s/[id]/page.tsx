@@ -109,7 +109,7 @@ export default async function SavePage({ params }: Props) {
                 label={
                   save.kind === 'trim'
                     ? `Trimmed by Airbag at ${fmt.usd(save.fillPrice)}`
-                    : 'Margin added by Airbag'
+                    : `Margin added by Airbag at ${fmt.usd(save.triggerMark)}`
                 }
                 value={save.withAirbag}
                 max={max}

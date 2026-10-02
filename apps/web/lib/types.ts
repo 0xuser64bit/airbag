@@ -252,6 +252,8 @@ export interface SaveReport {
   sizeDecimals: number;
   spareAdded: number;
   fillPrice: number | null;
+  /** The mark when the line was crossed. */
+  triggerMark: number;
   fee: number | null;
   oldLiquidation: number;
   lineToFillMs: number | null;
