@@ -44,12 +44,23 @@ export default function DashboardPage() {
   if (!data) return null;
 
   const [first] = data.positions;
+  // In simulation the wick is the way to see Airbag work: first in the side bay, or at the top
+  // of the page once the bays stack, rather than two screens down a phone.
+  const sim = (where: string | undefined) =>
+    data.mode === 'simulation' && (
+      <SimControls
+        className={where}
+        symbols={config.data?.markets.map((m) => m.symbol) ?? []}
+        positions={data.positions}
+      />
+    );
   const deployed = detail ? data.positions.find((p) => p.marketId === detail.marketId) : undefined;
 
   return (
     <div className="bays">
       <h1 className="visually-hidden">Positions</h1>
       <div className={`bay-main ${s.main}`}>
+        {sim(s.simTop)}
         <StatusBanner data={data} />
         {data.status === 'paused' && <PausedBanner />}
         {detail ? (
@@ -61,13 +72,7 @@ export default function DashboardPage() {
         <BlockStrip tape={data.tape} onchain={data.block.onchain} />
       </div>
       <aside className={`bay-side ${s.aside}`} aria-label="Airbag, key and deploys">
-        {/* In simulation the wick is the way to see Airbag work, so it comes first. */}
-        {data.mode === 'simulation' && (
-          <SimControls
-            symbols={config.data?.markets.map((m) => m.symbol) ?? []}
-            positions={data.positions}
-          />
-        )}
+        {sim(s.simSide)}
         {detail?.phase === 'done' && detail.kind === 'trim' && (
           <KeepsFalling d={detail} p={deployed} />
         )}

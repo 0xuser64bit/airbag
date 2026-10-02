@@ -5,7 +5,7 @@
 
 import { equity, fmt, SENSITIVITY } from '@airbag/risk';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { api, useApi } from '@/lib/api.ts';
 import type {
   Dashboard,
@@ -726,10 +726,13 @@ export function PausedBanner() {
 export function SimControls({
   symbols,
   positions,
+  className = '',
 }: {
   symbols: string[];
   positions: PositionView[];
+  className?: string;
 }) {
+  const id = useId();
   const [note, setNote] = useState<string | undefined>();
   type Played = { line?: number; low?: number };
   const run = async (path: string, body: unknown, done: (res: Played) => string) => {
@@ -750,9 +753,9 @@ export function SimControls({
     return `Playing a wick on ${sym}.${where}${paused ? ' Airbag is paused, so it only watches.' : ''}`;
   };
   return (
-    <section className={s.section} aria-labelledby="sim-controls">
+    <section className={`${s.section} ${className}`} aria-labelledby={id}>
       <div className={s.sectionHead}>
-        <h2 id="sim-controls" className="title">
+        <h2 id={id} className="title">
           Simulation controls
         </h2>
         <Annunciator state="off" size="sm">

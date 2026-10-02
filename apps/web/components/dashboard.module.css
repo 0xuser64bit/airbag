@@ -457,6 +457,28 @@
   flex-wrap: wrap;
   gap: var(--s-2);
 }
+/* The simulation controls: in the side bay, or on top of the main one when the bays stack. */
+.simTop {
+  display: none;
+}
+/* Hidden, the top copy still precedes the display: don't let it rule a line above it. */
+@media (min-width: 1001px) {
+  .main > .simTop + * {
+    margin-top: 0;
+  }
+  .main > .simTop + section {
+    padding-top: 0;
+    border-top: 0;
+  }
+}
+@media (max-width: 1000px) {
+  .simTop {
+    display: flex;
+  }
+  .simSide {
+    display: none;
+  }
+}
 
 /* If it keeps falling: both paths priced at the old liquidation price. */
 .paths > div {
