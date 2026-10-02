@@ -152,6 +152,13 @@ drops anything in flight.
 Streams `heartbeat@<chain>` (every block), `market-state@<chain>`, `funding@<chain>`,
 `market-config@<chain>`, `gas-stats@<chain>`, plus `order-book@<mkt>` and `trades@<mkt>`.
 
+**It drops everyone at once, sometimes.** On 2026-10-02 testnet closed every market-data
+connection from this machine at the same instant with `1008 ping timeout`, several times a minute
+for about ten minutes, then every few minutes. A socket sending `{mt:1}` every 10 s (answered
+with `{mt:2}`) was closed at the same moment as one sending nothing, so it is the server's doing,
+not a missing ping. `MarketFeed` reconnects after the documented 1 s backoff and the stale guard
+holds for the second or two it takes; in simulation the local clock fills in.
+
 `MarketState.at.b` is the block at which that market last changed. It is **not** a freshness signal
 on its own: the mark does not move every block.
 
