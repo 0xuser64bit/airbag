@@ -262,7 +262,8 @@ export function AirbagForm(props: AirbagFormProps) {
               type="button"
               className={`seg ${s.pushBtn}`}
               aria-pressed={pushHere && draft.push}
-              disabled={!canPush}
+              // Without a server key there's nothing to subscribe to; an old subscription can still go.
+              disabled={!canPush || (!props.vapidPublicKey && !pushHere)}
               onClick={togglePush}
             >
               Push to this browser
@@ -270,9 +271,11 @@ export function AirbagForm(props: AirbagFormProps) {
           </div>
           <span className={s.help}>
             {pushNote ??
-              (canPush
-                ? 'Deploys, saves and key problems. Turn it on in each browser you want alerts in.'
-                : "This browser can't receive push alerts. On an iPhone, add Airbag to your Home Screen first.")}
+              (!canPush
+                ? "This browser can't receive push alerts. On an iPhone, add Airbag to your Home Screen first."
+                : !props.vapidPublicKey
+                  ? 'This server doesn’t send push alerts yet. Deploys and saves still show on the dashboard and in the deploy log.'
+                  : 'Deploys, saves and key problems. Turn it on in each browser you want alerts in.')}
           </span>
         </fieldset>
 
