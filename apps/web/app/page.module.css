@@ -71,6 +71,18 @@
   gap: var(--s-3);
   flex-wrap: wrap;
 }
+.demo {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  margin-top: calc(-1 * var(--s-3));
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+.demo > :first-child {
+  flex-shrink: 0;
+}
 .promises {
   display: flex;
   flex-direction: column;

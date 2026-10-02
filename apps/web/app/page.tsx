@@ -17,7 +17,7 @@ import { Annunciator } from '@/components/instruments.tsx';
 import { Runway } from '@/components/Runway.tsx';
 import { Brand } from '@/components/ui.tsx';
 import { SOURCE_URL } from '@/lib/config.ts';
-import { liquidationsLast30Days } from '@/lib/stats.ts';
+import { isSimulation, liquidationsLast30Days } from '@/lib/stats.ts';
 import s from './page.module.css';
 
 const btc: Position = {
@@ -106,7 +106,7 @@ const FAQ = [
 export const revalidate = 3_600;
 
 export default async function Landing() {
-  const liquidated = await liquidationsLast30Days();
+  const [liquidated, demo] = await Promise.all([liquidationsLast30Days(), isSimulation()]);
   return (
     <div className={s.page}>
       <nav aria-label="Main" className={s.nav}>
@@ -145,6 +145,17 @@ export default async function Landing() {
                   Read the safety model
                 </a>
               </div>
+              {demo && (
+                <p className={s.demo}>
+                  <Annunciator state="on" size="sm">
+                    Simulation
+                  </Annunciator>
+                  <span>
+                    Try it with no wallet or funds: connect a test wallet, arm Airbag and play a
+                    wick. A paper exchange, on Monad testnet’s real blocks.
+                  </span>
+                </p>
+              )}
               <ul className={s.promises}>
                 {[
                   'Your key can’t withdraw. Perpl blocks it.',

@@ -1,8 +1,23 @@
-// "Liquidated on Perpl in the last 30 days", from Airbag's Envio indexer (indexer/). Returns
-// null when no indexer is configured or it doesn't answer: the landing page then shows nothing
-// rather than an invented number.
+// Server-side reads for the landing page. "Liquidated on Perpl in the last 30 days", from
+// Airbag's Envio indexer (indexer/), is null when no indexer is configured or it doesn't answer:
+// the landing page then shows nothing rather than an invented number.
+
+import { ENGINE_URL_SERVER } from './config.ts';
 
 const INDEXER_URL = process.env.INDEXER_URL;
+
+/** True when the engine behind this site runs the simulation; false when live or unreachable. */
+export async function isSimulation(): Promise<boolean> {
+  try {
+    const res = await fetch(`${ENGINE_URL_SERVER}/v1/config`, {
+      next: { revalidate: 3_600 },
+      signal: AbortSignal.timeout(3_000),
+    });
+    return res.ok && ((await res.json()) as { mode?: string }).mode === 'simulation';
+  } catch {
+    return false;
+  }
+}
 
 export async function liquidationsLast30Days(now = Date.now()): Promise<number | null> {
   if (!INDEXER_URL) return null;
