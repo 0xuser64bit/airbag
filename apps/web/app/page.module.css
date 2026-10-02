@@ -348,11 +348,11 @@
   color: var(--soft-bone);
 }
 
-/* FAQ: native disclosures. */
+/* FAQ: native disclosures across the whole column, like the safety rows above it; answers keep a
+   reading measure. */
 .faq {
   display: flex;
   flex-direction: column;
-  max-width: 880px;
   border-top: 1px solid var(--line);
 }
 .qa {
