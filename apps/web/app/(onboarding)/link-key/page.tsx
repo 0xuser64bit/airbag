@@ -210,7 +210,7 @@ export default function LinkKeyPage() {
                   Use a test key
                 </button>
               )}
-              {existing && (
+              {existing ? (
                 <button
                   type="button"
                   className="btn btn-ghost btn-lg"
@@ -218,6 +218,10 @@ export default function LinkKeyPage() {
                 >
                   Keep the current key
                 </button>
+              ) : (
+                <Link href="/connect" className="btn btn-ghost btn-lg">
+                  Back
+                </Link>
               )}
             </div>
           </form>
@@ -264,11 +268,6 @@ export default function LinkKeyPage() {
               )}
             </div>
           </>
-        )}
-        {!done && (
-          <Link href="/connect" className={`btn btn-ghost ${s.back}`}>
-            Back
-          </Link>
         )}
       </div>
 
