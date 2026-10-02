@@ -155,6 +155,9 @@ export function AirbagForm(props: AirbagFormProps) {
   const down = (dir * (mark - line.price)) / mark;
   const worst = `${fmt.pct(props.slippageBps / 10_000, 1).replace('.0%', '%')} ${pos.side === 'long' ? 'below' : 'above'} mark`;
   const r = pos.maintenance;
+  // The taker fee on the planned close, at the line; a margin add trades nothing.
+  const fee =
+    plan.kind === 'trim' ? plan.fraction * pos.size * line.price * (pos.closeFeeRate ?? 0) : 0;
   const canSubmit = !busy && (!props.requireChange || dirty);
 
   return (
@@ -388,8 +391,8 @@ export function AirbagForm(props: AirbagFormProps) {
               </dd>
             </div>
             <div>
-              <dt>Fee</dt>
-              <dd className="num">$0</dd>
+              <dt>Estimated fee</dt>
+              <dd className="num">{fmt.fee(fee)}</dd>
             </div>
             <div>
               <dt>Worst fill</dt>
