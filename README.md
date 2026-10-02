@@ -9,15 +9,16 @@ in to move liquidation further away. Trading fees, slippage and outages still ma
 is not guaranteed. It acts through a Perpl API key that cannot withdraw.
 
 **Try it: https://airbag.user64bit.world** — the simulation, no wallet extension needed:
-"Connect a test wallet", "Use a test key", arm, then "Play a wick on BTC" on the dashboard. The
-exchange is paper and the prices are scripted; the blocks are Monad testnet's own.
+"Connect a test wallet", "Use a test key", arm, then "Play a wick on BTC" (or ETH) on the
+dashboard. The wick is shaped to your position: through its Airbag line to its liquidation price
+and back. The exchange is paper and the prices are scripted; the blocks are Monad testnet's own.
 
 ![The dashboard just after a deploy: the trim, the re-add and the save in the block log, on Monad testnet blocks](docs/img/dashboard-deploy.png)
 
-*A simulated deploy on Monad testnet's real blocks: the line is crossed in block 67,239,006, the
+*A simulated deploy on Monad testnet's real blocks: the line is crossed in block 67,459,596, the
 reduce-only close fills in the next block, the released margin goes back in the one after, and
-the old liquidation price is reached while the trimmed position is still open. The public save
-report it produced:*
+the old liquidation price is reached five blocks later while the trimmed position is still open.
+The public save report it produced, with its share card one click away:*
 
 ![A public save report: $5,333 kept versus a liquidation](docs/img/save-report.png)
 
@@ -104,7 +105,8 @@ Open http://localhost:3000/connect. In simulation, "Connect a test wallet" is a 
 by the page, so the whole flow can be clicked through without a browser extension; an injected
 wallet such as Rabby or MetaMask works too. Sign in, use "Use a test key", arm, and press "Play a
 wick on BTC" on the dashboard: the engine trims, re-adds, re-arms and records a save, and the save
-report has a share card. Everything is labelled as simulated. Each wallet has its own simulated
+report has a share card to post, copy or download. "Play a wick on ETH" shows the other path:
+spare margin goes in instead of a trim. Everything is labelled as simulated. Each wallet has its own simulated
 prices, so visitors to one engine never move each other's positions, and "Reset account" puts
 that wallet back to the start.
 
@@ -154,6 +156,7 @@ This project is built with AI coding tools, as the hackathon rules allow. What w
 | Original code, tests and CI through `46d3a4b` | Claude Code (Anthropic, Claude Opus 5.5) | Pending |
 | 2026-09-27 audit, security/reliability/fee corrections, browser resilience, tests and operations documentation | Codex (OpenAI, GPT-6) | Pending |
 | 2026-10-01 live checks against testnet, live-path fixes, per-wallet simulation on Monad's block clock, demo deployment and docs | Claude Code (Anthropic, Claude Opus 5.5) | Pending |
+| 2026-10-02 product pass: one page frame and side bays, the loader, the share dialog and share images, per-position demo wicks, the save-value fix for later spare-margin adds, page titles, and docs | Claude Code (Anthropic, Claude Opus 5.5), from the owner's list and its own review | Pending |
 
 Commits carry no co-author trailer, at the owner's request, so the table above is the disclosure of
 record. It is updated as the owner reviews each part.
