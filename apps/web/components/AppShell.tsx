@@ -14,6 +14,7 @@ import { type Live, useDashboard } from '@/lib/useDashboard.ts';
 import s from './AppShell.module.css';
 import { DeploysIcon, ListIcon, Sliders } from './icons.tsx';
 import { Annunciator, type Lamp, Readout, StatusAnnunciator, useFresh } from './instruments.tsx';
+import { Loader } from './Loader.tsx';
 import { Page } from './Page.tsx';
 import { Brand, SimBanner } from './ui.tsx';
 
@@ -178,7 +179,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
 
         <Page className={s.body}>
-          {data ? children : session === undefined ? null : <PoweringUp failed={live.failed} />}
+          {data ? (
+            children
+          ) : live.failed ? (
+            <Loader
+              label="Can’t reach Airbag’s engine"
+              detail="Retrying every few seconds. Your positions show up as soon as it answers."
+            />
+          ) : (
+            <Loader
+              label="Connecting to Airbag’s engine"
+              detail="Your positions show up with the next Monad block."
+            />
+          )}
         </Page>
 
         <nav aria-label="App" className={s.tabs}>
@@ -196,26 +209,5 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
       </div>
     </LiveContext.Provider>
-  );
-}
-
-/** Before the first block: the instrument with its scale drawn and nothing on it yet. */
-function PoweringUp({ failed }: { failed: boolean }) {
-  return (
-    <div className={s.powering}>
-      <div className={`well ${s.blank}`} aria-hidden="true">
-        <div className={s.blankScale} />
-      </div>
-      <div className={s.poweringText}>
-        <p className="title" role="status">
-          {failed ? 'Can’t reach Airbag’s engine' : 'Connecting to Airbag’s engine'}
-        </p>
-        <p className="muted">
-          {failed
-            ? 'Retrying every few seconds. Your positions show up as soon as it answers.'
-            : 'Your positions show up with the next Monad block.'}
-        </p>
-      </div>
-    </div>
   );
 }

@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import type { EIP1193Provider } from 'viem';
 import { Check, Chevron, Wallet } from '@/components/icons.tsx';
 import { Annunciator } from '@/components/instruments.tsx';
+import { Spinner } from '@/components/Loader.tsx';
 import { Runway } from '@/components/Runway.tsx';
 import { ApiError, api, useEngineConfig } from '@/lib/api.ts';
 import { clearSession, useSession } from '@/lib/session.ts';
@@ -231,7 +232,7 @@ export default function ConnectPage() {
           onClick={next}
           disabled={!data?.account || busy === 'sign' || !config.data}
         >
-          {busy === 'sign' ? <span className="spinner" aria-hidden="true" /> : null}
+          {busy === 'sign' ? <Spinner /> : null}
           {busy === 'sign' ? 'Sign in your wallet' : 'Link a Perpl key'}
         </button>
         <Link href="/" className="btn btn-ghost btn-lg">

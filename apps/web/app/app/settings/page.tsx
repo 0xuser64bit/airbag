@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { AirbagForm } from '@/components/AirbagForm.tsx';
 import { useLive } from '@/components/AppShell.tsx';
 import { Annunciator } from '@/components/instruments.tsx';
+import { Loader } from '@/components/Loader.tsx';
 import { api, useEngineConfig } from '@/lib/api.ts';
 import { clearSession } from '@/lib/session.ts';
 import s from './settings.module.css';
@@ -23,18 +24,18 @@ export default function SettingsPage() {
   const [problem, setProblem] = useState<string | undefined>();
   if (!data) return null;
   if (!config.data)
-    return (
+    return config.error ? (
       <div className={s.page}>
         <h1 className={`display ${s.h1}`}>Airbag settings</h1>
-        <p role={config.error ? 'alert' : 'status'}>
-          {config.error?.message ?? 'Loading engine settings'}
-        </p>
-        {config.error && (
-          <button type="button" className="btn btn-secondary" onClick={config.reload}>
+        <div className="notice" data-tone="alert" role="alert">
+          <span>{config.error.message}</span>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={config.reload}>
             Try again
           </button>
-        )}
+        </div>
       </div>
+    ) : (
+      <Loader label="Loading engine settings" />
     );
 
   return (

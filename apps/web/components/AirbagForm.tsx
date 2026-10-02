@@ -22,6 +22,7 @@ import type { PositionView, Sensitivity, Settings } from '@/lib/types.ts';
 import s from './AirbagForm.module.css';
 import { Minus, Plus } from './icons.tsx';
 import { Annunciator } from './instruments.tsx';
+import { Spinner } from './Loader.tsx';
 import { Tape } from './Tape.tsx';
 
 const PRESETS: { id: Sensitivity; name: string; caption: string }[] = [
@@ -309,7 +310,7 @@ export function AirbagForm(props: AirbagFormProps) {
         )}
         <div className={s.actions}>
           <button type="submit" className="btn btn-primary btn-lg" disabled={!canSubmit}>
-            {busy && <span className="spinner" aria-hidden="true" />}
+            {busy && <Spinner />}
             {busy ? props.busyLabel : props.submitLabel}
           </button>
           {props.requireChange && dirty && !busy && (

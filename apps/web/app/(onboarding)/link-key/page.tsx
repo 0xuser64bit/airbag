@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Check, Copy, Cross, External } from '@/components/icons.tsx';
+import { Loader, Spinner } from '@/components/Loader.tsx';
 import { ApiError, api, useEngineConfig, useMe } from '@/lib/api.ts';
 import { SOURCE_URL } from '@/lib/config.ts';
 import { useSession } from '@/lib/session.ts';
@@ -70,6 +71,9 @@ export default function LinkKeyPage() {
     (existing && !replacing
       ? { accountId: existing.accountId, keyHint: existing.keyHint, simulated: sim }
       : undefined);
+
+  // Signed-out visitors are on their way to /connect; a linked key is known once /v1/me answers.
+  if (!session || (!me.data && !me.error)) return <Loader label="Checking for a linked key" />;
 
   return (
     <div className={s.withAside}>
@@ -198,7 +202,7 @@ export default function LinkKeyPage() {
 
             <div className={s.actions}>
               <button type="submit" className="btn btn-primary btn-lg" disabled={busy}>
-                {busy && <span className="spinner" aria-hidden="true" />}
+                {busy && <Spinner />}
                 {busy ? 'Checking with Perpl…' : 'Verify key'}
               </button>
               {sim && (

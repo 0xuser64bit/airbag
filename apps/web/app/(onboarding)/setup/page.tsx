@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { AirbagForm } from '@/components/AirbagForm.tsx';
+import { Loader } from '@/components/Loader.tsx';
 import { api, useEngineConfig, useMe } from '@/lib/api.ts';
 import { useSession } from '@/lib/session.ts';
 import { useDashboard } from '@/lib/useDashboard.ts';
@@ -24,11 +25,22 @@ export default function SetupPage() {
   }, [session, me.data, router]);
 
   if (!me.data || !config.data) {
-    const problem = me.error?.message ?? config.error?.message;
+    const problem = me.error ?? config.error;
+    if (!problem) return <Loader label="Loading your settings" />;
     return (
-      <p className={problem ? undefined : 'muted'} role={problem ? 'alert' : 'status'}>
-        {problem ?? 'Loading your settings'}
-      </p>
+      <div className="notice" data-tone="alert" role="alert">
+        <span>{problem.message}</span>
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm"
+          onClick={() => {
+            me.reload();
+            config.reload();
+          }}
+        >
+          Try again
+        </button>
+      </div>
     );
   }
   const view = live.data?.positions.find((p) => p.covered);

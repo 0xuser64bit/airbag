@@ -570,20 +570,6 @@ legend {
   text-align: right;
 }
 
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid currentColor;
-  border-right-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* A panel that arrives redraws top to bottom, the way a display unit repaints. */
 .redraw {
   animation: redraw var(--t-panel) var(--ease) both;

@@ -323,7 +323,7 @@ Depth only goes inward. Nothing casts a shadow onto the face; instruments are gl
 
 ## Shapes
 
-Small, machined corners. Lamps 3px, controls and notices 6px, wells 8px, the mark readout box 4px. Full rounding only for the switch track and thumb, the runway dot and the spinner. Instrument markers are cut shapes: the bug's notch and the readout's pointer are clip-path triangles pointing at the scale. Patterns are limited to two diagonal hatches (a neutral one between liquidation and the line, a warm one when the mark is inside the protection band) and the 45° yellow and graphite hazard stripe, 8px tall.
+Small, machined corners. Lamps 3px, controls and notices 6px, wells 8px, the mark readout box 4px. Full rounding only for the switch track and thumb, the runway dot and the loader's mark. Instrument markers are cut shapes: the bug's notch and the readout's pointer are clip-path triangles pointing at the scale. Patterns are limited to two diagonal hatches (a neutral one between liquidation and the line, a warm one when the mark is inside the protection band) and the 45° yellow and graphite hazard stripe, 8px tall.
 
 ### Named Rules
 **The Hazard Only When Airbag Acts Rule.** The hazard stripe appears only on a deploy (the flight display's top edge, wiping in over 320ms, and the deploy detail) and on the save report and its share image. Never as decoration or a section divider.
@@ -378,6 +378,9 @@ The horizontal tape for every other position: a 2px line track, a 6px red cliff 
 
 ### Block strip and readouts
 The per-block strip is a well of 10px cells: strong-line for seen blocks, hollow for missed ones, bone for the head. It shifts left by exactly one cell per block. Readout digits that change roll in from above over 120ms.
+
+### Loader
+The one loading indicator on the platform is the crash-test mark itself: its two filled quadrants turn a quarter at a time on the damped curve (1.4s for two quarters, a hold after each), so yellow and black trade places on every beat. A page or bay waiting on the engine shows the mark at 44px with a mono label saying what it waits for and, when useful, one line of detail; it holds back 180ms so a quick answer never flashes it. Inside a busy button the same mark turns at 18px in the button's own ink. Lists keep their skeleton rows. Under reduced motion the mark stands still and the label carries the meaning.
 
 ### Motion
 Instrument physics. Bugs, bands, ticks, gauges and labels move on the damped curve (`cubic-bezier(0.2, 0, 0, 1)`, 240ms); hover and colour changes take 120ms; a panel that arrives redraws top to bottom with a clip-path over 320ms. Lamps switch, they don't fade. Under reduced motion every animation is `none` and transitions collapse to 0.01ms; every keyframe animates in from a resting state, so nothing is left mid-flight.

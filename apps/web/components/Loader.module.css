@@ -1,0 +1,60 @@
+/* A quarter turn, a hold, a quarter turn: the two filled quadrants land where the black ones were,
+   so yellow and black swap on each beat. Two quarters make a half turn, which looks like the
+   start, so the loop has no seam. */
+.mark {
+  flex-shrink: 0;
+}
+.quads {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+  animation: quarter 1.4s var(--ease) infinite;
+}
+@keyframes quarter {
+  0%,
+  32% {
+    transform: rotate(0deg);
+  }
+  50%,
+  82% {
+    transform: rotate(90deg);
+  }
+  100% {
+    transform: rotate(180deg);
+  }
+}
+
+/* Holds back for a moment, so a quick answer never flashes it. */
+.loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-4);
+  min-height: min(56vh, 480px);
+  padding: var(--s-7) 0;
+  text-align: center;
+  animation: appear var(--t-fast) var(--ease) 180ms both;
+}
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+}
+.label {
+  font-family: var(--mono);
+  font-stretch: 87.5%;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--soft-bone);
+}
+.detail {
+  max-width: 46ch;
+  margin-top: calc(-1 * var(--s-2));
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-2);
+  text-wrap: pretty;
+}

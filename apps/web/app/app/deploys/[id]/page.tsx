@@ -11,6 +11,7 @@ import ds from '@/components/dashboard.module.css';
 import { deployTitle } from '@/components/dashboard.tsx';
 import { Back, External } from '@/components/icons.tsx';
 import { OutcomeAnnunciator } from '@/components/instruments.tsx';
+import { Loader } from '@/components/Loader.tsx';
 import { Tape } from '@/components/Tape.tsx';
 import { TxLink } from '@/components/ui.tsx';
 import { useApi } from '@/lib/api.ts';
@@ -41,15 +42,7 @@ export default function DeployPage({ params }: { params: Promise<{ id: string }>
       </div>
     );
   }
-  if (!d) {
-    return (
-      <div className={s.detail} aria-busy="true">
-        <p className="muted" role="status">
-          Loading the deploy
-        </p>
-      </div>
-    );
-  }
+  if (!d) return <Loader label="Loading the deploy" />;
 
   const tx = d.data.close?.tx ?? d.data.margin?.tx;
   const after = d.data.after;
