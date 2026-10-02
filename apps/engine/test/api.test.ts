@@ -226,7 +226,7 @@ describe('onboarding to a deploy, over HTTP', () => {
 
     // Play the landing page's wick on BTC through the simulated chain.
     const wick = await call('POST', '/v1/sim/wick', { token, body: { symbol: 'BTC' } });
-    expect(wick.body).toMatchObject({ ok: true, blocks: 41, low: 94_000 });
+    expect(wick.body).toMatchObject({ ok: true, blocks: 41, line: 97_000, low: 94_000 });
     // Mid-deploy, the key can't be removed or swapped.
     let status = '';
     for (let i = 0; i < 30 && status !== 'deploying'; i++) {
@@ -271,6 +271,35 @@ describe('onboarding to a deploy, over HTTP', () => {
     expect((await call('DELETE', '/v1/key', { token })).status).toBe(200);
     const me = await call('GET', '/v1/me', { token });
     expect(me.body).toMatchObject({ link: null, settings: { armed: false } });
+  });
+
+  it('shapes each wick to the position, so ETH and a re-armed BTC deploy and save too', async () => {
+    const { body: session } = await signIn();
+    const token = session.token;
+    const body = { apiKey: 'key-token-eeee', apiSecret: secret(), ipLocked: true };
+    expect((await call('POST', '/v1/key', { token, body })).status).toBe(200);
+    await call('PUT', '/v1/settings', { token, body: { armed: true } });
+    await blocks(2);
+    const oldestFirst = async (symbol: string) =>
+      (await call('GET', '/v1/deploys', { token })).body
+        .filter((d: { symbol: string }) => d.symbol === symbol)
+        .reverse();
+    // ETH at 5x has its line 7.5% down: past the 6% the BTC wick would have scaled to. Spare
+    // margin covers it; the wick keeps falling past the re-armed line, so Airbag adds again.
+    const eth = await call('POST', '/v1/sim/wick', { token, body: { symbol: 'ETH' } });
+    expect(eth.body).toMatchObject({ ok: true, line: 2_775, low: 2_550 });
+    await blocks(45);
+    const [margin] = await oldestFirst('ETH');
+    expect(margin).toMatchObject({ kind: 'margin', outcome: 'save' });
+    expect(margin.spareAdded).toBeCloseTo(105, 6);
+    // The first BTC wick deploys at $97,000; the next one at the line it re-armed at.
+    await call('POST', '/v1/sim/wick', { token, body: { symbol: 'BTC' } });
+    await blocks(45);
+    const again = await call('POST', '/v1/sim/wick', { token, body: { symbol: 'BTC' } });
+    expect(again.body.line).toBeCloseTo(92_150, -1);
+    await blocks(45);
+    const btc = await oldestFirst('BTC');
+    expect(btc.slice(0, 2).map((d: { outcome: string }) => d.outcome)).toEqual(['save', 'save']);
   });
 
   it("keeps each wallet's simulated prices to itself", async () => {

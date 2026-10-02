@@ -731,22 +731,23 @@ export function SimControls({
   positions: PositionView[];
 }) {
   const [note, setNote] = useState<string | undefined>();
-  const run = async (path: string, body: unknown, done: (res: { low?: number }) => string) => {
+  type Played = { line?: number; low?: number };
+  const run = async (path: string, body: unknown, done: (res: Played) => string) => {
     setNote(undefined);
     try {
-      setNote(done(await api<{ low?: number }>(path, { method: 'POST', body })));
+      setNote(done(await api<Played>(path, { method: 'POST', body })));
     } catch (err) {
       setNote((err as Error).message);
     }
   };
-  // After a deploy the line re-arms lower, so the same wick can stop short of it. Say so,
-  // rather than leave a price that moves while nothing happens looking broken.
-  const played = (sym: string, low: number | undefined) => {
-    const p = positions.find((x) => x.symbol === sym && x.covered);
-    const holds = low !== undefined && p?.side === 'long' && p.line !== undefined && low > p.line;
-    return holds && p?.line !== undefined
-      ? `Playing a wick on ${sym} down to ${fmt.usd(low)}. That stops short of your Airbag line at ${fmt.usd(p.line)}, so Airbag holds. Reset the account to start over.`
-      : `Playing a wick on ${sym}.`;
+  // The engine shapes each wick to the position, so it always reaches the line: say where.
+  const played = (sym: string, { line, low }: Played) => {
+    const paused = positions.some((x) => x.symbol === sym && x.status === 'paused');
+    const where =
+      line !== undefined && low !== undefined
+        ? ` Through your Airbag line at ${fmt.usd(line)}, down to the liquidation price, ${fmt.usd(low)}, and back.`
+        : '';
+    return `Playing a wick on ${sym}.${where}${paused ? ' Airbag is paused, so it only watches.' : ''}`;
   };
   return (
     <section className={s.section} aria-labelledby="sim-controls">
@@ -759,8 +760,9 @@ export function SimControls({
         </Annunciator>
       </div>
       <p className="muted">
-        Plays the landing page’s crash-test wick, one price per block, through the real engine on a
-        paper exchange. Only your account’s prices move.
+        Plays the landing page’s crash-test wick on your position, one price per block, through the
+        real engine on a paper exchange: through your Airbag line to the liquidation price and back.
+        Only your account’s prices move.
       </p>
       <div className={s.simButtons}>
         {symbols.map((sym) => (
@@ -768,7 +770,7 @@ export function SimControls({
             key={sym}
             type="button"
             className="btn btn-secondary btn-sm"
-            onClick={() => run('/v1/sim/wick', { symbol: sym }, (r) => played(sym, r.low))}
+            onClick={() => run('/v1/sim/wick', { symbol: sym }, (r) => played(sym, r))}
           >
             Play a wick on {sym}
           </button>

@@ -69,6 +69,38 @@ export const LANDING_PATH = [
   97000, 97000, 96400, 95900, 95300, 94800, 94400, 94000, 94500, 95200, 95900, 96600, 97200, 97700,
   98200, 98600, 98900, 99200, 99100, 99400, 99600, 99500, 99800, 99900, 100000, 100000, 100000,
 ];
+// Its levels: the entry it starts and ends at, the Airbag line, the liquidation price.
+const [TOP, LINE, BOTTOM] = [100_000, 97_000, 94_000];
+const BOTTOM_AT = LANDING_PATH.indexOf(BOTTOM);
+
+/**
+ * The landing's crash test, reshaped for one position: from its mark down through its Airbag
+ * line (held two blocks, for the trigger and the fill, as at $97,000) to its liquidation price,
+ * then back to the mark or the reference, whichever is further from liquidation. The BTC sample
+ * gets the landing's own numbers; ETH, and a position re-armed after a deploy, get a wick that
+ * reaches their own line instead of stopping short of it. The line and the liquidation price
+ * are rounded past themselves to the market's tick, so a rounding can't miss them: reaching the
+ * old liquidation price is what makes a deploy a save.
+ */
+export function wickPath(
+  p: { side: 'long' | 'short'; mark: number; reference: number; line: number; liquidation: number },
+  priceDecimals: number,
+): { prices: number[]; line: number; low: number } {
+  const k = 10 ** priceDecimals;
+  const past = (v: number) => (p.side === 'long' ? Math.floor(v * k) : Math.ceil(v * k)) / k;
+  const line = past(p.line);
+  const low = past(p.liquidation);
+  const dir = p.side === 'long' ? 1 : -1;
+  const back = dir * p.mark >= dir * p.reference ? p.mark : p.reference;
+  const prices = LANDING_PATH.map((v, i) => {
+    if (i > BOTTOM_AT) return low + ((v - BOTTOM) / (TOP - BOTTOM)) * (back - low);
+    if (v === LINE) return line;
+    if (v === BOTTOM) return low;
+    if (v > LINE) return p.mark - ((TOP - v) / (TOP - LINE)) * (p.mark - line);
+    return line - ((LINE - v) / (LINE - BOTTOM)) * (line - low);
+  });
+  return { prices, line, low };
+}
 
 interface WalletPrices {
   /** Scaled marks this wallet has set; other markets follow the shared feed. */

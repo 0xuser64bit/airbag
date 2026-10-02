@@ -13,7 +13,7 @@ import type { Deploy, Settings, Store } from './db.ts';
 import type { Engine } from './engine.ts';
 import type { Logger } from './log.ts';
 import { validatePush } from './notify.ts';
-import { LANDING_PATH, SAMPLE_SPARE_CNS, type SimChain, samplePositions } from './sim.ts';
+import { SAMPLE_SPARE_CNS, type SimChain, samplePositions, wickPath } from './sim.ts';
 
 export interface ApiDeps {
   cfg: Config;
@@ -381,12 +381,18 @@ export function createApi(deps: ApiDeps): Server {
     const w = wallet(ctx);
     const sim = simOnly();
     const body = await readJson(ctx.req);
-    const id = marketId(str(body.symbol, 'symbol', 16));
-    // The landing page's wick, scaled to the market's sample entry price.
-    const entry = id === 16 ? 100_000 : 3_000;
-    const path = LANDING_PATH.map((p) => (p / 100_000) * entry);
-    sim.play(w, id, path);
-    return { ok: true, blocks: path.length, low: Math.min(...path) };
+    const symbol = str(body.symbol, 'symbol', 16);
+    const id = marketId(symbol);
+    // The landing page's wick, shaped to this wallet's position: through its line to its
+    // liquidation price and back, so every covered market and every re-armed line gets one.
+    const v = engine.guards.get(w)?.views.find((x) => x.marketId === id);
+    const m = engine.markets.byId.get(id);
+    if (!m || v?.line === undefined || v.reference === undefined) {
+      throw new HttpError(409, 'no_position', `No ${symbol} position to play a wick on yet.`);
+    }
+    const wick = wickPath({ ...v, line: v.line, reference: v.reference }, m.config.price_decimals);
+    sim.play(w, id, wick.prices);
+    return { ok: true, blocks: wick.prices.length, line: wick.line, low: wick.low };
   });
 
   route('POST', '/v1/sim/reset', { auth: true, limit: 20 }, async (ctx) => {

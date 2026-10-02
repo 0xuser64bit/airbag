@@ -1,6 +1,6 @@
 import { MarketFeed } from '@airbag/perpl';
 import { afterEach, expect, it, vi } from 'vitest';
-import { SIM_CONTEXT, SimChain } from '../src/sim.ts';
+import { LANDING_PATH, SIM_CONTEXT, SimChain, wickPath } from '../src/sim.ts';
 
 const BTC = 16;
 
@@ -81,4 +81,33 @@ it('runs on its own clock, 300 ms a block, when not following Monad', () => {
   expect(heads).toEqual([1_000_001, 1_000_002, 1_000_003]);
   expect(sim.onchain).toBe(false);
   sim.stop();
+});
+
+it("shapes the landing's wick to a position: through its line, to its liquidation price, back", () => {
+  // The BTC sample keeps the landing's numbers: the line held at index 14 and 15, the
+  // liquidation price at 21, back to the entry.
+  const btc = wickPath(
+    { side: 'long', mark: 99_420, reference: 100_000, line: 97_000, liquidation: 94_000 },
+    1,
+  );
+  expect(btc.prices).toHaveLength(LANDING_PATH.length);
+  expect([btc.prices[14], btc.prices[15], btc.prices[21], btc.prices.at(-1)]).toEqual([
+    97_000, 97_000, 94_000, 100_000,
+  ]);
+  expect(btc.prices.slice(0, 14).every((p) => p > 97_000)).toBe(true);
+  expect(Math.min(...btc.prices)).toBe(94_000);
+  // Levels off the tick round past themselves, so the trigger and the save can't be missed.
+  const rearmed = wickPath(
+    { side: 'long', mark: 100_000, reference: 97_000, line: 92_150.37, liquidation: 87_300.37 },
+    1,
+  );
+  expect([rearmed.line, rearmed.low]).toEqual([92_150.3, 87_300.3]);
+  expect(rearmed.prices.at(-1)).toBe(100_000);
+  // A short mirrors it, upwards.
+  const short = wickPath(
+    { side: 'short', mark: 100, reference: 100, line: 103.333, liquidation: 106.666 },
+    2,
+  );
+  expect([short.line, short.low, Math.max(...short.prices)]).toEqual([103.34, 106.67, 106.67]);
+  expect(short.prices.slice(0, 14).every((p) => p < 103.34)).toBe(true);
 });
