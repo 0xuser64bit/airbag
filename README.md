@@ -11,7 +11,9 @@ is not guaranteed. It acts through a Perpl API key that cannot withdraw.
 **Try it: https://airbag.user64bit.world** — the simulation, no wallet extension needed:
 "Connect a test wallet", "Use a test key", arm, then "Play a wick on BTC" (or ETH) on the
 dashboard. The wick is shaped to your position: through its Airbag line to its liquidation price
-and back. The exchange is paper and the prices are scripted; the blocks are Monad testnet's own.
+and back. Turn on "Push to this browser" in Settings first and the trim and the save arrive as
+notifications. The exchange is paper and the prices are scripted; the blocks are Monad testnet's
+own.
 
 ![The dashboard just after a deploy: the trim, the re-add and the save in the block log, on Monad testnet blocks](docs/img/dashboard-deploy.png)
 

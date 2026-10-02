@@ -20,6 +20,14 @@ A visitor opens `/connect`, picks "Connect a test wallet", signs in, uses "Use a
 and presses "Play a wick on BTC". Each wallet has its own prices, so visitors can't disturb each
 other, and a room sharing one Wi-Fi IP gets ten times the live rate limits.
 
+**Push alerts are on.** "Push to this browser" in Settings subscribes the browser; a wick then
+arrives as "Simulated · Airbag trimmed your BTC long" and a save alert, within seconds. The VAPID
+keys were generated on the VM on 2026-10-02 and live only in `/etc/airbag/engine.env`
+(`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT=https://airbag.user64bit.world`); deploys
+leave them alone. To rotate, replace both keys there and restart the engine: browsers subscribed
+to the old key have to turn alerts on again. Phones need an installed app for push on iOS (Add to
+Home Screen); desktop Chrome, Edge, Firefox and Safari, and Android, work in the browser.
+
 To deploy a commit, from a clean working tree:
 
 ```bash

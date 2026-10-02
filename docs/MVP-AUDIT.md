@@ -301,5 +301,10 @@ handles it.
 ### Still open
 
 Unchanged: a funded testnet trim and re-add, independent review, the deployed engine's egress
-allow-list and alerts, push on the demo (it needs VAPID keys in the VM's `engine.env`), and the
-optional log and indexer. Nothing was sent to Perpl and nothing was deployed in this pass.
+allow-list and alerts, and the optional log and indexer. Nothing was sent to Perpl.
+
+After the pass, with the owner's go-ahead, it was pushed and deployed to the demo, and push alerts
+were turned on there: VAPID keys generated on the VM, `65b8e1c` (the toggle acts on this browser,
+at once) and `2e8e725` (a simulation's alerts say so). Checked on the live site in Chrome through
+Google's push service: the trim and save alerts arrive about 1.5 s after the deploy, with no push
+errors in the engine log. Not checked: delivery to phones, Firefox and Safari's push services.
