@@ -61,18 +61,19 @@ export default function DashboardPage() {
         <BlockStrip tape={data.tape} onchain={data.block.onchain} />
       </div>
       <aside className={`bay-side ${s.aside}`} aria-label="Airbag, key and deploys">
-        {detail?.phase === 'done' && detail.kind === 'trim' && (
-          <KeepsFalling d={detail} p={deployed} />
-        )}
-        <AirbagSummary settings={data.settings} slippageBps={config.data?.slippageBps} />
-        <KeyHealth data={data} now={now} perplUrl={config.data?.perplUrl} />
-        <RecentDeploys deploys={data.deploys} />
+        {/* In simulation the wick is the way to see Airbag work, so it comes first. */}
         {data.mode === 'simulation' && (
           <SimControls
             symbols={config.data?.markets.map((m) => m.symbol) ?? []}
             positions={data.positions}
           />
         )}
+        {detail?.phase === 'done' && detail.kind === 'trim' && (
+          <KeepsFalling d={detail} p={deployed} />
+        )}
+        <AirbagSummary settings={data.settings} slippageBps={config.data?.slippageBps} />
+        <KeyHealth data={data} now={now} perplUrl={config.data?.perplUrl} />
+        <RecentDeploys deploys={data.deploys} />
       </aside>
     </div>
   );
