@@ -8,6 +8,7 @@ import { notFound } from 'next/navigation';
 import { External } from '@/components/icons.tsx';
 import { Brand, SimBanner } from '@/components/ui.tsx';
 import { getSave } from '@/lib/save.ts';
+import { BackToPositions } from './Back.tsx';
 import { Share } from './Share.tsx';
 import s from './save.module.css';
 
@@ -89,6 +90,7 @@ export default async function SavePage({ params }: Props) {
                   <External />
                 </a>
               )}
+              <BackToPositions />
             </div>
           </section>
 
