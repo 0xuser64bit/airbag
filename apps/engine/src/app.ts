@@ -108,7 +108,7 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
       throw err;
     }
   }
-  const push = new Push(store, log, cfg.vapid);
+  const push = new Push(store, log, cfg.vapid, cfg.mode === 'simulation');
   const onchain =
     opts.onchain ??
     (cfg.airbagLog

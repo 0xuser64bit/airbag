@@ -79,25 +79,32 @@ export class Push {
   readonly enabled: boolean;
   private readonly store: Store;
   private readonly log: Logger;
+  private readonly simulated: boolean;
 
   constructor(
     store: Store,
     log: Logger,
     vapid?: { publicKey: string; privateKey: string; subject: string },
+    simulated = false,
   ) {
     this.store = store;
     this.log = log;
+    this.simulated = simulated;
     this.enabled = !!vapid;
     if (vapid) webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
   }
 
   async send(wallet: string, msg: PushMessage): Promise<number> {
     if (!this.enabled || !this.store.settings(wallet).push) return 0;
+    // A simulated trim on a lock screen must not read as a real one.
+    const payload = JSON.stringify(
+      this.simulated ? { ...msg, title: `Simulated · ${msg.title}` } : msg,
+    );
     let sent = 0;
     for (const sub of this.store.pushSubscriptions(wallet)) {
       try {
         validatePush(sub); // Also protects subscriptions stored before validation was introduced.
-        await webpush.sendNotification(sub, JSON.stringify(msg), {
+        await webpush.sendNotification(sub, payload, {
           TTL: 3_600,
           urgency: 'high',
           timeout: 10_000,
