@@ -147,6 +147,8 @@ export default async function Image({ params }: { params: Promise<{ id: string }
                 lineHeight: 0.9,
                 letterSpacing: '-0.04em',
                 color: C.airbag,
+                // Room for the comma's descender above the claim.
+                paddingBottom: 24,
               }}
             >
               {fmt.usd(save.kept)}
