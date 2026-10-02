@@ -1,47 +1,30 @@
 'use client';
 
 // The landing page's crash test: the same BTC long run twice through one scripted wick, one
-// frame per Monad block. Every number comes from @airbag/risk, the code the engine runs; the
-// engine's own test plays this exact path and fires at frame 14, fills at 15.
+// frame per Monad block. Every number comes from @airbag/risk, the code the engine runs, by way
+// of lib/crash.ts.
 
-import {
-  applyTrim,
-  counterfactualReturn,
-  equity,
-  fmt,
-  type Position,
-  planDeploy,
-} from '@airbag/risk';
+import { equity, fmt } from '@airbag/risk';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  BACK_AT,
+  btc,
+  FILL_AT,
+  LINE_AT,
+  LIQ_AT,
+  PATH,
+  plan,
+  returned,
+  trim,
+  trimmed,
+} from '@/lib/crash.ts';
 import s from './CrashTest.module.css';
 import { Replay } from './icons.tsx';
 import { Annunciator, Readout } from './instruments.tsx';
 
-const PATH = [
-  100000, 99900, 99960, 99700, 99420, 99500, 99100, 98800, 98900, 98400, 98100, 98200, 97700, 97300,
-  97000, 97000, 96400, 95900, 95300, 94800, 94400, 94000, 94500, 95200, 95900, 96600, 97200, 97700,
-  98200, 98600, 98900, 99200, 99100, 99400, 99600, 99500, 99800, 99900, 100000, 100000, 100000,
-];
 const LAST = PATH.length - 1;
-const LINE_AT = 14;
-const FILL_AT = 15;
-const LIQ_AT = 21;
-const BACK_AT = 38;
 /** Illustrative block numbers: this is a scripted crash test, not a real market. */
 const FIRST_BLOCK = 48_201_323;
-
-const btc: Position = {
-  side: 'long',
-  size: 1,
-  entry: 100_000,
-  deposit: 10_000,
-  funding: 0,
-  maintenance: 0.04,
-};
-const plan = planDeploy(btc, 97_000, 0, { target: 0.1, maxTrim: 0.5, useSpare: false });
-const trim = plan.kind === 'trim' ? plan.fraction : 0;
-const trimmed = applyTrim(btc, trim, 97_000).position;
-const returned = counterfactualReturn(btc);
 
 const x = (i: number) => 16 + i * 13.2;
 const y = (p: number) => 16 + ((100_800 - p) / 7_800) * 208;

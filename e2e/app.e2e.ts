@@ -11,6 +11,10 @@ test('landing page: the crash test plays and the page is accessible', async ({ p
     timeout: 15_000,
   });
   await checkA11y(page, 'landing');
+  // A shared link to the site unfurls into the crash test, not a bare URL.
+  const og = await page.request.get('/opengraph-image');
+  expect(og.status()).toBe(200);
+  expect(og.headers()['content-type']).toBe('image/png');
 });
 
 test('onboarding to a deploy and a save, as a trader would', async ({ page, wallet }, testInfo) => {
