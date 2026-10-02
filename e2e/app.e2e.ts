@@ -105,6 +105,26 @@ test('onboarding to a deploy and a save, as a trader would', async ({ page, wall
   const og = await page.request.get(`${page.url()}/opengraph-image`);
   expect(og.status()).toBe(200);
   expect(og.headers()['content-type']).toBe('image/png');
+
+  // Sharing works without a share sheet: the card itself, a link to copy, a PNG to keep.
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.getByRole('button', { name: 'Share save card' }).click();
+  const share = page.getByRole('dialog', { name: 'Share your save card' });
+  await expect(share.getByRole('img')).toBeVisible();
+  await share.getByRole('button', { name: 'Copy link' }).click();
+  await expect(share.getByRole('button', { name: 'Link copied' })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(page.url());
+  await expect(share.getByRole('link', { name: 'Download PNG' })).toHaveAttribute(
+    'download',
+    /\.png$/,
+  );
+  await expect(share.getByRole('link', { name: /Post on X/ })).toHaveAttribute(
+    'href',
+    /^https:\/\/x\.com\/intent\/tweet\?text=Simulated/,
+  );
+  await checkA11y(page, 'share dialog');
+  await page.keyboard.press('Escape');
+  await expect(share).toBeHidden();
 });
 
 test('a phone gets the tab bar and no sideways scrolling', async ({ page, wallet }, testInfo) => {

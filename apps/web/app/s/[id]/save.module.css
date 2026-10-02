@@ -107,6 +107,81 @@
   color: var(--text-3);
 }
 
+/* Sharing: the card itself on glass, then every way out, in a modal over the report. */
+.dialog {
+  width: min(680px, calc(100% - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-well);
+  background: var(--ground);
+  color: var(--bone);
+  overflow: hidden auto;
+}
+.dialog[open] {
+  animation: arrive var(--t-panel) var(--ease) both;
+}
+@keyframes arrive {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+.dialog::backdrop {
+  background: rgba(8, 8, 7, 0.8);
+}
+.dialogHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-3) 0 var(--s-5);
+}
+.close {
+  width: 36px;
+  padding: 0;
+}
+.dialogBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: var(--s-3) var(--s-5) var(--s-5);
+}
+.card {
+  position: relative;
+  aspect-ratio: 1200 / 675;
+  overflow: hidden;
+}
+.card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.cardWait {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.shareActions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--s-2);
+}
+.link {
+  font-size: 12px;
+  color: var(--text-2);
+}
+.shareNote {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--soft-bone);
+}
+
 /* Everyone who opens a shared report arrives cold: say what Airbag is. */
 .about {
   display: flex;

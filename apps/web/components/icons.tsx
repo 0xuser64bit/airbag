@@ -102,6 +102,18 @@ export const Share = ({ size = 16, color = 'currentColor', className }: P) =>
     className,
   );
 
+export const Download = ({ size = 16, color = 'currentColor', className }: P) =>
+  svg(
+    size,
+    color,
+    2,
+    <>
+      <path d="M12 4v11M7 10l5 5 5-5" />
+      <path d="M5 20h14" />
+    </>,
+    className,
+  );
+
 export const ListIcon = ({ size = 22, color = 'currentColor', className }: P) =>
   svg(size, color, 1.8, <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />, className);
 

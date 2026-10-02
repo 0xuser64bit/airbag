@@ -17,10 +17,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const save = await getSave(id).catch(() => null);
   if (!save) return { title: 'Save report' };
-  const title = `Saved ${fmt.usd(save.kept)} on a ${save.symbol} ${save.side}`;
+  const title = `${save.simulated ? 'Simulated save' : 'Saved'}: ${fmt.usd(save.kept)} on a ${save.symbol} ${save.side}`;
   return {
     title,
-    description: `${save.symbol} hit the old liquidation price after Airbag ${save.kind === 'trim' ? 'trimmed' : 'added spare margin'}. Kept ${fmt.usd(save.kept)} versus a liquidation.`,
+    description: `${save.simulated ? 'A simulation on a paper exchange. ' : ''}${save.symbol} hit the old liquidation price after Airbag ${save.kind === 'trim' ? 'trimmed' : 'added spare margin'}. Kept ${fmt.usd(save.kept)} versus a liquidation.`,
     openGraph: { title, type: 'article' },
     twitter: { card: 'summary_large_image', title },
   };
@@ -74,7 +74,10 @@ export default async function SavePage({ params }: Props) {
               )}
             </p>
             <div className={s.actions}>
-              <Share title={`Airbag kept ${fmt.usd(save.kept)} on a ${save.symbol} ${save.side}`} />
+              <Share
+                id={save.id}
+                text={`${save.simulated ? 'Simulated: ' : ''}Airbag kept ${fmt.usd(save.kept)} on a ${save.symbol} ${save.side} versus a liquidation on Perpl.`}
+              />
               {save.tx && !save.simulated && (
                 <a
                   className="btn btn-secondary btn-lg"
