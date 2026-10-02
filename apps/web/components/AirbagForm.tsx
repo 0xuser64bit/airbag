@@ -17,6 +17,7 @@ import {
   triggered,
 } from '@airbag/risk';
 import { useEffect, useState } from 'react';
+import { api } from '@/lib/api.ts';
 import { disablePush, enablePush, pushSupported, subscribed } from '@/lib/push.ts';
 import type { PositionView, Sensitivity, Settings } from '@/lib/types.ts';
 import s from './AirbagForm.module.css';
@@ -71,7 +72,8 @@ export interface AirbagFormProps {
   heading: React.ReactNode;
 }
 
-const KEYS = ['sensitivity', 'targetPct', 'maxTrimPct', 'useSpare', 'push', 'demo'] as const;
+// What a save changes. Push isn't here: the toggle acts on this browser at once.
+const KEYS = ['sensitivity', 'targetPct', 'maxTrimPct', 'useSpare', 'demo'] as const;
 
 export function AirbagForm(props: AirbagFormProps) {
   const { initial, view, spare } = props;
@@ -102,14 +104,19 @@ export function AirbagForm(props: AirbagFormProps) {
     setPushNote(undefined);
     try {
       if (pushHere) {
+        // This browser only: the account's other browsers keep their alerts.
         await disablePush();
         setPushHere(false);
-        set('push', false);
       } else {
         if (!props.vapidPublicKey) throw new Error('Push alerts aren’t set up on this server yet.');
         await enablePush(props.vapidPublicKey);
         setPushHere(true);
-        set('push', true);
+        // Alerts can be off for the whole account (an older 'off' saved here); this browser just
+        // asked for them, so turn them on at once rather than wait for 'Save changes'.
+        if (!draft.push) {
+          await api('/v1/settings', { method: 'PUT', body: { push: true } });
+          set('push', true);
+        }
       }
     } catch (err) {
       setPushNote((err as Error).message);

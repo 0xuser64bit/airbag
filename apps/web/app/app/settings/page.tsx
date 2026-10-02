@@ -41,8 +41,15 @@ export default function SettingsPage() {
   return (
     <div className={s.page}>
       <AirbagForm
-        // Remount on a fresh save so the form starts from what the engine stored.
-        key={data.settings.updatedAt}
+        // Remount when what the form edits changes in the engine (a save here, or in another tab),
+        // so the draft starts from what's stored. A pause or a push toggle keeps unsaved edits.
+        key={[
+          data.settings.sensitivity,
+          data.settings.targetPct,
+          data.settings.maxTrimPct,
+          data.settings.useSpare,
+          data.settings.demo,
+        ].join()}
         initial={data.settings}
         view={data.positions.find((p) => p.covered)}
         spare={data.account?.spare ?? 0}
