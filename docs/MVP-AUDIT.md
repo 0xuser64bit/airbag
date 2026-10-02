@@ -281,6 +281,8 @@ a screen looked wrong.
 | The share image's comma ran into "kept versus a liquidation"; the site had no share image; simulated saves weren't labelled in link previews | Unfinished-looking shares | `ff6fd1e`, `446cfaf`, `6f6353b` |
 | The Simulation banner arrived after a browser fetch | Every onboarding and app page dropped 37 px after it painted | `3fa25c4`: the layouts read the engine's mode on the server |
 | The wick controls sat below the fold; the landing never said the demo needs no wallet | A visitor couldn't find the one button that shows Airbag work | `d08ddb5`, `164f76f` |
+| The landing never said why Airbag needs Monad | The hackathon's question went unanswered on the site | `8efcc70`: a section with a dated simulated deploy on Monad testnet's own blocks, each linked to MonadVision, and the measured 303 ms block time |
+| On a phone the wick controls sat ~1,950 px down; a margin save's path read "Margin added by Airbag $1,320" when $105 went in | | `6bb8da9`, `491f823` |
 | Smaller: every app page titled "Positions"; link-key's Back orphaned and its checkbox yellow; no way back from your own save report; push enabled on a server with no VAPID key | | `029d427`, `3d8e966`, `03696ef`, `23aa140` |
 
 Also recorded: Perpl testnet's market-data socket sometimes closes every client at once with
