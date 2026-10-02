@@ -55,7 +55,14 @@ function keyLamp(data: Dashboard): [Lamp, string] {
   return ['off', 'Connecting'];
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  serverMode,
+  children,
+}: {
+  /** The engine's mode as the server read it, so the simulation label is in the first paint. */
+  serverMode: 'live' | 'simulation' | null;
+  children: React.ReactNode;
+}) {
   const router = useRouter();
   const path = usePathname();
   const session = useSession();
@@ -79,7 +86,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <LiveContext.Provider value={live}>
-      {data?.mode === 'simulation' && <SimBanner />}
+      {(data?.mode ?? serverMode) === 'simulation' && <SimBanner />}
       <div className={s.frame}>
         <header className={s.masthead}>
           <div className={s.lead}>

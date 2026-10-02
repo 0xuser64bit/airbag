@@ -17,7 +17,7 @@ import { Annunciator } from '@/components/instruments.tsx';
 import { Runway } from '@/components/Runway.tsx';
 import { Brand } from '@/components/ui.tsx';
 import { SOURCE_URL } from '@/lib/config.ts';
-import { isSimulation, liquidationsLast30Days } from '@/lib/stats.ts';
+import { engineMode, liquidationsLast30Days } from '@/lib/stats.ts';
 import s from './page.module.css';
 
 const btc: Position = {
@@ -106,7 +106,8 @@ const FAQ = [
 export const revalidate = 3_600;
 
 export default async function Landing() {
-  const [liquidated, demo] = await Promise.all([liquidationsLast30Days(), isSimulation()]);
+  const [liquidated, mode] = await Promise.all([liquidationsLast30Days(), engineMode()]);
+  const demo = mode === 'simulation';
   return (
     <div className={s.page}>
       <nav aria-label="Main" className={s.nav}>
