@@ -195,6 +195,9 @@ export function applyTrim(
 export const counterfactualReturn = (before: Position, userShare = 0.8): number =>
   userShare * maintenanceRequirement(before);
 
-/** Money kept versus a liquidation. Spare margin Airbag added was the user's already. */
+/**
+ * Money kept versus a liquidation. Spare margin Airbag added (by this deploy and any later one on
+ * the same position) was the user's already, so `spareAdded` is all of it.
+ */
 export const saveValue = (equityNow: number, spareAdded: number, counterfactual: number): number =>
   equityNow - spareAdded - counterfactual;

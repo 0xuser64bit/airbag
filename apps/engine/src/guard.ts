@@ -947,7 +947,7 @@ export class AccountGuard {
       const mark = m && this.markOf(m);
       if (!m || mark === undefined) continue;
       const risk = this.risk(p, m, head);
-      d.data.kept = saveValue(equity(risk, mark), d.data.spareAdded, d.data.counterfactual);
+      d.data.kept = saveValue(equity(risk, mark), this.spareSince(d), d.data.counterfactual);
       d.data.keptMark = mark;
       if (d.outcome === 'pending' && crossed(d.side, mark, d.data.before.liquidation)) {
         d.data.save = { block: head, at: Date.now(), mark };
@@ -962,6 +962,25 @@ export class AccountGuard {
         this.save(d);
       }
     }
+  }
+
+  /**
+   * Spare margin Airbag has put into this deploy's position from this deploy on, later deploys
+   * included: the trader's own money moved in, so not part of what any of them kept.
+   */
+  private spareSince(d: Deploy): number {
+    const open = new Map(this.tracked);
+    for (const e of this.episodes.values()) open.set(e.deploy.id, e.deploy);
+    let sum = 0;
+    for (const x of open.values()) {
+      if (
+        x.marketId === d.marketId &&
+        x.data.positionId === d.data.positionId &&
+        x.createdAt >= d.createdAt
+      )
+        sum += x.data.spareAdded;
+    }
+    return sum;
   }
 
   private classify(d: Deploy, outcome: 'save' | 'precaution') {

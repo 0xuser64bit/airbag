@@ -97,7 +97,10 @@ account.
   liquidations`); the estimate is the fill: a liquidation executes on the book near, not exactly
   at, the liquidation price.
 - Save value = the current value of the Airbag path − the counterfactual return. Live while the
-  position is open, frozen when it closes. The share card snapshots it.
+  position is open, frozen when it closes. The share card snapshots it. The value of the Airbag
+  path is the position's equity less the spare margin Airbag moved into it, by this deploy and
+  by any later deploy on the same position: that was the trader's money either way, so it is
+  never counted as kept.
 - **When it costs.** A move that keeps going to the new liquidation price liquidates the smaller
   position too. The released margin went back in, so that returns `0.8 × MMR'` on the smaller
   size: less than the first liquidation's `0.8 × MMR`. In the golden example, $1,635 at $87,300

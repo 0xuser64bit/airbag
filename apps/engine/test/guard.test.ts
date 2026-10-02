@@ -188,6 +188,23 @@ describe('deploy paths', () => {
     expect(d.data.timeline.some((e) => e.text.includes('Fee $16'))).toBe(true);
     expect(deployMessage(d).body).toMatch(/Fee \$16\.\d\d\.$/);
   });
+  it("counts a later deploy's spare margin as the trader's money in an earlier save", async () => {
+    // ETH's line is $2,775; $105 of spare puts liquidation 10% under it. The fall continues
+    // past the line re-armed at $2,636, so $297 more goes in, then $2,550 (the first deploy's
+    // old liquidation price) arrives and the first deploy is a save.
+    const h = harness({ markets: [ETH] });
+    const path = [3_000, 2_900, 2_800, 2_775, 2_775, 2_700, 2_640, 2_610, 2_610, 2_580, 2_550];
+    await h.run([...path, 2_800, 3_060, 3_060], ETH);
+    const [first, second] = h.store.deploys(WALLET).sort((a, b) => a.createdAt - b.createdAt);
+    expect(first).toMatchObject({ kind: 'margin', outcome: 'save' });
+    expect(first?.data.spareAdded).toBeCloseTo(105, 6);
+    expect(second).toMatchObject({ kind: 'margin' });
+    expect(second?.data.spareAdded).toBeCloseTo(297, 6);
+    // At $3,060 the position holds $1,722, and $402 of that is the trader's own spare margin
+    // moved in, not something Airbag kept: $1,722 − $402 − the $240 a liquidation returns.
+    expect(h.guard.live(first?.id ?? '')?.data.kept).toBeCloseTo(1_080, 0);
+  });
+
   it('adds spare margin instead of trimming when it alone reaches the target', async () => {
     const h = harness({ spareCns: 10_000_000_000n });
     await h.run([99_000, 98_000, 97_000, 97_000, 97_000]);
