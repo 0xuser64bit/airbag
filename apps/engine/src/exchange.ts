@@ -2,7 +2,8 @@
 // PaperExchange is the simulated one used by simulation mode and the tests. Both enforce the
 // order-type allowlist, and the paper one mimics what matters on Perpl: IOC closes fill at the
 // mark within the limit on a later block, the deposit shrinks pro-rata, the closed part's
-// equity settles to the free balance, and t:6 moves free balance into the position.
+// equity settles to the free balance, t:6 moves free balance into the position, and a position
+// whose mark reaches its liquidation price is liquidated, returning the trader's share.
 
 import {
   type Account,
@@ -20,8 +21,9 @@ import {
   scaled,
   type TradingClient,
   toCnsFloor,
+  toRiskPosition,
 } from '@airbag/perpl';
-import { direction } from '@airbag/risk';
+import { crossed, direction, equity, liquidationPrice, type Side } from '@airbag/risk';
 
 export type Exchange = Pick<
   TradingClient,
@@ -47,6 +49,24 @@ export interface PaperOptions {
   delayBlocks?: number;
   /** Share of a close that fills, for partial-fill tests. */
   fillShare?: (frame: AllowedOrderFrame) => number;
+  /** How far past the mark a close fills, against the trader: book depth. Default 0. */
+  fillSlippageBps?: number;
+  /** The trader's share of what's left at liquidation (Perpl's getLiquidationInfo). */
+  userShare?: number;
+}
+
+/** A position the paper exchange liquidated: the mark reached its liquidation price. */
+export interface PaperLiquidation {
+  marketId: number;
+  positionId: number;
+  side: Side;
+  /** Base units closed. */
+  size: number;
+  block: number;
+  /** The mark it was liquidated at. */
+  price: number;
+  /** What went back to the free balance: the trader's share of the equity left. */
+  returned: number;
 }
 
 export class PaperExchange implements Exchange {
@@ -59,6 +79,7 @@ export class PaperExchange implements Exchange {
   lastMessageAt = Date.now();
   /** Every frame accepted, for tests and the allowlist audit. */
   readonly sent: AllowedOrderFrame[] = [];
+  readonly liquidations: PaperLiquidation[] = [];
   private readonly queue: Queued[] = [];
   private rq: number;
   private oid = 1;
@@ -92,14 +113,48 @@ export class PaperExchange implements Exchange {
     for (const q of this.queue.splice(0)) q.resolve({ result: 'lost', rq: q.frame.rq });
   }
 
-  /** Advances to `head`, settling every order whose delay has passed. */
+  /**
+   * Advances to `head`: liquidates what the mark has reached, then settles every order whose
+   * delay has passed. A liquidation in the same block as an order wins, as it can on Perpl.
+   */
   onBlock(head: number): void {
     this.head = head;
     this.lastMessageAt = Date.now();
+    this.liquidate();
     const due = this.queue.filter((q) => head - q.at >= (this.opts.delayBlocks ?? 1));
     for (const q of due) {
       this.queue.splice(this.queue.indexOf(q), 1);
       q.resolve(this.settle(q.frame));
+    }
+  }
+
+  private liquidate(): void {
+    const account = this.account;
+    if (!account) return;
+    const cd = this.opts.collateralDecimals;
+    for (const [mkt, pos] of this.positions) {
+      const market = this.opts.markets.get(mkt);
+      const mark = this.opts.markOf(mkt);
+      if (!market || mark === undefined) continue;
+      // Paper positions carry no funding: their entry sum is the current sum.
+      const risk = toRiskPosition(pos, market, cd, pos.efs);
+      const price = scaled(mark, market.config.price_decimals);
+      if (!crossed(risk.side, price, liquidationPrice(risk))) continue;
+      const returned = toCnsFloor(
+        Math.max(0, equity(risk, price)) * (this.opts.userShare ?? 0.8),
+        cd,
+      );
+      account.b = (BigInt(account.b) + returned).toString();
+      this.positions.delete(mkt);
+      this.liquidations.push({
+        marketId: mkt,
+        positionId: pos.pid,
+        side: risk.side,
+        size: risk.size,
+        block: this.head,
+        price,
+        returned: fromCns(returned, cd),
+      });
     }
   }
 
@@ -157,9 +212,16 @@ export class PaperExchange implements Exchange {
       };
     }
 
-    // CloseLong (3) / CloseShort (4): IOC at the mark if it's within the limit.
-    const mark = this.opts.markOf(frame.mkt);
+    // CloseLong (3) / CloseShort (4): IOC at the mark (less any slippage) if within the limit.
+    const markNow = this.opts.markOf(frame.mkt);
     const side = frame.t === 3 ? 'long' : 'short';
+    const slip = (this.opts.fillSlippageBps ?? 0) / 10_000;
+    const mark =
+      markNow === undefined
+        ? undefined
+        : side === 'long'
+          ? Math.floor(markNow * (1 - slip))
+          : Math.ceil(markNow * (1 + slip));
     if (!pos || (pos.sd === 1) !== (side === 'long') || mark === undefined) {
       return {
         result: 'failed',

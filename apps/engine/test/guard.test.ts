@@ -28,6 +28,7 @@ interface Options {
   markets?: number[];
   short?: boolean;
   feeMicros?: number;
+  fillSlippageBps?: number;
 }
 
 function harness(opts: Options = {}) {
@@ -81,6 +82,7 @@ function harness(opts: Options = {}) {
     markets: new Map(marketDefinitions.map((m) => [m.id, m])),
     collateralDecimals: 6,
     markOf: (id) => feed.mark(id),
+    ...(opts.fillSlippageBps ? { fillSlippageBps: opts.fillSlippageBps } : {}),
     ...(opts.fillShare || opts.failAdds
       ? {
           fillShare: (f: { s: number; t: number }) =>
@@ -158,6 +160,7 @@ describe('the landing-page crash test, through the real engine', () => {
     expect(d.data.counterfactual).toBeCloseTo(3_200, 6);
 
     // $94,000 arrives at index 21: the old liquidation price, with the position still open.
+    expect(h.paper.liquidations).toEqual([]);
     expect(d.outcome).toBe('save');
     expect(index(d.data.save?.block ?? 0)).toBe(21);
     expect(h.saved).toHaveLength(1);
@@ -224,6 +227,15 @@ describe('deploy paths', () => {
     expect(d).toMatchObject({ kind: 'trim', phase: 'done' });
     expect(d.data.after?.distance).toBeGreaterThanOrEqual(0.0999);
     expect(d.data.timeline.some((e) => e.text.includes('Trimming instead next block'))).toBe(true);
+  });
+
+  it('fills a thin book past the mark, inside the worst price', async () => {
+    const h = harness({ fillSlippageBps: 10 });
+    await h.run([98_000, 97_000, 97_000, 97_000]);
+    const d = only(h.store);
+    // 0.1% under the $97,000 mark, above the $96,515 limit.
+    expect(d.data.close?.fillPrice).toBe(96_903);
+    expect(d.phase).toBe('done');
   });
 
   it('retries the rest of a partial fill next block', async () => {
@@ -336,6 +348,18 @@ describe('what stops a deploy', () => {
     expect(h.store.deploys(WALLET)).toHaveLength(0);
     expect(h.guard.status()).toBe('paused');
     expect(h.guard.views.find((v) => v.marketId === BTC)?.status).toBe('paused');
+  });
+
+  it('lets Perpl liquidate a paused position at its liquidation price', async () => {
+    const h = harness({ settings: { armed: false } });
+    await h.run([97_000, 95_000, 94_000]);
+    expect(h.paper.positions.has(BTC)).toBe(false);
+    // 80% of the $4,000 left at $94,000 goes back to the balance, beside the $420 spare.
+    expect(h.paper.liquidations).toEqual([
+      expect.objectContaining({ marketId: BTC, side: 'long', price: 94_000, returned: 3_200 }),
+    ]);
+    expect(h.paper.spare()).toBeCloseTo(3_620, 6);
+    expect(h.store.deploys(WALLET)).toHaveLength(0);
   });
 
   it('never acts on stale data', async () => {
