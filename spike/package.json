@@ -10,7 +10,8 @@
     "check": "node --env-file-if-exists=../.env check.ts",
     "liquidations": "node --env-file-if-exists=../.env liquidations.ts",
     "account": "node --env-file-if-exists=../.env account.ts",
-    "deploy": "node --env-file-if-exists=../.env deploy.ts"
+    "deploy": "node --env-file-if-exists=../.env deploy.ts",
+    "backtest": "node --env-file-if-exists=../.env backtest.ts"
   },
   "dependencies": {
     "@airbag/perpl": "workspace:*",

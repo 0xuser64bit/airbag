@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!design", "!**/*.md"]
+    "includes": ["**", "!design", "!**/*.md", "!apps/web/lib/backtest.json"]
   },
   "formatter": {
     "enabled": true,
