@@ -225,6 +225,9 @@ test('the backtest: every liquidation replayed, each with its own page', async (
   );
   await expect(page.getByText('were still open when Perpl liquidated')).toBeVisible();
   await checkA11y(page, 'backtest');
+  const og = await page.request.get('/backtest/opengraph-image');
+  expect(og.status()).toBe(200);
+  expect(og.headers()['content-type']).toBe('image/png');
   await checkNoOverflow(page);
   // The folded rows open in place; every row links to its liquidation.
   await page.getByText(/^Show the other \d+$/).click();
