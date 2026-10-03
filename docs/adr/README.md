@@ -12,10 +12,11 @@ One file per decision. Status is Accepted unless marked otherwise. Supersede a r
 | [0006](0006-api-key-custody.md) | API secret custody: AES-256-GCM envelope encryption in the engine only |
 | [0007](0007-web-app.md) | Web: Next.js App Router, Tailwind tokens, wagmi/viem, SIWE, PWA push (amended by 0011, 0013) |
 | [0008](0008-risk-math-numerics.md) | Risk math in float64, integer conversion at the Perpl edge with safe rounding |
-| [0009](0009-onchain-log-and-indexer.md) | AirbagLog contract with Foundry, indexed by Envio HyperIndex |
+| [0009](0009-onchain-log-and-indexer.md) | AirbagLog contract with Foundry, indexed by Envio HyperIndex (amended by 0016) |
 | [0010](0010-engine-owns-state-in-sqlite.md) | The engine owns all state, in SQLite |
 | [0011](0011-bearer-sessions.md) | Sessions are bearer tokens from Sign-In with Ethereum |
 | [0012](0012-exchange-port-and-simulation.md) | One exchange port, a paper exchange, and simulation mode |
 | [0013](0013-web-css-and-viem.md) | Web: CSS custom properties and viem, no Tailwind or wagmi |
 | [0014](0014-simulation-on-monad-blocks.md) | Simulation runs on Monad's real block clock (amends 0012) |
 | [0015](0015-free-shared-vm.md) | Host on one free, shared VM (supersedes 0004) |
+| [0016](0016-airbaglog-reads-perpl.md) | AirbagLog checks its records against Perpl's own state (amends 0009) |

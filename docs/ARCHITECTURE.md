@@ -47,7 +47,8 @@ flowchart LR
   E -- "1 shared socket" --> MD
   E -- "1 socket per account<br/>(Ed25519 sign-in)" --> TR
   TR --> EX
-  E -- "recordDeploy / recordSave<br/>(hot wallet, optional)" --> LOG
+  E -- "recordDeploy / proveSave<br/>(hot wallet, optional)" --> LOG
+  LOG -- "reads positions,<br/>mark, margins" --> EX
   API -- "lookup" --> RPC
   IDX -- "HyperSync" --> EX
   IDX -- "HyperSync" --> LOG
@@ -66,7 +67,7 @@ decrypt a Perpl key ([ADR 0006](adr/0006-api-key-custody.md)).
 | `packages/perpl` | Perpl client: context and funding REST, frame types, Ed25519 sign-in, `TradingClient` (snapshots, heartbeat `sn`, pings, token bucket, reconnect, order outcomes), `MarketFeed` (heartbeat, marks, funding, config, stale guard), onchain reads, unit conversion with safe rounding, and **the order-type allowlist**. | `risk`, viem |
 | `apps/engine` | The always-on service: config, logger, SQLite store, key vault, the per-account guard, the paper exchange and simulation, the HTTP API, Web Push, the AirbagLog writer; and the replay of a recorded mark path that the backtest runs on. | `risk`, `perpl`, viem, web-push |
 | `apps/web` | Next.js site and app ([ADR 0007](adr/0007-web-app.md), [0013](adr/0013-web-css-and-viem.md)). Design system and content contract: [apps/web/DESIGN.md](../apps/web/DESIGN.md). | `risk`, viem, next |
-| `contracts/` | Foundry project: `AirbagLog` and its tests ([ADR 0009](adr/0009-onchain-log-and-indexer.md)). | — |
+| `contracts/` | Foundry project: `AirbagLog`, which reads Perpl's Exchange to compute liquidation prices, record each deploy's after-state and prove saves, and its tests, one on a fork of Monad mainnet ([ADR 0009](adr/0009-onchain-log-and-indexer.md), [0016](adr/0016-airbaglog-reads-perpl.md)). | — |
 | `indexer/` | Envio HyperIndex over AirbagLog and Perpl's liquidations. | envio |
 | `e2e/` | Playwright journeys with axe checks, against the engine in simulation mode. | — |
 | `spike/` | Scripts for the one-off testnet verification run. See [DEPLOY.md](DEPLOY.md). | `perpl`, `risk` |
@@ -102,9 +103,9 @@ sequenceDiagram
     end
   end
   G->>G: re-arm: reference = fill price, new line, lock released
-  G-->>L: recordDeploy (queued, never blocks)
+  G-->>L: recordDeploy (queued, never blocks; the contract reads the after-state from Perpl)
   G-->>G: push notification; SSE to the dashboard
-  Note over G: later blocks: old liquidation price reached while open = save (recordSave), closed first = precaution
+  Note over G: later blocks: old liquidation price reached while open = save (proveSave, checked against Perpl's mark), closed first = precaution
 ```
 
 A restart compares fresh snapshots with persisted pre-order state and exact re-add targets.
@@ -218,7 +219,9 @@ Accepted for now, and worth knowing before changing anything near them.
   mutation. Disposable testnet chaos testing and independent review remain launch gates.
 - The optional onchain writer has an in-memory queue, without durable retry or a persistent
   outbox. Receipts survive in SQLite, but failed log writes require operator investigation and
-  are not silently backfilled on restart. The contract is writer-attested, not independent proof
-  that a counterfactual liquidation would have occurred.
+  are not silently backfilled on restart. The contract reads each deploy's after-state and checks
+  each save against Perpl's own state ([ADR 0016](adr/0016-airbaglog-reads-perpl.md)); the
+  liquidation price before a deploy is still the engine's reading, and a save is not proof that a
+  counterfactual liquidation would have filled where the estimate says.
 - The session token lives in `localStorage`. The CSP limits where a script could send it, but Next's
   inline scripts need `'unsafe-inline'`.

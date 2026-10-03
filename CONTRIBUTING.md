@@ -20,6 +20,7 @@ pnpm dev:web      # web app on :3000
 
 pnpm e2e          # Playwright + axe; starts the engine (simulation) and web if not running
 pnpm contracts:test   # Foundry via its Docker image
+(cd contracts && MONAD_FORK_RPC=https://rpc1.monad.xyz forge test --match-contract Fork)   # vs Perpl's Exchange
 
 pnpm --filter @airbag/indexer codegen && pnpm --filter @airbag/indexer test
 

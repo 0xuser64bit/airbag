@@ -180,10 +180,12 @@ drill is still required.
 
 ## 3. AirbagLog (optional)
 
-See `contracts/README.md`. Deploy with a funded deployer, use a separate low-value wallet as the
-writer, then add `AIRBAG_LOG_ADDRESS` and `AIRBAG_LOG_PRIVATE_KEY` to a live engine's
+See `contracts/README.md`. Deploy with a funded deployer and the constructor arguments it lists
+(the writer, Perpl's Exchange for the network, 6), use a separate low-value wallet as the writer,
+then add `AIRBAG_LOG_ADDRESS` and `AIRBAG_LOG_PRIVATE_KEY` to a live engine's
 `/etc/airbag/engine.env` (simulation refuses a real log). Record the address and deploy transaction
-in the root README.
+in the root README. The contract's `liquidationPrice` works against real positions as soon as it
+is deployed: `cast call <address> "liquidationPrice(uint256,uint256)" <perpId> <accountId>`.
 
 ## 4. Indexer on Envio Cloud (optional)
 
