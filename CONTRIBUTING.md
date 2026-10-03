@@ -25,6 +25,7 @@ pnpm --filter @airbag/indexer codegen && pnpm --filter @airbag/indexer test
 
 pnpm --filter @airbag/spike check   # position math vs Perpl's contract on testnet, no key
 PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc1.monad.xyz pnpm --filter @airbag/spike liquidations
+PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc1.monad.xyz pnpm --filter @airbag/spike backtest   # rewrites apps/web/lib/backtest.json
 ```
 
 Operator commands, on the machine that has the engine's environment:

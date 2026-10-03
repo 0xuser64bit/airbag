@@ -74,6 +74,20 @@ before the mark reached the liquidation price Airbag computes for it, and the tr
 commands anyone can rerun: `pnpm --filter @airbag/spike check` and
 `pnpm --filter @airbag/spike liquidations` ([how](docs/PERPL.md#checked-against-testnet-on-2026-10-01-without-a-key)).
 
+**Replayed against every Perpl mainnet liquidation** (2026-10-04,
+[the results](https://airbag.user64bit.world/backtest), [method](docs/RISK-MODEL.md#backtest-on-perpls-own-liquidations)):
+each of the 372 positions Perpl fully liquidated over 21 days is rebuilt from its own
+liquidation event, and the marks Perpl published, block by block, run through Airbag's
+production engine on a paper exchange at its default settings. Airbag's line was crossed first in
+all 369 replayable ones, a median 50 minutes before Perpl liquidated (the fastest tenth, under 6
+minutes). **363 trimmed positions were still open when Perpl liquidated the original**, holding
+$35,244 at those blocks against the $19,629 the liquidations returned; none reached its new
+liquidation price in the day after. The other 6 were single lots, too small to trim within the 50%
+cap. A control replay with Airbag paused liquidated all 369 at or before Perpl did, a median 3
+blocks early, so the replay agrees with the chain. Fills are the one assumption: two blocks after
+the line, 0.25% past the mark, with the taker fee. Rerun it with
+`PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc1.monad.xyz pnpm --filter @airbag/spike backtest`.
+
 **Not done yet:** Airbag has **not traded on Perpl**. A real trim and re-add needs a disposable
 funded testnet wallet and a Trade key ([runbook](docs/DEPLOY.md#demo-day-a-real-deploy-on-perpl-testnet)).
 The demo above runs on a free VM ([ADR 0015](docs/adr/0015-free-shared-vm.md)); no contract is
@@ -85,12 +99,12 @@ deployed. Independent review comes before anyone relies on it with real money. A
 |---|---|
 | `packages/risk` | The risk math, pure and dependency-free: liquidation price, the Airbag line, deploy planning, the save value. Golden vectors plus property tests. |
 | `packages/perpl` | Perpl client: trading and market-data sockets, Ed25519 sign-in, onchain reads, safe unit conversion, and the order-type allowlist (only closes, margin adds, and a link-time scope probe). |
-| `apps/engine` | The always-on engine: one guard per account, per-block checks, deploys, re-arming and saves; the HTTP API (SIWE, key linking, settings, live stream); SQLite; Web Push; the AirbagLog writer; simulation mode. |
-| `apps/web` | The site and app (Next.js): landing page with the crash-test replay, onboarding, dashboard, deploy receipts, public save reports with a share image; installable for push alerts. |
+| `apps/engine` | The always-on engine: one guard per account, per-block checks, deploys, re-arming and saves; the HTTP API (SIWE, key linking, settings, live stream); SQLite; Web Push; the AirbagLog writer; simulation mode, and the replay of recorded mark paths the backtest runs on. |
+| `apps/web` | The site and app (Next.js): landing page with the crash-test replay, the backtest of every Perpl liquidation, onboarding, dashboard, deploy receipts, public save reports with a share image; installable for push alerts. |
 | `contracts/` | `AirbagLog`, a public append-only log of deploys and saves (Foundry). |
 | `indexer/` | Envio HyperIndex over AirbagLog and Perpl's liquidations. |
 | `e2e/` | Playwright journeys with axe accessibility checks. |
-| `spike/` | Testnet scripts: a keyless check of the position math against the contract, feed measurements, and the funded verification run. |
+| `spike/` | Keyless checks against the chain: the position math against the contract, the backtest that replays every Perpl mainnet liquidation through the engine, and Perpl's liquidations against Airbag's liquidation price; feed measurements; the funded verification run. |
 | `design/` | The approved design, as reference artboards. |
 
 ## Run it

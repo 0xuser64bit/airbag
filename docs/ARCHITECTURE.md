@@ -64,7 +64,7 @@ decrypt a Perpl key ([ADR 0006](adr/0006-api-key-custody.md)).
 |---|---|---|
 | `packages/risk` | Pure risk math: equity, liquidation price, the Airbag line, deploy planning (spare margin or trim, with the cap), trim application, save value, display formatting. No I/O, no dependencies. Runs in the engine and in the browser (settings preview, landing replay). | nothing |
 | `packages/perpl` | Perpl client: context and funding REST, frame types, Ed25519 sign-in, `TradingClient` (snapshots, heartbeat `sn`, pings, token bucket, reconnect, order outcomes), `MarketFeed` (heartbeat, marks, funding, config, stale guard), onchain reads, unit conversion with safe rounding, and **the order-type allowlist**. | `risk`, viem |
-| `apps/engine` | The always-on service: config, logger, SQLite store, key vault, the per-account guard, the paper exchange and simulation, the HTTP API, Web Push, the AirbagLog writer. | `risk`, `perpl`, viem, web-push |
+| `apps/engine` | The always-on service: config, logger, SQLite store, key vault, the per-account guard, the paper exchange and simulation, the HTTP API, Web Push, the AirbagLog writer; and the replay of a recorded mark path that the backtest runs on. | `risk`, `perpl`, viem, web-push |
 | `apps/web` | Next.js site and app ([ADR 0007](adr/0007-web-app.md), [0013](adr/0013-web-css-and-viem.md)). Design system and content contract: [apps/web/DESIGN.md](../apps/web/DESIGN.md). | `risk`, viem, next |
 | `contracts/` | Foundry project: `AirbagLog` and its tests ([ADR 0009](adr/0009-onchain-log-and-indexer.md)). | — |
 | `indexer/` | Envio HyperIndex over AirbagLog and Perpl's liquidations. | envio |
@@ -147,6 +147,14 @@ Enforced in code and covered by tests.
   own, from Perpl's public heartbeat, with a local clock filling in while it is quiet
   ([ADR 0014](adr/0014-simulation-on-monad-blocks.md)); `SIM_CLOCK=local` never connects.
 
+- **Replay** (`apps/engine/src/replay.ts`, no server): the same engine and guard on a paper
+  exchange driven by a recorded mark path, one position, jumping between mark updates while idle
+  and stepping every block while a deploy is in flight. `spike/backtest.ts` runs every Perpl
+  mainnet liquidation through it, with a paused control replay that must liquidate where Perpl did
+  ([RISK-MODEL.md](RISK-MODEL.md#backtest-on-perpls-own-liquidations)). The paper exchange
+  liquidates a position whose mark reaches its liquidation price, before settling that block's
+  orders, in simulation and replay alike.
+
 SQLite is bound to mode and chain id. Local default files are
 `data/airbag-<mode>-<network>.db`; an explicit path still must match the stored identity.
 Populated legacy files require an operator backup and explicit binding. `/health` provides
@@ -171,6 +179,7 @@ Next.js App Router. Server components for the public pages, client components fo
 | `/app/deploys`, `/app/deploys/[id]` | Deploy receipts and detail |
 | `/app/settings` | The same controls outside the stepper |
 | `/s/[id]` | Public save report and its share image |
+| `/backtest`, `/backtest/[id]` | Every Perpl mainnet liquidation replayed through the engine, and each one block by block (static, from `apps/web/lib/backtest.json`) |
 
 The engine's HTTP API is `apps/engine/src/api.ts`, one `route()` call per endpoint, with its CORS,
 body-size and per-IP rate-limit options in the same place.

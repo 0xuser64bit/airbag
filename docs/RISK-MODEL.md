@@ -107,6 +107,58 @@ account.
   instead of $3,200 at $94,000. Airbag pays off when a wick turns before the new line, and the
   product says so rather than implying a falling market gets cheaper.
 
+## Backtest on Perpl's own liquidations
+
+The model above says a trim at the line keeps a position open through a wick that would have
+liquidated it. `spike/backtest.ts` asks the chain: for every position Perpl fully liquidated on
+mainnet, what would Airbag's engine have done on the prices that actually happened? The results
+are committed in `apps/web/lib/backtest.json` and shown at `/backtest`.
+
+**Method.**
+
+1. Each `PositionLiquidated` event gives back the position it closed: size, deposit, funding and
+   the PnL realized at the liquidation's fill, hence the effective entry (as in
+   `spike/liquidations.ts`).
+2. Perpl's `MarkUpdated(perpId, pricePNS)` events give the mark the liquidation engine used, block
+   by block. They are read from a public Monad RPC and cached in `spike/out/marks`.
+3. The position's Airbag line is computed at Balanced, armed at entry. The replay starts at the
+   last mark on the safe side of that line and runs a day past the liquidation
+   (`apps/engine/src/replay.ts`): the production `Engine` and guard, default settings (10% target,
+   50% cap), on a paper exchange with no spare margin (the event doesn't say what the account
+   held). Closes fill two blocks after sending, 0.25% past the mark, with Perpl's taker fee.
+4. The Airbag path's value is the open position's equity at the mark plus any released margin not
+   re-added. The liquidation's value is what Perpl actually returned to the account, from the
+   event, not the 80% estimate.
+5. **The control:** the same replay with Airbag paused. The paper exchange liquidates a position
+   once the mark reaches the liquidation price this model computes, so the control has to
+   liquidate where Perpl did. If it didn't, the reconstruction or the model would be wrong.
+
+**Results** (mainnet, 6,000,000 blocks to 110,298,004, 2026-09-13 to 2026-10-04):
+
+| | |
+|---|---|
+| Liquidation events / full liquidations | 374 / 372 |
+| Replayed | 369 (3 crossed their line more than three days before the data read starts) |
+| Airbag deployed before Perpl liquidated | 369 of 369; lead median 50 min, 10th percentile 6 min, 90th 7.6 h |
+| Trimmed position still open at Perpl's liquidation (a save) | 363 |
+| Of those, liquidated at the new price within a day | 0 |
+| Of those, worth more than the liquidation returned, at the liquidation / a day later | 363 / 318 |
+| Too small to trim within the 50% cap (one lot) | 6, liquidated like the original |
+| Returned by Perpl's liquidations | $19,629 |
+| Airbag path at the same blocks / a day later | $35,244 / $32,236 |
+| Control replay liquidated at or before Perpl | 369 of 369, a median 3 blocks before Perpl's liquidator |
+
+The gap between the paths is more than the 20% liquidation share: the trimmed part closes at the
+line instead of at liquidation, and a liquidation fills on the book, sometimes well past the mark
+(one ZEC short filled 3.7% past it and returned $218 of the $1,280 maintenance margin).
+
+**What it doesn't show.** Whether Perpl's book had the depth for each trim at that price (the
+one assumption; the engine's worst price is 0.5%, the replay assumes half of it); the trader's own
+trades and margin moves between the line and the liquidation, and whether they would have armed
+Airbag; funding after the liquidation (the paper exchange accrues none). The totals are small
+because most liquidated positions on Perpl are. It is the engine on recorded prices, not live
+fills: Airbag has not traded on Perpl.
+
 ## Golden vectors
 
 From the approved design, and asserted by `packages/risk/test` at the precision the design
