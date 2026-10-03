@@ -148,6 +148,9 @@ export interface ChainPosition {
 /** One Perpl liquidation, as its PositionLiquidated event reports it. */
 export interface ChainLiquidation {
   block: bigint;
+  /** The transaction that liquidated it, and the event's place in that block. */
+  tx: `0x${string}`;
+  logIndex: number;
   perpId: number;
   accountId: number;
   side: 'long' | 'short';
@@ -250,8 +253,10 @@ export function perplChain(
         toBlock,
         strict: true,
       });
-      return logs.map(({ blockNumber, args: a }) => ({
+      return logs.map(({ blockNumber, transactionHash, logIndex, args: a }) => ({
         block: blockNumber,
+        tx: transactionHash,
+        logIndex,
         perpId: Number(a.perpId),
         accountId: Number(a.posAccountId),
         side: a.positionType === 0 ? 'long' : 'short',

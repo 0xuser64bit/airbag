@@ -99,6 +99,8 @@ it("decodes Perpl's liquidations with the contract's side encoding (0 long, 1 sh
   const [l] = await chain.liquidations(109_330_000n, 109_330_197n);
   expect(l).toMatchObject({
     block: 109_330_197n,
+    tx: `0x${'2'.repeat(64)}`,
+    logIndex: 0,
     perpId: 1,
     accountId: 1633,
     side: 'short',
