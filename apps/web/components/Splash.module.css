@@ -1,0 +1,45 @@
+/* The splash: the loader's mark, one cycle, then docked in the masthead
+   (Splash.tsx). Without JavaScript the curtain fades at 2.2s, after that cycle. */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  animation: leave 400ms var(--ease) 2200ms forwards;
+}
+
+.curtain {
+  position: absolute;
+  inset: 0;
+  background: var(--ground);
+}
+
+.stage {
+  position: relative;
+  user-select: none;
+}
+
+.stage svg {
+  width: clamp(56px, 14vw, 104px);
+  height: clamp(56px, 14vw, 104px);
+}
+
+@keyframes leave {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* While the splash's mark is in flight, the masthead's twin stays out of the way. */
+:global(html[data-splash-handoff] [data-brand] > svg) {
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro {
+    display: none;
+  }
+}

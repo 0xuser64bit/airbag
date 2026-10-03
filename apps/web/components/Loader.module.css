@@ -22,6 +22,11 @@
     transform: rotate(180deg);
   }
 }
+/* One cycle, then hold. A half turn looks like the start, which is the masthead's pose. */
+.once {
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
+}
 
 /* Holds back for a moment, so a quick answer never flashes it. */
 .loader {

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Archivo, Instrument_Sans, Martian_Mono } from 'next/font/google';
+import { Splash } from '@/components/Splash.tsx';
 import { SITE_URL } from '@/lib/config.ts';
 import './globals.css';
 
@@ -32,7 +33,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       data-scroll-behavior="smooth"
       className={`${display.variable} ${ui.variable} ${mono.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        <Splash />
+        {children}
+      </body>
     </html>
   );
 }

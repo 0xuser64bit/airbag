@@ -2,6 +2,8 @@ import { checkA11y, checkNoOverflow, ENGINE_URL, expect, test } from './fixtures
 
 test('landing page: the crash test plays and the page is accessible', async ({ page }) => {
   await page.goto('/');
+  // The splash (one loader cycle docking into the masthead) clears itself off the page.
+  await expect(page.locator('[data-splash]')).toHaveCount(0, { timeout: 10_000 });
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Get trimmed');
   await expect(page.getByText('Crash test · BTC long · 10x')).toBeVisible();
   // The replay reaches the trim within a few seconds of frames.

@@ -386,6 +386,8 @@ The per-block strip is a well of 10px cells: strong-line for seen blocks, hollow
 ### Loader
 The one loading indicator on the platform is the crash-test mark itself: its two filled quadrants turn a quarter at a time on the damped curve (1.4s for two quarters, a hold after each), so yellow and black trade places on every beat. A page or bay waiting on the engine shows the mark at 44px with a mono label saying what it waits for and, when useful, one line of detail; it holds back 180ms so a quick answer never flashes it. Inside a busy button the same mark turns at 18px in the button's own ink. Lists keep their skeleton rows. Under reduced motion the mark stands still and the label carries the meaning.
 
+The same turn plays once as the splash, on every full load (a refresh or an opened link), even though it is the loader's drawing. The mark sits alone on a ground curtain, large, and runs one cycle so it finishes on the pose the masthead wears. The mark then moves onto the masthead brand and the curtain lifts. A click or a key skips straight to that move. Without JavaScript the curtain fades once the cycle is over. Moving from page to page does not play it again. Under reduced motion the splash is not shown. It is an opening, not a second indicator and not a progress report.
+
 ### Motion
 Instrument physics. Bugs, bands, ticks, gauges and labels move on the damped curve (`cubic-bezier(0.2, 0, 0, 1)`, 240ms); hover and colour changes take 120ms; a panel that arrives redraws top to bottom with a clip-path over 320ms. Lamps switch, they don't fade. Under reduced motion every animation is `none` and transitions collapse to 0.01ms; every keyframe animates in from a resting state, so nothing is left mid-flight.
 

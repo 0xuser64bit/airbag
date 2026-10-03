@@ -18,6 +18,7 @@ export function Brand({
     <Link
       href={href}
       aria-label="Airbag home"
+      data-brand=""
       style={{
         display: 'inline-flex',
         alignItems: 'center',
