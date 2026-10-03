@@ -103,7 +103,10 @@ const FAQ = [
     'What happens after a deploy?',
     'It re-arms on the smaller position with a new line and sends you the fill and the transaction. If your old liquidation price is hit later, you get a save report.',
   ],
-  ['Which markets does it cover?', 'BTC and ETH at launch, then the rest of Perpl’s markets.'],
+  [
+    'Which markets does it cover?',
+    'BTC, ETH and MON, Monad’s own token, at launch, then the rest of Perpl’s markets.',
+  ],
 ] as const;
 
 // A dated simulated deploy on Monad testnet's real blocks (the README's screenshot): the blocks
@@ -495,7 +498,7 @@ export default async function Landing() {
             Protect my positions
           </Link>
           <span className={`num ${s.finalNote}`}>
-            Free during beta · Open source · BTC and ETH at launch
+            Free during beta · Open source · BTC, ETH and MON at launch
           </span>
         </section>
       </main>

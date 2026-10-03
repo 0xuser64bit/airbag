@@ -123,6 +123,7 @@ export interface DeploySummary {
   id: string;
   symbol: string;
   side: Side;
+  sizeDecimals: number;
   kind: 'trim' | 'margin';
   phase: DeployPhase;
   outcome: DeployOutcome;
@@ -195,7 +196,6 @@ export interface DeployData {
 
 export interface DeployDetail extends DeploySummary {
   marketId: number;
-  sizeDecimals: number;
   simulated: boolean;
   explorerUrl: string;
   data: DeployData;

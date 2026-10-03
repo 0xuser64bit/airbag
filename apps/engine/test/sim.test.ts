@@ -44,7 +44,7 @@ it('gives every new paper account its own position ids', () => {
   const { sim } = chain();
   const a = [...sim.paper('0xa', 1).positions.values()].map((p) => p.pid);
   const again = [...sim.paper('0xa', 1).positions.values()].map((p) => p.pid);
-  expect(new Set([...a, ...again]).size).toBe(4);
+  expect(new Set([...a, ...again]).size).toBe(a.length * 2);
 });
 
 it("follows Monad's heartbeat and fills in with the local clock only while it is quiet", () => {

@@ -39,7 +39,10 @@ const market = (
   funding: { at: { b: 0 }, feb: 0, rate: 0, sum: 0, div: 1 },
 });
 
-/** Perpl testnet's BTC and ETH terms: 4% and 5% maintenance, 1 and 2 price decimals. */
+/**
+ * Perpl testnet's BTC, ETH and MON terms: 4%, 5% and 20% maintenance (MON trades at up to 3x
+ * there), 1, 2 and 5 price decimals.
+ */
 export const SIM_CONTEXT: Context = {
   chain: { chain_id: 10143 },
   instances: [
@@ -49,15 +52,21 @@ export const SIM_CONTEXT: Context = {
   markets: [
     market(16, 'BTC', 1, 5, 2500, 1500, 994_200),
     market(32, 'ETH', 2, 3, 2000, 1200, 306_000),
+    market(64, 'MON', 5, 0, 500, 300, 3_366),
   ],
 };
 
-/** The design's sample account: BTC long 1.000 at $100,000 (10x), ETH long 2.000 at $3,000. */
+/**
+ * The design's sample account: BTC long 1.000 at $100,000 (10x), ETH long 2.000 at $3,000, and
+ * a short on Monad's own token, 500,000 MON at $0.034 (about 3x): one trim, one spare-margin
+ * add and one trim on a short, between them.
+ */
 export function samplePositions(accountId: number): PerplPosition[] {
   const base = { at: { b: 0 }, acc: accountId, st: 1, sd: 1 as const, efs: 0 };
   return [
     { ...base, mkt: 16, pid: 1, c: '10000000000', ep: 1_000_000, s: 100_000, lv: 1000 },
     { ...base, mkt: 32, pid: 2, c: '1200000000', ep: 300_000, s: 2_000, lv: 500 },
+    { ...base, mkt: 64, pid: 3, sd: 2, c: '6000000000', ep: 3_400, s: 500_000, lv: 283 },
   ];
 }
 

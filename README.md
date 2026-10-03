@@ -9,9 +9,10 @@ in to move liquidation further away. Trading fees, slippage and outages still ma
 is not guaranteed. It acts through a Perpl API key that cannot withdraw.
 
 **Try it: https://airbag.user64bit.world** — the simulation, no wallet extension needed:
-"Connect a test wallet", "Use a test key", arm, then "Play a wick on BTC" (or ETH) on the
-dashboard. The wick is shaped to your position: through its Airbag line to its liquidation price
-and back. Turn on "Push to this browser" in Settings first and the trim and the save arrive as
+"Connect a test wallet", "Use a test key", arm, then "Play a wick on BTC" (or ETH, or the MON
+short) on the dashboard. The wick is shaped to your position: through its Airbag line to its
+liquidation price and back. Play it with Airbag paused first and the position is liquidated
+instead; "Reset account" puts it back. Turn on "Push to this browser" in Settings first and the trim and the save arrive as
 notifications. The exchange is paper and the prices are scripted; the blocks are Monad testnet's
 own.
 
@@ -122,7 +123,8 @@ by the page, so the whole flow can be clicked through without a browser extensio
 wallet such as Rabby or MetaMask works too. Sign in, use "Use a test key", arm, and press "Play a
 wick on BTC" on the dashboard: the engine trims, re-adds, re-arms and records a save, and the save
 report has a share card to post, copy or download. "Play a wick on ETH" shows the other path:
-spare margin goes in instead of a trim. Everything is labelled as simulated. Each wallet has its own simulated
+spare margin goes in instead of a trim, and "Play a wick on MON" a short: the line sits above the
+mark and Airbag buys some of the position back. Everything is labelled as simulated. Each wallet has its own simulated
 prices, so visitors to one engine never move each other's positions, and "Reset account" puts
 that wallet back to the start.
 

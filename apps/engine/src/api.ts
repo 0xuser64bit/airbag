@@ -403,8 +403,7 @@ export function createApi(deps: ApiDeps): Server {
     if (!link) throw bad('Link a key first.');
     notDeploying(w);
     engine.remove(w);
-    store.deleteReference(w, 16);
-    store.deleteReference(w, 32);
+    for (const id of engine.markets.covered) store.deleteReference(w, id);
     sim.reset(w);
     engine.add(w, sim.paper(w, link.accountId));
     lookupCache.delete(w);
@@ -556,6 +555,7 @@ export function createApi(deps: ApiDeps): Server {
       id: d.id,
       symbol: d.symbol,
       side: d.side,
+      sizeDecimals: sizeDecimals(d.marketId),
       kind: d.kind,
       phase: d.phase,
       outcome: d.outcome,
@@ -580,7 +580,6 @@ export function createApi(deps: ApiDeps): Server {
     return {
       ...summary(d),
       marketId: d.marketId,
-      sizeDecimals: sizeDecimals(d.marketId),
       simulated: cfg.mode === 'simulation',
       explorerUrl: cfg.network.explorerUrl,
       data: d.data,

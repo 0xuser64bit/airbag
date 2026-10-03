@@ -36,12 +36,12 @@ export function Brand({
 }
 
 /** One line of what a deploy did, for lists. */
-export function deploySentence(d: DeploySummary, sizeDecimals = 3): string {
+export function deploySentence(d: DeploySummary): string {
   const what =
     d.kind === 'margin'
       ? `Added ${fmt.usd(d.spareAdded)} of spare margin.`
       : d.trimmed > 0
-        ? `Trimmed ${fmt.size(d.trimmed, sizeDecimals)} ${d.symbol}.`
+        ? `Trimmed ${fmt.size(d.trimmed, d.sizeDecimals)} ${d.symbol}.`
         : 'The close didn’t fill.';
   if (d.outcome === 'save') {
     const after = d.saveAfterMs === null ? '' : ` ${fmt.duration(d.saveAfterMs)} later`;

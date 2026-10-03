@@ -95,7 +95,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     webOrigins,
     egressIps: list(env.ENGINE_EGRESS_IPS),
     staleBlocks: int(env, 'STALE_BLOCKS', 3, 1, 50),
-    markets: list(env.MARKETS ?? 'BTC,ETH').map((s) => s.toUpperCase()),
+    markets: list(env.MARKETS ?? 'BTC,ETH,MON').map((s) => s.toUpperCase()),
     slippageBps: int(env, 'SLIPPAGE_BPS', 50, 1, 500),
     maxAttempts: int(env, 'MAX_DEPLOY_ATTEMPTS', 3, 1, 10),
     demoWallets,

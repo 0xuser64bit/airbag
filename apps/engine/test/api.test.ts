@@ -85,7 +85,11 @@ describe('public endpoints', () => {
     expect((await call('GET', '/health')).body.blocks).toBe('monad');
     const cfg = await call('GET', '/v1/config');
     expect(cfg.body).toMatchObject({ mode: 'simulation', chainId: 10143 });
-    expect(cfg.body.markets.map((m: { symbol: string }) => m.symbol)).toEqual(['BTC', 'ETH']);
+    expect(cfg.body.markets.map((m: { symbol: string }) => m.symbol)).toEqual([
+      'BTC',
+      'ETH',
+      'MON',
+    ]);
   });
 
   it('looks up a wallet and shows the design sample in simulation', async () => {
@@ -219,7 +223,8 @@ describe('onboarding to a deploy, over HTTP', () => {
     const state = await call('GET', '/v1/state', { token });
     expect(state.body.status).toBe('armed');
     expect(state.body.account).toMatchObject({ spare: 420, forwarding: true });
-    expect(Math.round(state.body.account.value)).toBe(11_160);
+    // $420 spare, BTC $9,420 and ETH $1,320 at their marks, and the MON short $6,170.
+    expect(Math.round(state.body.account.value)).toBe(17_330);
     const btc = state.body.positions[0];
     expect(btc).toMatchObject({ symbol: 'BTC', line: 97_000, liquidation: 94_000 });
     expect(btc.atLine.fraction.toFixed(3)).toBe('0.489');
@@ -301,6 +306,15 @@ describe('onboarding to a deploy, over HTTP', () => {
     await blocks(45);
     const btc = await oldestFirst('BTC');
     expect(btc.slice(0, 2).map((d: { outcome: string }) => d.outcome)).toEqual(['save', 'save']);
+    // MON is a short: its wick rises through the line above the mark, and spare margin can't
+    // cover a position this size, so Airbag buys some back and re-adds the margin.
+    const mon = await call('POST', '/v1/sim/wick', { token, body: { symbol: 'MON' } });
+    expect(mon.body.line).toBeCloseTo(0.0366, 6);
+    expect(mon.body.low).toBeGreaterThan(mon.body.line);
+    await blocks(45);
+    const [short] = await oldestFirst('MON');
+    expect(short).toMatchObject({ side: 'short', kind: 'trim', outcome: 'save' });
+    expect(short.trimmed).toBeGreaterThan(0);
   });
 
   it('liquidates a paused position on its wick, says so, and a reset clears it', async () => {
@@ -314,7 +328,7 @@ describe('onboarding to a deploy, over HTTP', () => {
     );
     await blocks(45);
     const state = (await call('GET', '/v1/state', { token })).body;
-    expect(state.positions.map((p: { symbol: string }) => p.symbol)).toEqual(['ETH']);
+    expect(state.positions.map((p: { symbol: string }) => p.symbol).sort()).toEqual(['ETH', 'MON']);
     expect(state.liquidations).toEqual([
       expect.objectContaining({ symbol: 'BTC', side: 'long', price: 94_000, returned: 3_200 }),
     ]);
@@ -324,7 +338,7 @@ describe('onboarding to a deploy, over HTTP', () => {
     await blocks(1);
     const after = (await call('GET', '/v1/state', { token })).body;
     expect(after.liquidations).toEqual([]);
-    expect(after.positions).toHaveLength(2);
+    expect(after.positions).toHaveLength(3);
   });
 
   it("keeps each wallet's simulated prices to itself", async () => {

@@ -786,10 +786,11 @@ export function SimControls({
   };
   // The engine shapes each wick to the position, so it always reaches the line: say where.
   const played = (sym: string, { line, low }: Played) => {
-    const paused = positions.some((x) => x.symbol === sym && x.status === 'paused');
+    const p = positions.find((x) => x.symbol === sym);
+    const paused = p?.status === 'paused';
     const where =
       line !== undefined && low !== undefined
-        ? ` Through your Airbag line at ${fmt.usd(line)}, down to the liquidation price, ${fmt.usd(low)}, and back.`
+        ? ` Through your Airbag line at ${fmt.usd(line)}, ${p?.side === 'short' ? 'up' : 'down'} to the liquidation price, ${fmt.usd(low)}, and back.`
         : '';
     return `Playing a wick on ${sym}.${where}${paused ? ' Airbag is paused, so nothing trims it before the liquidation price.' : ''}`;
   };

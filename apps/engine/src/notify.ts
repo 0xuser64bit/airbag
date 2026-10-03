@@ -58,9 +58,11 @@ export function deployMessage(d: Deploy): PushMessage {
   }
   const c = d.data.close;
   const trimmed = c ? (c.filledLots / d.data.before.lots) * d.data.before.size : 0;
+  // Lots are base units times 10^size_decimals: 500,000 MON in whole lots, not 500,000.000.
+  const sd = Math.round(Math.log10(d.data.before.lots / d.data.before.size));
   return {
     title: `Airbag trimmed ${what}`,
-    body: `Airbag trimmed ${fmt.size(trimmed)} ${d.symbol} at ${fmt.usd(c?.fillPrice)}. Liquidation now ${liq}. Fee ${fmt.fee(c?.fee)}.`,
+    body: `Airbag trimmed ${fmt.size(trimmed, sd)} ${d.symbol} at ${fmt.usd(c?.fillPrice)}. Liquidation now ${liq}. Fee ${fmt.fee(c?.fee)}.`,
     url: `/app/deploys/${d.id}`,
     tag: d.id,
   };

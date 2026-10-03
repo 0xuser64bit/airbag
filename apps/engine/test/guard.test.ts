@@ -18,6 +18,7 @@ import {
 const WALLET = '0x7a3f00000000000000000000000000000000c21e';
 const BTC = 16;
 const ETH = 32;
+const MON = 64;
 
 interface Options {
   settings?: Partial<Settings>;
@@ -191,6 +192,17 @@ describe('deploy paths', () => {
     expect(d.data.timeline.some((e) => e.text.includes('Fee $16'))).toBe(true);
     expect(deployMessage(d).body).toMatch(/Fee \$16\.\d\d\.$/);
   });
+  it('trims a short on a whole-lot market and says it in whole units', async () => {
+    // The sample MON short's line is $0.0366, above its $0.03366 mark; $420 of spare can't
+    // reach the target, so Airbag buys some back.
+    const h = harness({ markets: [MON] });
+    await h.run(Array(8).fill(0.0366), MON);
+    const d = only(h.store);
+    expect(d).toMatchObject({ side: 'short', kind: 'trim', phase: 'done' });
+    expect(h.paper.sent[0]).toMatchObject({ t: 4 });
+    expect(deployMessage(d).body).toMatch(/^Airbag trimmed 50,670 MON at \$0\.0366/);
+  });
+
   it("counts a later deploy's spare margin as the trader's money in an earlier save", async () => {
     // ETH's line is $2,775; $105 of spare puts liquidation 10% under it. The fall continues
     // past the line re-armed at $2,636, so $297 more goes in, then $2,550 (the first deploy's
