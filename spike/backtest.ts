@@ -178,6 +178,8 @@ for (const l of full.slice(0, limit)) {
       : gone
         ? 'liquidated-later'
         : 'open';
+  // The chart shows the approach to the line too, and a while after the liquidation.
+  const chartStart = from - Math.max(1_200, Math.round((block - from) / 4));
   const chartEnd = Math.min(to, block + Math.max(24_000, 2 * (block - from)));
   rows.push({
     id: `${block}-${l.logIndex}`,
@@ -201,6 +203,7 @@ for (const l of full.slice(0, limit)) {
       : null,
     deploys: airbag.deploys.map((d) => ({
       block: d.data.trigger.block,
+      filled: d.data.timeline.find((e) => e.text.startsWith('Filled'))?.block ?? null,
       trimmed: r6(d.data.close ? d.data.close.filledLots / d.data.before.lots : 0),
       fill: d.data.close?.fillPrice ?? null,
       fee: d.data.close?.fee === undefined ? null : r6(d.data.close.fee),
@@ -217,7 +220,9 @@ for (const l of full.slice(0, limit)) {
     control: control.liquidation ? { block: control.liquidation.block } : null,
     // The mark around it, as [blocks from the liquidation, price].
     path: thin(
-      hist.filter(([b]) => b >= from && b <= chartEnd).map(([b, p]) => [b, scaled(p, pd)] as const),
+      hist
+        .filter(([b]) => b >= chartStart && b <= chartEnd)
+        .map(([b, p]) => [b, scaled(p, pd)] as const),
       40,
     ).map(([b, p]) => [b - block, r6(p)]),
   });

@@ -1,9 +1,9 @@
 // The backtest: every Perpl liquidation replayed through Airbag's engine. spike/backtest.ts
-// writes backtest.json from public chain data; the /backtest pages read it on the server, so the
-// file never ships to the browser.
+// writes backtest.json from public chain data; the /backtest pages read it on the server
+// (app/backtest/data.ts), so the file never ships to the browser. This module is its shape and
+// the formatting both sides share.
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { fmt } from '@airbag/risk';
 
 /**
  * open: Airbag trimmed in time and the position was still open when Perpl liquidated the
@@ -39,7 +39,9 @@ export interface BacktestRow {
   /** Where the replay first deployed. */
   trigger: { block: number; at: number; mark: number } | null;
   deploys: {
+    /** Where the line was crossed, and where the close filled. */
     block: number;
+    filled: number | null;
     /** Share of the position the deploy closed. */
     trimmed: number;
     fill: number | null;
@@ -96,10 +98,30 @@ export interface Backtest {
   rows: BacktestRow[];
 }
 
-let cached: Backtest | undefined;
+/** MonadVision for the backtest's chain. */
+export const explorerFor = (chainId: number): string =>
+  chainId === 143 ? 'https://monadvision.com' : 'https://testnet.monadvision.com';
 
-/** The committed results. Server-only: it reads the file the spike wrote. */
-export function loadBacktest(): Backtest {
-  cached ??= JSON.parse(readFileSync(join(process.cwd(), 'lib/backtest.json'), 'utf8')) as Backtest;
-  return cached;
+/** Oct 3, 21:14 UTC. */
+export const utc = (ms: number): string =>
+  `${new Date(ms).toLocaleString('en-US', {
+    timeZone: 'UTC',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  })} UTC`;
+
+/** Seconds from the replay's first deploy to Perpl's liquidation. */
+export const warningSeconds = (r: BacktestRow): number | null =>
+  r.trigger ? (r.block - r.trigger.block) * BLOCK_S : null;
+
+/** Seconds per Monad block, measured over 6M mainnet blocks. */
+export const BLOCK_S = 0.302;
+
+/** −50 min · 0 · +2 h, from blocks relative to the liquidation. */
+export function relative(blocks: number): string {
+  if (blocks === 0) return '0';
+  return `${blocks < 0 ? '−' : '+'}${fmt.duration(Math.abs(blocks) * BLOCK_S * 1000)}`;
 }

@@ -1,0 +1,88 @@
+/* A recorded mark path on glass, drawn like the landing's crash test. */
+.well {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 6px 10px;
+}
+.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: pan-y;
+}
+.chart:focus-visible {
+  outline-offset: -2px;
+}
+.text {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.6px;
+}
+.faintText {
+  fill: var(--text-3);
+}
+.airbagText {
+  fill: var(--airbag);
+}
+.liqText {
+  fill: var(--liq);
+}
+.zero {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+.airbag {
+  stroke: var(--airbag);
+  stroke-width: 1.5;
+}
+.liq {
+  stroke: var(--liq);
+  stroke-width: 1.5;
+}
+.trace {
+  fill: none;
+  stroke: var(--bone);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.trim {
+  fill: var(--airbag);
+  stroke: var(--well);
+  stroke-width: 3;
+}
+.liqMark {
+  fill: var(--well);
+  stroke: var(--liq);
+  stroke-width: 2.5;
+}
+.cross line {
+  stroke: var(--text-2);
+  stroke-width: 1;
+}
+.cross circle {
+  fill: var(--bone);
+  stroke: var(--well);
+  stroke-width: 2;
+}
+.readout {
+  min-height: 20px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+.airbagGhost {
+  stroke: var(--airbag);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  opacity: 0.6;
+}
+.liqGhost {
+  stroke: var(--liq);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  opacity: 0.6;
+}
+.knockout {
+  fill: var(--well);
+}

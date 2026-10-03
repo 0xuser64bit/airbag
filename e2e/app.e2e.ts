@@ -216,3 +216,31 @@ test('an unavailable engine is explained and the config can be retried', async (
   await expect(page.locator('.notice[role="alert"]')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Connect a test wallet' })).toBeVisible();
 });
+
+test('the backtest: every liquidation replayed, each with its own page', async ({ page }) => {
+  await page.goto('/backtest');
+  await expect(page.locator('[data-splash]')).toHaveCount(0, { timeout: 10_000 });
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(
+    'Every Perpl liquidation, replayed through Airbag',
+  );
+  await expect(page.getByText('were still open when Perpl liquidated')).toBeVisible();
+  await checkA11y(page, 'backtest');
+  await checkNoOverflow(page);
+  // The folded rows open in place; every row links to its liquidation.
+  await page.getByText(/^Show the other \d+$/).click();
+  await page
+    .getByRole('link', { name: /long|short/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/backtest\/\d+-\d+$/);
+  await expect(page.getByRole('heading', { name: 'Block log' })).toBeVisible();
+  await expect(page.getByText(/Perpl liquidated the original at a mark of/)).toBeVisible();
+  await expect(page.getByRole('link', { name: /The liquidation on MonadVision/ })).toHaveAttribute(
+    'href',
+    /^https:\/\/monadvision\.com\/tx\/0x[0-9a-f]{64}$/,
+  );
+  await checkA11y(page, 'backtest liquidation');
+  await page.setViewportSize({ width: 375, height: 812 });
+  await checkNoOverflow(page);
+  expect((await page.goto('/backtest/0-0'))?.status()).toBe(404);
+});
