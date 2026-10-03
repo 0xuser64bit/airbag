@@ -670,7 +670,6 @@ export class AccountGuard {
     const mayHaveFilled = ['filled', 'partial', 'lost'].includes(outcome.result);
     if (mayHaveFilled)
       await this.until(() => (this.exchange.positions.get(mkt)?.s ?? 0) < lotsBefore);
-    const lotsAfter = this.exchange.positions.get(mkt)?.s ?? 0;
     const current = this.exchange.positions.get(mkt);
     if (current && current.pid !== d.data.positionId) {
       this.entry(
@@ -680,9 +679,16 @@ export class AccountGuard {
       );
       return this.finish(mkt, d, this.exchange.head, 'failed');
     }
+    // A position that is gone may have gone another way (a liquidation, or the trader closing
+    // it): only what Perpl reports this order filled was Airbag's.
+    const lotsAfter = current?.s ?? lotsBefore - Math.min(lotsBefore, outcome.order?.fs ?? 0);
     const filled = lotsBefore - lotsAfter;
     const filledAt = Date.now();
 
+    if (!current && filled <= 0) {
+      this.entry(d, this.exchange.head, 'The position closed on Perpl before the trim filled.');
+      return this.finish(mkt, d, this.exchange.head, 'failed');
+    }
     if (filled <= 0) {
       const why =
         outcome.result === 'rejected'
@@ -715,11 +721,13 @@ export class AccountGuard {
       { tone: 'airbag', ...txOf(outcome) },
     );
 
-    if (lotsAfter === 0) {
+    if (!current) {
       this.entry(
         d,
         this.exchange.head,
-        'The whole position is closed. The released margin stays in your balance.',
+        lotsAfter === 0
+          ? 'The whole position is closed. The released margin stays in your balance.'
+          : 'The rest of the position closed on Perpl. The released margin stays in your balance.',
       );
       return this.finish(mkt, d, this.exchange.head, 'done', fill);
     }

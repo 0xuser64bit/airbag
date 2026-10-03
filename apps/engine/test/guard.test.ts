@@ -282,6 +282,21 @@ describe('deploy paths', () => {
     expect(d.phase).toBe('done');
   });
 
+  it('never counts a position that closed another way mid-trim as its own fill', async () => {
+    const h = harness();
+    await h.run([98_000, 97_000]);
+    // The close is in flight when Perpl liquidates the position, or the trader closes it.
+    h.paper.positions.delete(BTC);
+    await h.blocks(3);
+    const d = only(h.store);
+    expect(d.phase).toBe('failed');
+    expect(d.outcome).toBe('precaution');
+    expect(d.data.close).toBeUndefined();
+    expect(d.data.timeline.map((e) => e.text)).toContain(
+      'The position closed on Perpl before the trim filled.',
+    );
+  });
+
   it('stops after the attempt cap, alerts, and cools down', async () => {
     const h = harness({ fillShare: () => 0 });
     await h.run([98_000, 97_000, 97_000, 97_000, 97_000, 97_000, 97_000, 97_000, 97_000]);
