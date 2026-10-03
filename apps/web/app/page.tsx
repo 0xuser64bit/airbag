@@ -18,6 +18,7 @@ import { Runway } from '@/components/Runway.tsx';
 import { Brand } from '@/components/ui.tsx';
 import { SOURCE_URL } from '@/lib/config.ts';
 import { engineMode, liquidationsLast30Days } from '@/lib/stats.ts';
+import { loadBacktest } from './backtest/data.ts';
 import s from './page.module.css';
 
 const btc: Position = {
@@ -75,6 +76,8 @@ const SAFETY = [
   ],
 ] as const;
 
+const backtest = loadBacktest().summary;
+
 const FAQ = [
   [
     'Why trim instead of adding margin?',
@@ -82,7 +85,7 @@ const FAQ = [
   ],
   [
     'What if the price keeps going?',
-    `Then the smaller position can be liquidated too, at its new liquidation price. Because the released margin went back in, that returns less than the first liquidation would have: in the example above, ${ex.returnedLater} at ${ex.newLiq} instead of ${ex.returned} at ${ex.liq}. Airbag pays off when a wick turns before the new line.`,
+    `Then the smaller position can be liquidated too, at its new liquidation price. Because the released margin went back in, that returns less than the first liquidation would have: in the example above, ${ex.returnedLater} at ${ex.newLiq} instead of ${ex.returned} at ${ex.liq}. Airbag pays off when a wick turns before the new line. Replayed on Perpl’s own liquidations, none of the ${backtest.open} trimmed positions reached its new liquidation price in the day after.`,
   ],
   [
     'Will it close my whole position?',
@@ -125,6 +128,7 @@ export default async function Landing() {
         <div className={s.navRight}>
           <div className={s.navLinks}>
             <a href="#how">How it works</a>
+            <Link href="/backtest">Backtest</Link>
             <a href="#monad">Why Monad</a>
             <a href="#safety">Safety</a>
             <a href="#faq">FAQ</a>
@@ -190,24 +194,25 @@ export default async function Landing() {
             <h2 id="math-title" className={`display ${s.h2}`}>
               A liquidation shares its proceeds. A trim pays trading fees and keeps the rest open.
             </h2>
-            {liquidated !== null ? (
+            {/* A dated replay anyone can rerun (spike/backtest.ts), not a live count. */}
+            <p className={s.stat}>
+              <span className="num liq">{backtest.replayed}</span> Perpl mainnet liquidations,
+              replayed through Airbag’s engine on the marks Perpl published: its line was crossed
+              first{' '}
+              {backtest.actedBefore === backtest.replayed
+                ? 'every time'
+                : `${backtest.actedBefore} times`}
+              , a median {fmt.duration(backtest.leadSeconds.p50 * 1000)} before, and {backtest.open}{' '}
+              trimmed positions were still open when Perpl liquidated the original.{' '}
+              <Link className="faint" href="/backtest">
+                See every one.
+              </Link>
+            </p>
+            {liquidated !== null && (
               <p className={s.stat}>
                 <span className="num liq">{liquidated.toLocaleString('en-US')}</span> Perpl position
                 {liquidated === 1 ? ' was' : 's were'} liquidated in the last 30 days.{' '}
                 <span className="faint">Counted onchain by Airbag’s Envio indexer.</span>
-              </p>
-            ) : (
-              // A dated check anyone can rerun (spike/liquidations.ts), not a live count.
-              <p className={s.stat}>
-                <span className="num liq">159</span> Perpl mainnet liquidations, checked against
-                Airbag’s math: none came before the liquidation price it computes, and each returned
-                80% of what was left.{' '}
-                <a
-                  className="faint"
-                  href={`${SOURCE_URL}/blob/main/docs/PERPL.md#checked-against-testnet-on-2026-10-01-without-a-key`}
-                >
-                  Checked onchain, Oct 1, 2026.
-                </a>
               </p>
             )}
           </div>
