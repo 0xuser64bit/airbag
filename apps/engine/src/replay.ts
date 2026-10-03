@@ -31,6 +31,8 @@ export interface ReplayInput {
   delayBlocks?: number;
   fillSlippageBps?: number;
   userShare?: number;
+  /** Blocks at which to record what the trader holds, like the block Perpl liquidated. */
+  checkpoints?: number[];
 }
 
 export interface ReplayResult {
@@ -42,6 +44,8 @@ export interface ReplayResult {
   position?: Position;
   /** What the trader holds at `end`: the open position's equity plus the free balance. */
   value: number;
+  /** The same, at each checkpoint the replay reached, by block. */
+  values: Map<number, number>;
 }
 
 /** Perpl's scaled entry and Q16 residue for an effective entry price (see effectiveEntryPrice). */
@@ -133,18 +137,29 @@ export async function replay(input: ReplayInput): Promise<ReplayResult> {
     ...(input.fillSlippageBps ? { fillSlippageBps: input.fillSlippageBps } : {}),
   });
   const guard = engine.add(WALLET, paper);
+  const holding = () => {
+    const open = paper.positions.get(m.id);
+    const risk = open ? toRiskPosition(open, m, 6, open.efs) : undefined;
+    return {
+      risk,
+      value: paper.spare() + (risk ? equity(risk, scaled(feed.mark(m.id) ?? 0, pd)) : 0),
+    };
+  };
+  const values = new Map<number, number>();
+  const pending = [...(input.checkpoints ?? [])].sort((a, b) => a - b);
 
   // Between mark updates nothing changes for an idle guard, so it jumps to the next one; while
   // a deploy is in flight it steps every block, as orders fill a block or two after sending.
   for (;;) {
     engine.tick(head);
     if (head >= input.to || paper.positions.size === 0) break;
-    if (guard.hasPendingDeploy) {
-      await settle();
-      head += 1;
-    } else {
-      head = Math.min(input.to, marks[i + 1]?.[0] ?? input.to);
-    }
+    let next = head + 1;
+    if (guard.hasPendingDeploy) await settle();
+    else next = Math.min(input.to, marks[i + 1]?.[0] ?? input.to);
+    // Nothing changes before `next`, so a checkpoint in between holds what the trader holds now.
+    while (pending.length && (pending[0] ?? 0) < next)
+      values.set(pending.shift() ?? 0, holding().value);
+    head = next;
     i = at(marks, head);
   }
   // A deploy can still be settling its last order; let it finish so its record is complete.
@@ -155,16 +170,16 @@ export async function replay(input: ReplayInput): Promise<ReplayResult> {
   }
   engine.stop();
 
-  const open = paper.positions.get(m.id);
-  const balance = paper.spare();
-  const risk = open ? toRiskPosition(open, m, 6, open.efs) : undefined;
-  const mark = scaled(marks[i]?.[1] ?? 0, pd);
+  const { risk, value } = holding();
+  // Checkpoints past a liquidation hold what it returned.
+  for (const cp of pending) if (cp <= input.to) values.set(cp, value);
   const result: ReplayResult = {
     deploys: store
       .deploys(WALLET, 1_000)
       .sort((a, b) => a.data.trigger.block - b.data.trigger.block),
     end: head,
-    value: balance + (risk ? equity(risk, mark) : 0),
+    value,
+    values,
   };
   const liquidation = paper.liquidations[0];
   if (liquidation) result.liquidation = liquidation;
