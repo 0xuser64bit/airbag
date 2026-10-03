@@ -125,7 +125,7 @@ export class Push {
 
 export interface OnchainLog {
   recordDeploy(d: Deploy): Promise<void>;
-  recordSave(d: Deploy): Promise<void>;
+  proveSave(d: Deploy): Promise<void>;
 }
 
 /** Fans guard events out to push and the onchain log. Neither may block or break protection. */
@@ -139,7 +139,7 @@ export function notifier(push: Push, log: Logger, onchain?: OnchainLog): Notifie
     },
     saved(d) {
       void safely('push', push.send(d.wallet, saveMessage(d)));
-      if (onchain) void safely('onchain', onchain.recordSave(d));
+      if (onchain) void safely('onchain', onchain.proveSave(d));
     },
     alert(wallet, text) {
       log.warn('alert', { wallet, text });

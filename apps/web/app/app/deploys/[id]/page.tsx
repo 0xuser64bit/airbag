@@ -152,6 +152,18 @@ export default function DeployPage({ params }: { params: Promise<{ id: string }>
                 </dd>
               </div>
             )}
+            {d.data.onchain?.saveTx && (
+              <div>
+                <dt>Save proven against Perpl</dt>
+                <dd>
+                  <TxLink
+                    tx={d.data.onchain.saveTx}
+                    explorerUrl={d.explorerUrl}
+                    simulated={d.simulated}
+                  />
+                </dd>
+              </div>
+            )}
             {d.data.latency && (
               <div>
                 <dt>Line to re-armed</dt>

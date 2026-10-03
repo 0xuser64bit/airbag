@@ -29,30 +29,24 @@ const deploy = (over: Partial<Deploy['data']> = {}, kind: Deploy['kind'] = 'trim
   }) as unknown as Deploy;
 
 describe('AirbagLog arguments', () => {
-  it('are in Perpl units: lots and price-scaled integers', () => {
+  it('are what the engine saw before the deploy, in Perpl units', () => {
     if (!btc) throw new Error('no market');
+    // The contract reads the size and liquidation price after from Perpl itself.
     expect(deployArgs(deploy(), btc)).toEqual([
       4127n,
       16n,
       `0x${'9c'.repeat(32)}`,
       100_000n,
-      51_094n,
       940_000n,
-      872_998n,
       0,
     ]);
   });
 
-  it('use a zero hash without a Perpl tx, zero for a closed position, and reason 1 for margin', () => {
+  it('use a zero hash without a Perpl tx, and reason 1 for margin', () => {
     if (!btc) throw new Error('no market');
-    const args = deployArgs(
-      deploy({ close: undefined, after: { size: 0, liquidation: null } } as never, 'margin'),
-      btc,
-    );
+    const args = deployArgs(deploy({ close: undefined } as never, 'margin'), btc);
     expect(args[2]).toBe(`0x${'0'.repeat(64)}`);
-    expect(args[4]).toBe(0n);
-    expect(args[6]).toBe(0n);
-    expect(args[7]).toBe(1);
+    expect(args[5]).toBe(1);
   });
 });
 

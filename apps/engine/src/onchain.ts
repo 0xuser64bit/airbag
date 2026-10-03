@@ -1,6 +1,8 @@
-// Writes deploys and saves to the AirbagLog contract (ADR 0009) from the engine's hot wallet.
-// Writes are queued one at a time so nonces stay in order, and a failure is logged, never
-// thrown: the onchain log must not delay or break protection.
+// Writes deploys and proves saves on the AirbagLog contract (ADR 0009, 0016) from the engine's
+// hot wallet. The contract reads each deploy's after-state from Perpl itself and checks a save
+// against Perpl's mark, so the engine sends only what it saw before the deploy. Writes are
+// queued one at a time so nonces stay in order, and a failure is logged, never thrown: the
+// onchain log must not delay or break protection.
 
 import type { Market } from '@airbag/perpl';
 import {
@@ -28,21 +30,16 @@ export const airbagLogAbi = [
       { name: 'market', type: 'uint256' },
       { name: 'perplTxHash', type: 'bytes32' },
       { name: 'sizeBefore', type: 'uint256' },
-      { name: 'sizeAfter', type: 'uint256' },
       { name: 'liqBefore', type: 'uint256' },
-      { name: 'liqAfter', type: 'uint256' },
       { name: 'reason', type: 'uint8' },
     ],
     outputs: [{ name: 'deployId', type: 'uint256' }],
   },
   {
     type: 'function',
-    name: 'recordSave',
+    name: 'proveSave',
     stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'deployId', type: 'uint256' },
-      { name: 'oldLiqHitBlock', type: 'uint256' },
-    ],
+    inputs: [{ name: 'deployId', type: 'uint256' }],
     outputs: [],
   },
   {
@@ -81,21 +78,18 @@ export function confirmedDeployId(
   return id;
 }
 
-/** recordDeploy's arguments in Perpl's own units: lots and price-scaled integers. */
+/**
+ * recordDeploy's arguments in Perpl's own units, lots and price-scaled integers: what the engine
+ * saw before the deploy. The contract reads the after-state from Perpl.
+ */
 export function deployArgs(d: Deploy, m: Market) {
-  const pd = m.config.price_decimals;
-  const sd = m.config.size_decimals;
-  const price = (p: number | null | undefined) =>
-    BigInt(Math.max(0, Math.round((p ?? 0) * 10 ** pd)));
   const tx = d.data.close?.tx;
   return [
     BigInt(d.accountId),
     BigInt(m.perpetual_id),
     tx && isHex(tx) && tx.length === 66 ? tx : ZERO32,
     BigInt(d.data.before.lots),
-    BigInt(Math.round((d.data.after?.size ?? 0) * 10 ** sd)),
-    price(d.data.before.liquidation),
-    price(d.data.after?.liquidation),
+    BigInt(Math.max(0, Math.round(d.data.before.liquidation * 10 ** m.config.price_decimals))),
     d.kind === 'trim' ? 0 : 1,
   ] as const;
 }
@@ -146,15 +140,17 @@ export function airbagLog(
         store.updateDeploy(d);
         log.info('onchain.deploy', { id: d.id, deployId: d.data.onchain.deployId, tx: hash });
       }),
-    recordSave: (d) =>
+    proveSave: (d) =>
       enqueue(async () => {
         const onchain = d.data.onchain;
         if (!onchain?.deployId || !d.data.save || onchain.saveTx) return;
+        // The contract checks Perpl's mark in the block it runs; gas estimation simulates that
+        // first, so a mark that already moved back fails here rather than onchain.
         const hash = await wallet.writeContract({
           address: cfg.address,
           abi: airbagLogAbi,
-          functionName: 'recordSave',
-          args: [BigInt(onchain.deployId), BigInt(d.data.save.block)],
+          functionName: 'proveSave',
+          args: [BigInt(onchain.deployId)],
         });
         const receipt = await reader.waitForTransactionReceipt({ hash, timeout: 60_000 });
         if (receipt.status !== 'success') throw new Error('AirbagLog save transaction reverted');
