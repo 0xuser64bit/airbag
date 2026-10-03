@@ -207,7 +207,7 @@ in `packages/perpl`, with the rounding direction chosen for safety
 | trim size | **up** to the lot size, then clamped to the position size and `maxTrim` |
 | worst close price | **away from** the mark (a long's close limit rounds down) |
 | collateral re-add | exact integer from the account's balance change |
-| trigger comparison | in the risk package, on the same float values the UI shows |
+| trigger comparison | in the risk package, on the same float values the UI shows; a mark exactly on the line or a liquidation price counts as reaching it (a billionth, relative, absorbs float noise) |
 
 Property tests assert the invariants the model has to hold: trims never increase size, never flip
 side, always meet the target unless capped, `L'` is monotonic in `s`, and long/short symmetry.

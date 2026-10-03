@@ -44,9 +44,16 @@ export const distanceToLiquidation = (p: Position, mark: number): number =>
 /** Notional at `price` over equity at `price`. */
 export const leverage = (p: Position, price: number): number => (p.size * price) / equity(p, price);
 
+/**
+ * Levels computed in float64 can land a hair off the price they print as: a $0.0366 line can
+ * leave equity at $0.0366 a millionth of a cent above its trigger. A billionth, relative, counts
+ * as reached, so a mark exactly on a level always is.
+ */
+const NOISE = 1e-9;
+
 /** True once `mark` is at or past `level` in the direction that hurts the position. */
 export const crossed = (side: Side, mark: number, level: number): boolean =>
-  direction(side) * (mark - level) <= 0;
+  direction(side) * (mark - level) <= NOISE * Math.abs(level);
 
 // ---- The Airbag line ----------------------------------------------------------------------
 
@@ -77,7 +84,7 @@ export function airbagLine(p: Position, reference: number, f: number): Line {
 
 /** Deploy when equity(mark) ≤ Q. Comparing equity keeps funding changes exact. */
 export const triggered = (p: Position, mark: number, line: Line): boolean =>
-  equity(p, mark) <= line.triggerEquity;
+  equity(p, mark) - line.triggerEquity <= NOISE * Math.max(1, Math.abs(line.triggerEquity));
 
 /** Share of the reference cushion used up at `mark` (0 at the reference, f at the line). */
 export const cushionUsed = (p: Position, mark: number, line: Line): number =>

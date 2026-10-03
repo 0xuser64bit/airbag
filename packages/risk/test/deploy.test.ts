@@ -65,6 +65,23 @@ describe('golden vectors: the Airbag line', () => {
     expect(triggered(btc, 97_000, line)).toBe(true);
   });
 
+  it('a mark exactly on the line triggers, whatever the float noise', () => {
+    // 500,000 MON short from $0.034 at 20% maintenance: the line is $0.0366, and equity there
+    // computes as $4,700.000000000001 against a $4,700 trigger.
+    const mon: Position = {
+      side: 'short',
+      size: 500_000,
+      entry: 0.034,
+      deposit: 6_000,
+      funding: 0,
+      maintenance: 0.2,
+    };
+    const line = airbagLine(mon, mon.entry, SENSITIVITY.balanced);
+    expect(line.price).toBeCloseTo(0.0366, 12);
+    expect(triggered(mon, 0.0366, line)).toBe(true);
+    expect(triggered(mon, 0.03659, line)).toBe(false);
+  });
+
   it('ETH: Balanced line $2,775', () => {
     expect(usd(airbagLine(eth, eth.entry, SENSITIVITY.balanced).price)).toBe('2,775');
   });
@@ -247,6 +264,16 @@ describe('properties', () => {
         const line = airbagLine(p, p.entry, f).price;
         expect(d * (p.entry - line)).toBeGreaterThan(0);
         expect(d * (line - liquidationPrice(p))).toBeGreaterThan(0);
+      }),
+    );
+  });
+
+  it('the mark at the line triggers, and its liquidation price is crossed at itself', () => {
+    fc.assert(
+      fc.property(genPosition, genSensitivity, (p, f) => {
+        const line = airbagLine(p, p.entry, f);
+        expect(triggered(p, line.price, line)).toBe(true);
+        expect(crossed(p.side, liquidationPrice(p), liquidationPrice(p))).toBe(true);
       }),
     );
   });
