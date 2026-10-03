@@ -303,6 +303,30 @@ describe('onboarding to a deploy, over HTTP', () => {
     expect(btc.slice(0, 2).map((d: { outcome: string }) => d.outcome)).toEqual(['save', 'save']);
   });
 
+  it('liquidates a paused position on its wick, says so, and a reset clears it', async () => {
+    const { body: session } = await signIn();
+    const token = session.token;
+    const body = { apiKey: 'key-token-dddd', apiSecret: secret(), ipLocked: true };
+    expect((await call('POST', '/v1/key', { token, body })).status).toBe(200);
+    await blocks(2);
+    expect((await call('POST', '/v1/sim/wick', { token, body: { symbol: 'BTC' } })).status).toBe(
+      200,
+    );
+    await blocks(45);
+    const state = (await call('GET', '/v1/state', { token })).body;
+    expect(state.positions.map((p: { symbol: string }) => p.symbol)).toEqual(['ETH']);
+    expect(state.liquidations).toEqual([
+      expect.objectContaining({ symbol: 'BTC', side: 'long', price: 94_000, returned: 3_200 }),
+    ]);
+    expect(state.account.spare).toBeCloseTo(3_620, 6);
+    expect((await call('GET', '/v1/deploys', { token })).body).toHaveLength(0);
+    expect((await call('POST', '/v1/sim/reset', { token })).status).toBe(200);
+    await blocks(1);
+    const after = (await call('GET', '/v1/state', { token })).body;
+    expect(after.liquidations).toEqual([]);
+    expect(after.positions).toHaveLength(2);
+  });
+
   it("keeps each wallet's simulated prices to itself", async () => {
     const [a, b] = await Promise.all([signIn(), signIn()]).then((r) => r.map((s) => s.body.token));
     for (const token of [a, b]) {

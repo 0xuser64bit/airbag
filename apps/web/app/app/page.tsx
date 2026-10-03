@@ -14,6 +14,7 @@ import {
   InterventionDisplay,
   KeepsFalling,
   KeyHealth,
+  LiquidatedNotice,
   PausedBanner,
   Positions,
   RecentDeploys,
@@ -63,6 +64,9 @@ export default function DashboardPage() {
         {sim(s.simTop)}
         <StatusBanner data={data} />
         {data.status === 'paused' && <PausedBanner />}
+        {data.liquidations[0] && (
+          <LiquidatedNotice liquidation={data.liquidations[0]} armed={data.settings.armed} />
+        )}
         {detail ? (
           <InterventionDisplay d={detail} p={deployed} />
         ) : (

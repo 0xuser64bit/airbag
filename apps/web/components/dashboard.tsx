@@ -722,6 +722,47 @@ export function PausedBanner() {
   );
 }
 
+/**
+ * Simulation only: the paper exchange liquidated a position, as Perpl would have. Says what came
+ * back and offers the way to run the same wick again with Airbag armed.
+ */
+export function LiquidatedNotice({
+  liquidation: l,
+  armed,
+}: {
+  liquidation: Dashboard['liquidations'][number];
+  armed: boolean;
+}) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className={`notice ${s.banner}`} role="status">
+      <Annunciator state="liq" size="sm">
+        Liquidated
+      </Annunciator>
+      <p>
+        Your {l.symbol} {l.side} was liquidated at <span className="num">{fmt.usd(l.price)}</span>{' '}
+        in block <span className="num">{fmt.block(l.block)}</span>.{' '}
+        <span className="num">{fmt.usd(l.returned)}</span>, 80% of what was left, came back to your
+        balance; the rest went to the insurance fund and the protocol.{' '}
+        {armed
+          ? 'Airbag couldn’t trim it in time.'
+          : 'Reset the account, resume Airbag and play the same wick to see it trim instead.'}
+      </p>
+      <button
+        type="button"
+        className="btn btn-secondary btn-sm"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          await api('/v1/sim/reset', { method: 'POST', body: {} }).finally(() => setBusy(false));
+        }}
+      >
+        Reset account
+      </button>
+    </div>
+  );
+}
+
 /** Simulation only: drive the scripted chain from the dashboard. */
 export function SimControls({
   symbols,
@@ -750,7 +791,7 @@ export function SimControls({
       line !== undefined && low !== undefined
         ? ` Through your Airbag line at ${fmt.usd(line)}, down to the liquidation price, ${fmt.usd(low)}, and back.`
         : '';
-    return `Playing a wick on ${sym}.${where}${paused ? ' Airbag is paused, so it only watches.' : ''}`;
+    return `Playing a wick on ${sym}.${where}${paused ? ' Airbag is paused, so nothing trims it before the liquidation price.' : ''}`;
   };
   return (
     <section className={`${s.section} ${className}`} aria-labelledby={id}>
@@ -765,7 +806,8 @@ export function SimControls({
       <p className="muted">
         Plays the landing page’s crash-test wick on your position, one price per block, through the
         real engine on a paper exchange: through your Airbag line to the liquidation price and back.
-        Only your account’s prices move.
+        Only your account’s prices move. Pause Airbag first to watch the position get liquidated
+        instead.
       </p>
       <div className={s.simButtons}>
         {symbols.map((sym) => (

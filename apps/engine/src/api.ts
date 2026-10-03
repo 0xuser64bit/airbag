@@ -11,6 +11,7 @@ import type { Auth } from './auth.ts';
 import type { Config } from './config.ts';
 import type { Deploy, Settings, Store } from './db.ts';
 import type { Engine } from './engine.ts';
+import { PaperExchange } from './exchange.ts';
 import type { Logger } from './log.ts';
 import { validatePush } from './notify.ts';
 import { SAMPLE_SPARE_CNS, type SimChain, samplePositions, wickPath } from './sim.ts';
@@ -670,6 +671,24 @@ export function createApi(deps: ApiDeps): Server {
       demoAllowed: cfg.demoWallets.has(w),
       positions,
       deploys: store.deploys(w, 10).map((d) => summary(guard?.live(d.id) ?? d)),
+      // Simulation only: what the paper exchange liquidated, newest first, until a reset.
+      liquidations:
+        guard?.exchange instanceof PaperExchange
+          ? guard.exchange.liquidations
+              .map((l) => {
+                const m = engine.markets.byId.get(l.marketId);
+                return {
+                  symbol: m ? symbolOf(m) : String(l.marketId),
+                  side: l.side,
+                  size: l.size,
+                  sizeDecimals: m?.config.size_decimals ?? 3,
+                  block: l.block,
+                  price: l.price,
+                  returned: l.returned,
+                };
+              })
+              .reverse()
+          : [],
     };
   }
 

@@ -244,3 +244,28 @@ test('the backtest: every liquidation replayed, each with its own page', async (
   await checkNoOverflow(page);
   expect((await page.goto('/backtest/0-0'))?.status()).toBe(404);
 });
+
+test('paused, a wick liquidates the paper position and the dashboard says so', async ({
+  page,
+  wallet,
+}) => {
+  await page.goto('/connect');
+  await page.getByRole('button', { name: 'Connect Test Wallet' }).click();
+  await page.getByRole('button', { name: 'Link a Perpl key' }).click();
+  await page.getByRole('button', { name: 'Use a test key' }).click();
+  await page.getByRole('button', { name: 'Verify key' }).click();
+  await expect(page.getByText(/Key verified/)).toBeVisible();
+  // Linked but never armed: Airbag watches and does nothing.
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Play a wick on BTC' }).click();
+  const notice = page.getByRole('status').filter({ hasText: 'was liquidated at' });
+  await expect(notice).toContainText('Your BTC long was liquidated at $94,000', {
+    timeout: 20_000,
+  });
+  await expect(notice).toContainText('$3,200, 80% of what was left');
+  await checkA11y(page, 'dashboard after a liquidation');
+  await notice.getByRole('button', { name: 'Reset account' }).click();
+  await expect(notice).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: /BTC long/ }).first()).toBeVisible();
+  expect(wallet).toMatch(/^0x/);
+});

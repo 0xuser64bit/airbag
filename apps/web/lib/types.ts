@@ -234,6 +234,16 @@ export interface Dashboard {
   demoAllowed: boolean;
   positions: PositionView[];
   deploys: DeploySummary[];
+  /** Simulation only: positions the paper exchange liquidated, newest first. */
+  liquidations: {
+    symbol: string;
+    side: Side;
+    size: number;
+    sizeDecimals: number;
+    block: number;
+    price: number;
+    returned: number;
+  }[];
 }
 
 export interface SaveReport {
