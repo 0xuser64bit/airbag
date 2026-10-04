@@ -61,8 +61,29 @@ interface Live {
   onchain?: number;
 }
 
+type Reading = Awaited<ReturnType<typeof readChain>>;
+/**
+ * Readings by address for 30 s: a burst of requests for one wallet costs the public RPC one read,
+ * so it can't get this server's IP refused and take the landing's radar down with it.
+ */
+const recent = new Map<string, { at: number; value: Promise<Reading> }>();
+
+function read(address: `0x${string}`, now = Date.now()): Promise<Reading> {
+  const key = address.toLowerCase();
+  const hit = recent.get(key);
+  if (hit && now - hit.at < 30_000) return hit.value;
+  if (recent.size > 1_000) recent.clear();
+  const value = readChain(address);
+  recent.set(key, { at: now, value });
+  // A failed read isn't kept: trying again should read again.
+  void value.then((v) => {
+    if (v === undefined && recent.get(key)?.value === value) recent.delete(key);
+  });
+  return value;
+}
+
 /** The wallet's account and open positions, or undefined if Perpl or Monad didn't answer. */
-async function read(address: `0x${string}`) {
+async function readChain(address: `0x${string}`) {
   try {
     const net = mainnet();
     const ctx = await mainnetContext();
