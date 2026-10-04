@@ -452,6 +452,28 @@ export default async function Landing() {
                 server.
               </p>
             </div>
+            <div>
+              <h3>The record checks itself</h3>
+              <p>
+                Because Perpl’s positions live in a contract, Airbag’s log can read them in the same
+                transaction. AirbagLog takes a deploy’s size and liquidation price after from Perpl,
+                not from Airbag, and anyone can prove a save against Perpl’s own mark.{' '}
+                <a href={`${SOURCE_URL}/blob/main/contracts/README.md`}>
+                  Tested against Perpl mainnet
+                </a>
+                ; it goes live with the live engine.
+              </p>
+            </div>
+            <div>
+              <h3>Replayed on Perpl’s own liquidations</h3>
+              <p>
+                Every liquidation Perpl published in three weeks, rebuilt from its event on Monad
+                and run block by block through Airbag’s engine: {backtest.open} of{' '}
+                {backtest.replayed} would have been trimmed in time, a median{' '}
+                {fmt.duration(backtest.leadSeconds.p50 * 1000)} ahead.{' '}
+                <Link href="/backtest">See every one</Link>.
+              </p>
+            </div>
           </div>
         </section>
 
