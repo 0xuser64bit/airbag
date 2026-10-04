@@ -31,6 +31,14 @@ own.
 4. **[AirbagLog](contracts/README.md)**: a contract that reads Perpl's positions on Monad to check
    Airbag's own records, tested against Perpl's real mainnet Exchange on a fork.
 
+![The backtest: 363 of 369 liquidated Perpl positions still open when Perpl liquidated them, the liquidations' $19,629 beside the Airbag path's $35,244](docs/img/backtest.png)
+
+*One of the 369, a real BTC short Perpl liquidated on 2026-09-18: the replay trimmed it at the
+Airbag line 50 minutes earlier, liquidation moved to $85,823, and when Perpl liquidated the
+original at $80,719 the trimmed position was still open, worth $826 against the $477 returned:*
+
+![A replayed Perpl liquidation: the real mark, the Airbag line, the trim and Perpl's liquidation](docs/img/backtest-liquidation.png)
+
 ![The dashboard just after a deploy: the trim, the re-add and the save in the block log, on Monad testnet blocks](docs/img/dashboard-deploy.png)
 
 *A simulated deploy on Monad testnet's real blocks: the line is crossed in block 67,459,596, the
