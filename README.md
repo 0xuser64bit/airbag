@@ -181,6 +181,7 @@ of the engine image.
 | [docs/RISK-MODEL.md](docs/RISK-MODEL.md) | The arithmetic, the deploy algorithm, the golden test vectors |
 | [docs/PERPL.md](docs/PERPL.md) | Verified Perpl, Monad and Envio protocol facts, and the gotchas that have cost time |
 | [docs/SECURITY.md](docs/SECURITY.md) | The threat model, the controls, master-key rotation and a leak |
+| [docs/DEMO.md](docs/DEMO.md) | Showing Airbag in three minutes: the script, and what judges ask |
 | [docs/DEPLOY.md](docs/DEPLOY.md) | The demo on the free VM, a real testnet deploy, verification on testnet, operating the VM |
 | [docs/adr/](docs/adr/) | Why each major decision went the way it did |
 | [apps/web/DESIGN.md](apps/web/DESIGN.md) | The web app's design system and content contract |

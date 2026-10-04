@@ -1,0 +1,66 @@
+# Showing Airbag in three minutes
+
+For a submission video or a judge at the table. Everything below runs on the public demo,
+https://airbag.user64bit.world, with nothing to install. The live testnet run, if it has happened,
+replaces step 3's simulation with real Perpl transactions ([DEPLOY.md](DEPLOY.md#demo-day-a-real-deploy-on-perpl-testnet)).
+
+## Before you start
+
+- In a fresh browser profile, open https://airbag.user64bit.world/engine/health: `ok: true` and
+  `blocks: "monad"` mean the engine is on Monad testnet's real blocks.
+- Open the landing once so its live radar has a reading (it refreshes every five minutes).
+- For the push alerts, go through the demo once beforehand in the same browser, turn on "Push to
+  this browser" in Settings, allow notifications, and reset the account.
+
+## The script
+
+**0:00 — The problem, live.** The landing. Read the "Perpl now" line under the hero: how many
+open positions on Perpl mainnet are, right now, past the line where Airbag would already have
+trimmed them, read from Perpl's contract a few minutes ago. *"Every one of those is a trader one
+wick from losing the whole position and 20% of what's left."*
+
+**0:20 — Does it work? The chain says so.** Open `/backtest`. *"We took every position Perpl
+liquidated on mainnet in three weeks, rebuilt each from its own liquidation event, and replayed the
+marks Perpl actually published, block by block, through our production engine."* Point at 363 of
+369, the $19,629 versus $35,244, and the paused control that liquidates where Perpl did. Open the
+featured liquidation: the trace crossing the yellow line, the trim, liquidation moving away, Perpl
+liquidating the original while the trimmed position stays open. Click "The liquidation on
+MonadVision": it's a real transaction.
+
+**1:00 — The product.** `/connect` → "Connect a test wallet" → sign in → "Use a test key" → the
+settings preview (the numbers are the engine's own math) → don't arm yet; go to the dashboard.
+
+**1:20 — Without Airbag.** Press "Play a wick on BTC" while paused. Twelve seconds later: the
+liquidation lamp, $3,200 back of a $10,000 position, the push alert. *"That's Perpl's liquidation:
+whole position gone, 20% of what's left to the insurance fund and protocol."*
+
+**1:40 — With Airbag.** "Reset account", "Resume", play the same wick. Watch the block log: line
+crossed in one Monad block, the reduce-only close fills in the next, the released margin goes back
+in the one after, re-armed lower; then the old liquidation price arrives and the position is
+still open: a save. Open the save report and its share card. Optional: "Play a wick on MON", a
+short, trims the other way.
+
+**2:20 — Why Monad.** Back on the landing's "Built on 300 ms blocks": per-block checks, real fills
+on Perpl's onchain book, and AirbagLog, which reads Perpl's positions in the same transaction, so
+a deploy's after-state and a save are Perpl's word, not ours. If it's deployed, show
+`liquidationPrice` on MonadVision against a real position; if not, the fork test against Perpl
+mainnet (`MONAD_FORK_RPC=https://rpc1.monad.xyz forge test --match-contract Fork -vvvv`).
+
+**2:45 — What it can't do, said plainly.** The key can't withdraw; Airbag only shrinks positions.
+A gap through the line and the liquidation price inside one block still liquidates, and nothing
+is trimmed while the engine or Perpl is down. Say whether the funded testnet run has happened.
+
+## Questions judges ask
+
+- **What stops Airbag from wrecking my account?** Perpl API keys can't withdraw or transfer, whatever
+  their scope; Airbag's engine only ever sends reduce-only closes and margin adds (an allowlist in
+  three layers, [ADR 0003](adr/0003-engine-runtime.md)); the key is IP-locked to Airbag's servers.
+- **Why not just a stop loss?** A stop closes a fixed size at a fixed price. Airbag trims the
+  smallest amount that moves liquidation a set distance away, puts the released margin back (a
+  close alone doesn't move Perpl's liquidation price, [ADR 0002](adr/0002-deploy-is-close-then-readd.md))
+  and re-arms.
+- **What if the price keeps going?** The smaller position can be liquidated at its new price and
+  returns less than the first liquidation would have. In the backtest none of the 363 did within a
+  day.
+- **Has it traded on Perpl?** Only if the testnet run below has happened. Everything else is
+  checked against Perpl's contract and public data, and says so.
