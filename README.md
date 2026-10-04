@@ -89,6 +89,11 @@ blocks early, so the replay agrees with the chain. Fills are the one assumption:
 the line, 0.25% past the mark, with the taker fee. Rerun it with
 `PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc1.monad.xyz pnpm --filter @airbag/spike backtest`.
 
+**Live on the landing page**: every few minutes the site reads all open positions on Perpl
+mainnet from the contract (about 700 on 2026-10-04) and says how many are past the line where
+Airbag would already have trimmed them (40, worth $215,000) and how many are within 5% of
+liquidation (136).
+
 **Not done yet:** Airbag has **not traded on Perpl**. A real trim and re-add needs a disposable
 funded testnet wallet and a Trade key ([runbook](docs/DEPLOY.md#demo-day-a-real-deploy-on-perpl-testnet)).
 The demo above runs on a free VM ([ADR 0015](docs/adr/0015-free-shared-vm.md)); no contract is

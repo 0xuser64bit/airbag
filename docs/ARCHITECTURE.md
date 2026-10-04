@@ -43,6 +43,7 @@ flowchart LR
   B -- "SIWE, key paste (TLS),<br/>settings, SSE (bearer)" --> API
   W -- "public save reports" --> API
   W -- "liquidation count (GraphQL)" --> IDX
+  W -- "live radar: every open position,<br/>mainnet, every 5 min" --> EX
   E -- "startup config" --> PR
   E -- "1 shared socket" --> MD
   E -- "1 socket per account<br/>(Ed25519 sign-in)" --> TR
@@ -56,7 +57,10 @@ flowchart LR
 
 Both run on one free, shared VM behind Caddy ([ADR 0015](adr/0015-free-shared-vm.md)). The web
 app has no database and no secrets: everything goes through the engine's API
-([ADR 0010](adr/0010-engine-owns-state-in-sqlite.md)). The engine is the only process that can
+([ADR 0010](adr/0010-engine-owns-state-in-sqlite.md)), except public chain data it reads on its
+own server: the landing's live radar walks every open position on Perpl mainnet
+(`openPositions`, then `@airbag/risk`) at most every five minutes and shows nothing if the chain
+doesn't answer in ten seconds (`apps/web/lib/radar.ts`). The engine is the only process that can
 decrypt a Perpl key ([ADR 0006](adr/0006-api-key-custody.md)).
 
 ## Packages

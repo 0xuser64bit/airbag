@@ -11,6 +11,7 @@
     "start": "next start --port 3000"
   },
   "dependencies": {
+    "@airbag/perpl": "workspace:*",
     "@airbag/risk": "workspace:*",
     "next": "16.3.8",
     "react": "19.3.0",

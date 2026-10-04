@@ -90,6 +90,19 @@
   padding-top: var(--s-5);
   border-top: 1px solid var(--line);
 }
+.radar {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+.radar > :first-child {
+  flex-shrink: 0;
+}
 .promises li {
   display: flex;
   align-items: center;

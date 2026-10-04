@@ -17,6 +17,7 @@ import { Annunciator } from '@/components/instruments.tsx';
 import { Runway } from '@/components/Runway.tsx';
 import { Brand } from '@/components/ui.tsx';
 import { SOURCE_URL } from '@/lib/config.ts';
+import { liveRadar } from '@/lib/radar.ts';
 import { engineMode, liquidationsLast30Days } from '@/lib/stats.ts';
 import { loadBacktest } from './backtest/data.ts';
 import s from './page.module.css';
@@ -119,10 +120,15 @@ const MOMENTS: Record<number, [long: string, short: string]> = {
   67459603: ['Saved', 'Saved'],
 };
 
-export const revalidate = 3_600;
+// The live radar is read at most every five minutes; so is this page.
+export const revalidate = 300;
 
 export default async function Landing() {
-  const [liquidated, mode] = await Promise.all([liquidationsLast30Days(), engineMode()]);
+  const [liquidated, mode, radar] = await Promise.all([
+    liquidationsLast30Days(),
+    engineMode(),
+    liveRadar(),
+  ]);
   const demo = mode === 'simulation';
   return (
     <div className={s.page}>
@@ -187,6 +193,25 @@ export default async function Landing() {
                   </li>
                 ))}
               </ul>
+              {radar && radar.positions > 0 && (
+                // Live, from Perpl's contract on Monad: the problem, right now.
+                <p className={s.radar}>
+                  <Annunciator state="on" size="sm">
+                    Perpl now
+                  </Annunciator>
+                  <span>
+                    <span className="num">{radar.pastLine.count}</span> open positions on Perpl
+                    mainnet, worth <span className="num">{fmt.usd(radar.pastLine.notional)}</span>,
+                    are past the line where Airbag would already have trimmed them;{' '}
+                    <span className="num">{radar.near.count}</span> are within 5% of liquidation.{' '}
+                    <span className="faint">
+                      Read from Perpl’s contract on Monad at{' '}
+                      {new Date(radar.at).toISOString().slice(11, 16)} UTC, all{' '}
+                      {radar.positions.toLocaleString('en-US')} open positions.
+                    </span>
+                  </span>
+                </p>
+              )}
             </div>
             <CrashTest />
           </div>
