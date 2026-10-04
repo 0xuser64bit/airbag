@@ -20,7 +20,7 @@ own.
 
 1. **[The backtest](https://airbag.user64bit.world/backtest)**: every position Perpl mainnet
    liquidated over three weeks, rebuilt from its liquidation event and replayed block by block
-   through Airbag's engine. 363 of 369 would have been trimmed in time and still open when Perpl
+   through Airbag's engine. 363 of the 369 replayable ones (372 fully liquidated) would have been trimmed in time and still open when Perpl
    liquidated them; each has its own page with the real mark, the trim and the transaction.
 2. **[The demo](https://airbag.user64bit.world/connect)**: play a wick with Airbag paused (the
    position is liquidated), reset, arm, play it again (trimmed, margin back, saved).
@@ -53,7 +53,7 @@ The public save report it produced, with its share card one click away:*
 
 - Perpl can liquidate all or part of a position; the default split of remaining proceeds is 80% to the
   trader, 10% to the insurance fund, 10% to the protocol. On mainnet that happened 160 times in the
-  3,000,000 blocks (about ten days) to 2026-10-01, and each full liquidation returned exactly 80% of
+  3,000,000 blocks (about ten days) to 2026-10-01, and each of the 159 full liquidations returned exactly 80% of
   what was left, read from Perpl's own `PositionLiquidated` events.
 - Closing or reducing pays Perpl's trading fee. Airbag reads the taker schedule and fee tier,
   estimates the net trim size, and records observed fees.
