@@ -46,3 +46,6 @@ forge create src/AirbagLog.sol:AirbagLog --broadcast \
 
 Then set `AIRBAG_LOG_ADDRESS` and `AIRBAG_LOG_PRIVATE_KEY` (the writer's key) on a live engine,
 and put the address and deploy transaction in the root README. Fund the writer with a little MON.
+On mainnet, give the web app `AIRBAG_LENS_ADDRESS` too: the wallet check then shows the contract's
+own `liquidationPrice` beside each position. On a fork of mainnet with AirbagLog deployed, it
+matched the risk package to the tick on all nine positions of a real account.

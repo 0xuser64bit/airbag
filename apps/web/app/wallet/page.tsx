@@ -26,6 +26,7 @@ import Link from 'next/link';
 import { isAddress } from 'viem';
 import d from '@/components/dashboard.module.css';
 import { Runway } from '@/components/Runway.tsx';
+import { lensLiquidations } from '@/lib/lens.ts';
 import { mainnet, mainnetContext } from '@/lib/radar.ts';
 import { engineMode } from '@/lib/stats.ts';
 import s from '../backtest/backtest.module.css';
@@ -45,6 +46,8 @@ const POLICY = { target: 0.1, maxTrim: 0.5, useSpare: true };
 
 interface Live {
   symbol: string;
+  perpId: number;
+  priceDecimals: number;
   sizeDecimals: number;
   position: Position;
   mark: number;
@@ -54,6 +57,8 @@ interface Live {
   past: boolean;
   /** What Airbag would do: at the line, or now if the mark is already past it. */
   plan: Plan;
+  /** The liquidation price AirbagLog computed onchain, when its address is configured. */
+  onchain?: number;
 }
 
 /** The wallet's account and open positions, or undefined if Perpl or Monad didn't answer. */
@@ -80,6 +85,8 @@ async function read(address: `0x${string}`) {
           const past = crossed(position.side, mark, line);
           return {
             symbol: symbolOf(m),
+            perpId: m.perpetual_id,
+            priceDecimals: m.config.price_decimals,
             sizeDecimals: m.config.size_decimals,
             position,
             mark,
@@ -91,9 +98,18 @@ async function read(address: `0x${string}`) {
           };
         }),
     );
+    const open = positions.filter((x) => x !== undefined).sort((a, b) => a.distance - b.distance);
+    // AirbagLog's own reading of each liquidation price, when the contract is configured.
+    const onchain = await lensLiquidations(
+      net.rpcUrl,
+      open.map((x) => ({ perpId: x.perpId, accountId: account.id })),
+    );
     return {
       account: { id: account.id, spare },
-      positions: positions.filter((x) => x !== undefined).sort((a, b) => a.distance - b.distance),
+      positions: open.map((x, i) => {
+        const raw = onchain?.[i];
+        return raw == null ? x : { ...x, onchain: scaled(Number(raw), x.priceDecimals) };
+      }),
     };
   } catch {
     return undefined;
@@ -183,6 +199,15 @@ export default async function WalletPage({ searchParams }: Props) {
                     near={x.past}
                   />
                   <p className="muted">{whatAirbagDoes(x)}</p>
+                  {x.onchain !== undefined && (
+                    <p className="faint">
+                      AirbagLog on Monad computes its liquidation price from Perpl’s contract:{' '}
+                      <span className="num">{fmt.price(x.onchain)}</span>
+                      {Math.abs(x.onchain - x.liquidation) <= 1.5 * 10 ** -x.priceDecimals
+                        ? ', the same to the tick.'
+                        : '.'}
+                    </p>
+                  )}
                 </li>
               ))}
             </ul>
