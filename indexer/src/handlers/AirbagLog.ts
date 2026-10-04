@@ -1,4 +1,4 @@
-// AirbagLog: one Deploy per DeployRecorded; SaveRecorded marks it saved, and v2's SaveProven
+// AirbagLog: one Deploy per DeployRecorded; SaveRecorded marks it saved, and SaveProven
 // (ADR 0016) adds what the chain showed when the save was proven and who proved it.
 
 import { indexer } from 'envio';

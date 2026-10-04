@@ -19,7 +19,7 @@ type Deploy {
   "The mark reached the pre-deploy liquidation price while the position was open."
   saved: Boolean!
   oldLiqHitBlock: BigInt
-  "Who proved the save against Perpl's state (AirbagLog v2), the mark it read and the lots still open."
+  "Who proved the save against Perpl's state, the mark it read and the lots still open."
   prover: String
   provenMark: BigInt
   provenLots: BigInt

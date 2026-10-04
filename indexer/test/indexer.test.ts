@@ -94,7 +94,7 @@ describe('AirbagLog', () => {
     expect(await indexer.AirbagTotals.getOrThrow('10143')).toMatchObject({ deploys: 1, saves: 1 });
   });
 
-  it('keeps what the chain showed when v2 proved a save, and who proved it', async () => {
+  it('keeps what the chain showed when a save was proven, and who proved it', async () => {
     const indexer = createTestIndexer();
     const prover = '0x000000000000000000000000000000000000bEEF';
     await indexer.process({

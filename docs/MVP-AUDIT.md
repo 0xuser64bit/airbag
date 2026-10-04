@@ -350,7 +350,7 @@ evidence surfaced real bugs, fixed first.
 | `pnpm e2e` | **8 passed** (from 6): now also the backtest pages and their share image, and the paused wick that liquidates and resets |
 | `pnpm build` | Passes; 386 static pages, 369 of them one per replayed liquidation |
 | Contracts | **14 passed** natively (Foundry 1.5.1; Docker Desktop wasn't answering). The fork test against Perpl's real mainnet Exchange: on 20 open positions in BTC, MON, ETH, SOL and ZEC, `liquidationPrice` puts equity at the maintenance margin by Perpl's own accounting, within a tick |
-| Indexer | Codegen and **3 handler tests** pass; v2 still emits the events it indexes |
+| Indexer | Codegen and **3 handler tests** pass; the contract still emits the events it indexes |
 | Backtest, mainnet to block 110,298,004 | 369 of 372 full liquidations replayed: Airbag deployed first in all 369 (median 50 min ahead, 10th percentile 6 min); 363 still open at Perpl's liquidation, none liquidated in the day after; 6 single lots untrimmable within the 50% cap. $35,244 on the Airbag path at those blocks against the $19,629 the liquidations returned. The paused control liquidated all 369 at or before Perpl did, a median 3 blocks early |
 | Live radar, 2026-10-04 04:17 UTC | 705 open positions on Perpl mainnet; 40, worth $215,046, past their Balanced line from entry; 136 within 5% of liquidation |
 
@@ -358,6 +358,6 @@ evidence surfaced real bugs, fixed first.
 
 Unchanged: a funded testnet trim and re-add, independent review, the deployed engine's egress
 allow-list and alerts, real push delivery to phones. Nothing was sent to Perpl in this pass.
-After it, with the owner's go-ahead and a deployer they funded, AirbagLog v2 was deployed on
+After it, with the owner's go-ahead and a deployer they funded, AirbagLog was deployed on
 Monad testnet at `0x52259e30d3687691F663033922472B43120276F7`; its `liquidationPrice` agreed with the risk package
 to the tick on 16 of 16 real testnet positions. The live engine writes to it once it trades.
