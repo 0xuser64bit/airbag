@@ -44,7 +44,9 @@ engine only ever sends reduce-only closes and margin adds.
   them. Any wallet can be checked for its positions now and its liquidations replayed.
 - **A contract that checks Airbag.** AirbagLog reads Perpl's positions in the same transaction: a
   deploy's size and liquidation price after come from Perpl, not Airbag, and anyone can prove a
-  save against Perpl's own mark. Tested against Perpl's real Exchange on a fork of Monad mainnet.
+  save against Perpl's own mark. Tested against Perpl's real Exchange on a fork of Monad mainnet,
+  and deployed on Monad testnet (0x52259e30d3687691F663033922472B43120276F7), where its onchain liquidation price
+  matched Airbag's math to the tick on 16 of 16 real positions.
 
 ## How it uses Monad
 
@@ -71,7 +73,7 @@ axe accessibility checks, 14 contract tests plus a mainnet fork test.
 Working end to end in simulation (paper exchange, Monad testnet blocks) in CI and on the public
 demo. Checked against Perpl mainnet's contract, its liquidations and its live positions without a
 key. Not yet: a funded trim and re-add on Perpl testnet (the runbook is one step away), a deployed
-AirbagLog, and an independent security review before anyone uses it with real money.
+AirbagLog on mainnet, and an independent security review before anyone uses it with real money.
 
 ## Links
 

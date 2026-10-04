@@ -44,6 +44,16 @@ forge create src/AirbagLog.sol:AirbagLog --broadcast \
   --constructor-args "$WRITER_ADDRESS" 0x1964C32f0bE608E7D29302AFF5E61268E72080cc 6
 ```
 
+## Deployments
+
+| Network | Address | Deploy transaction | Owner | Writer |
+|---|---|---|---|---|
+| Monad testnet (10143), 2026-10-04 | [`0x52259e30d3687691F663033922472B43120276F7`](https://testnet.monadvision.com/address/0x52259e30d3687691F663033922472B43120276F7) | [`0x707007a1…1f56`](https://testnet.monadvision.com/tx/0x707007a11f7eff7d35b087726f9b42fead1d98d7e9c57c32f96fb2478a781f56) | `0x82802e5c…c3d7` | `0x216fbEdB…0097` |
+
+The testnet deployment reads Perpl's testnet Exchange. Checked after deploying: its
+`liquidationPrice` agreed with `@airbag/risk` to the tick on 16 of 16 open positions in BTC, ETH,
+SOL and MON.
+
 Then set `AIRBAG_LOG_ADDRESS` and `AIRBAG_LOG_PRIVATE_KEY` (the writer's key) on a live engine,
 and put the address and deploy transaction in the root README. Fund the writer with a little MON.
 On mainnet, give the web app `AIRBAG_LENS_ADDRESS` too: the wallet check then shows the contract's

@@ -357,6 +357,7 @@ evidence surfaced real bugs, fixed first.
 ### Still open
 
 Unchanged: a funded testnet trim and re-add, independent review, the deployed engine's egress
-allow-list and alerts, real push delivery to phones. New and owner-gated: deploying AirbagLog v2
-(it needs a funded deployer and a writer key) so the live engine's deploys and saves land on
-Monad. Nothing was sent to Perpl and nothing was deployed in this pass.
+allow-list and alerts, real push delivery to phones. Nothing was sent to Perpl in this pass.
+After it, with the owner's go-ahead and a deployer they funded, AirbagLog v2 was deployed on
+Monad testnet at `0x52259e30d3687691F663033922472B43120276F7`; its `liquidationPrice` agreed with the risk package
+to the tick on 16 of 16 real testnet positions. The live engine writes to it once it trades.

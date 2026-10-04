@@ -42,9 +42,10 @@ short, trims the other way.
 
 **2:20 — Why Monad.** Back on the landing's "Built on 300 ms blocks": per-block checks, real fills
 on Perpl's onchain book, and AirbagLog, which reads Perpl's positions in the same transaction, so
-a deploy's after-state and a save are Perpl's word, not ours. If it's deployed, show
-`liquidationPrice` on MonadVision against a real position; if not, the fork test against Perpl
-mainnet (`MONAD_FORK_RPC=https://rpc1.monad.xyz forge test --match-contract Fork -vvvv`).
+a deploy's after-state and a save are Perpl's word, not ours. It's deployed on Monad testnet at
+`0x52259e30d3687691F663033922472B43120276F7`: call `liquidationPrice(16, 12)` on MonadVision (BTC, a real testnet
+account) and compare it with Perpl's UI, or run the fork test against Perpl mainnet
+(`MONAD_FORK_RPC=https://rpc1.monad.xyz forge test --match-contract Fork -vvvv`).
 
 **2:45 — What it can't do, said plainly.** The key can't withdraw; Airbag only shrinks positions.
 A gap through the line and the liquidation price inside one block still liquidates, and nothing

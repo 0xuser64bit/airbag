@@ -461,8 +461,12 @@ export default async function Landing() {
                 not from Airbag, and anyone can prove a save against Perpl’s own mark.{' '}
                 <a href={`${SOURCE_URL}/blob/main/contracts/README.md`}>
                   Tested against Perpl mainnet
+                </a>{' '}
+                and{' '}
+                <a href="https://testnet.monadvision.com/address/0x52259e30d3687691F663033922472B43120276F7">
+                  deployed on Monad testnet
                 </a>
-                ; it goes live with the live engine.
+                .
               </p>
             </div>
             <div>
