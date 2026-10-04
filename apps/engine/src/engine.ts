@@ -1,6 +1,7 @@
 // The engine: one guard per linked account, all driven by the shared market feed's per-block
 // tick. It also keeps the block tape the dashboard shows ("every block, checked").
 
+import { symbolOf } from '@airbag/perpl';
 import type { Store } from './db.ts';
 import { type Exchange, PaperExchange } from './exchange.ts';
 import { AccountGuard, type Feed, type Markets, type Notifier } from './guard.ts';
@@ -38,6 +39,8 @@ export class Engine {
   lastTickAt = 0;
   private readonly deps: EngineDeps;
   private readonly listeners = new Set<() => void>();
+  /** Paper liquidations already told, per exchange: a reset brings a fresh one. */
+  private readonly told = new WeakMap<PaperExchange, number>();
 
   constructor(deps: EngineDeps) {
     this.deps = deps;
@@ -91,7 +94,10 @@ export class Engine {
     const ok = !this.deps.feed.staleness().stale;
     for (const guard of this.guards.values()) {
       try {
-        (guard.exchange as Partial<PaperExchange>).onBlock?.(head);
+        if (guard.exchange instanceof PaperExchange) {
+          guard.exchange.onBlock(head);
+          this.tellLiquidations(guard.wallet, guard.exchange);
+        }
         guard.onBlock(head);
       } catch (err) {
         this.deps.log.error('guard.error', { wallet: guard.wallet, head, err });
@@ -105,6 +111,20 @@ export class Engine {
     this.tape.push({ block: head, ok, at: this.lastTickAt });
     if (this.tape.length > TAPE) this.tape.splice(0, this.tape.length - TAPE);
     for (const fn of this.listeners) fn();
+  }
+
+  private tellLiquidations(wallet: string, paper: PaperExchange) {
+    const told = this.told.get(paper) ?? 0;
+    for (const l of paper.liquidations.slice(told)) {
+      const m = this.deps.markets.byId.get(l.marketId);
+      this.deps.notify.liquidated?.(wallet, {
+        symbol: m ? symbolOf(m) : String(l.marketId),
+        side: l.side,
+        price: l.price,
+        returned: l.returned,
+      });
+    }
+    this.told.set(paper, paper.liquidations.length);
   }
 
   /** Subscribes to ticks (for the live stream). Returns an unsubscribe function. */

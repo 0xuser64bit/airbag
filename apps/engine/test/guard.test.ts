@@ -6,7 +6,7 @@ import { DEFAULT_SETTINGS, type Deploy, openStore, type Settings } from '../src/
 import { Engine } from '../src/engine.ts';
 import { PaperExchange } from '../src/exchange.ts';
 import { createLogger } from '../src/log.ts';
-import { deployMessage } from '../src/notify.ts';
+import { deployMessage, liquidationMessage } from '../src/notify.ts';
 import {
   LANDING_PATH,
   SAMPLE_SPARE_CNS,
@@ -37,6 +37,7 @@ function harness(opts: Options = {}) {
   const deployed: Deploy[] = [];
   const saved: Deploy[] = [];
   const alerts: string[] = [];
+  const liquidated: unknown[] = [];
   let engine: Engine | undefined;
   const marketDefinitions = SIM_CONTEXT.markets.map((m) => ({
     ...m,
@@ -63,6 +64,7 @@ function harness(opts: Options = {}) {
       deployed: (d) => deployed.push(structuredClone(d)),
       saved: (d) => saved.push(structuredClone(d)),
       alert: (_w, text) => alerts.push(text),
+      liquidated: (_w, l) => liquidated.push(l),
     },
     slippageBps: 50,
     maxAttempts: 3,
@@ -112,7 +114,20 @@ function harness(opts: Options = {}) {
       await flush();
     }
   };
-  return { store, engine, feed, chain, paper, guard, deployed, saved, alerts, run, blocks };
+  return {
+    store,
+    engine,
+    feed,
+    chain,
+    paper,
+    guard,
+    deployed,
+    saved,
+    alerts,
+    liquidated,
+    run,
+    blocks,
+  };
 }
 
 const flush = async () => {
@@ -372,6 +387,13 @@ describe('what stops a deploy', () => {
     ]);
     expect(h.paper.spare()).toBeCloseTo(3_620, 6);
     expect(h.store.deploys(WALLET)).toHaveLength(0);
+    // Told once, not on every block after.
+    await h.blocks(3);
+    expect(h.liquidated).toEqual([{ symbol: 'BTC', side: 'long', price: 94_000, returned: 3_200 }]);
+    expect(liquidationMessage(h.liquidated[0] as never, false)).toMatchObject({
+      title: 'Your BTC long was liquidated',
+      body: 'At $94,000. $3,200, 80% of what was left, came back to your balance. Airbag was paused. Reset the account, resume and play the wick again.',
+    });
   });
 
   it('never acts on stale data', async () => {

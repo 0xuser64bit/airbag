@@ -77,6 +77,19 @@ export function saveMessage(d: Deploy): PushMessage {
   };
 }
 
+/** Simulation's paper liquidation: what happened, and how to see Airbag stop it instead. */
+export function liquidationMessage(
+  l: { symbol: string; side: string; price: number; returned: number },
+  armed: boolean,
+): PushMessage {
+  return {
+    title: `Your ${l.symbol} ${l.side} was liquidated`,
+    body: `At ${fmt.usd(l.price)}. ${fmt.usd(l.returned)}, 80% of what was left, came back to your balance.${armed ? '' : ' Airbag was paused. Reset the account, resume and play the wick again.'}`,
+    url: '/app',
+    tag: `liquidated-${l.symbol}`,
+  };
+}
+
 export class Push {
   readonly enabled: boolean;
   private readonly store: Store;
@@ -94,6 +107,10 @@ export class Push {
     this.simulated = simulated;
     this.enabled = !!vapid;
     if (vapid) webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
+  }
+
+  armed(wallet: string): boolean {
+    return this.store.settings(wallet).armed;
   }
 
   async send(wallet: string, msg: PushMessage): Promise<number> {
@@ -140,6 +157,9 @@ export function notifier(push: Push, log: Logger, onchain?: OnchainLog): Notifie
     saved(d) {
       void safely('push', push.send(d.wallet, saveMessage(d)));
       if (onchain) void safely('onchain', onchain.proveSave(d));
+    },
+    liquidated(wallet, l) {
+      void safely('push', push.send(wallet, liquidationMessage(l, push.armed(wallet))));
     },
     alert(wallet, text) {
       log.warn('alert', { wallet, text });

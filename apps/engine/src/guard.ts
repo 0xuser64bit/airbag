@@ -43,6 +43,7 @@ import {
   type Position,
   planDeploy,
   SENSITIVITY,
+  type Side,
   saveValue,
   triggered,
 } from '@airbag/risk';
@@ -65,6 +66,11 @@ export interface Notifier {
   deployed(d: Deploy): void;
   saved(d: Deploy): void;
   alert(wallet: string, text: string): void;
+  /** Simulation: the paper exchange liquidated a position. */
+  liquidated?(
+    wallet: string,
+    l: { symbol: string; side: Side; price: number; returned: number },
+  ): void;
 }
 
 export interface GuardDeps {
