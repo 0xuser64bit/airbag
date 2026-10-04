@@ -26,7 +26,9 @@ keys were generated on the VM on 2026-10-02 and live only in `/etc/airbag/engine
 (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT=https://airbag.user64bit.world`); deploys
 leave them alone. To rotate, replace both keys there and restart the engine: browsers subscribed
 to the old key have to turn alerts on again. Phones need an installed app for push on iOS (Add to
-Home Screen); desktop Chrome, Edge, Firefox and Safari, and Android, work in the browser.
+Home Screen); desktop Chrome, Edge, Firefox and Safari, and Android, work in the browser. Brave
+refuses ("Registration failed - push service error") until "Use Google services for push
+messaging" is on in Settings → Privacy and security; Settings says so when it happens.
 
 **Telegram alerts** need a bot: message @BotFather on Telegram, `/newbot`, pick a name and a
 username ending in `bot`, and put the token and the username in `/etc/airbag/engine.env` as
