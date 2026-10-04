@@ -184,6 +184,7 @@ Next.js App Router. Server components for the public pages, client components fo
 | `/app/deploys`, `/app/deploys/[id]` | Deploy receipts and detail |
 | `/app/settings` | The same controls outside the stepper |
 | `/s/[id]` | Public save report and its share image |
+| `/wallet` | Any wallet's Perpl mainnet positions read from the contract, with where Airbag would act on each, and its liquidations in the backtest |
 | `/backtest`, `/backtest/[id]` | Every Perpl mainnet liquidation replayed through the engine, and each one block by block (static, from `apps/web/lib/backtest.json`) |
 
 The engine's HTTP API is `apps/engine/src/api.ts`, one `route()` call per endpoint, with its CORS,

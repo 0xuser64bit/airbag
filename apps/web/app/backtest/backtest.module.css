@@ -386,3 +386,6 @@
 .sideNext {
   margin-top: var(--s-6);
 }
+.cta {
+  align-self: flex-start;
+}

@@ -173,12 +173,14 @@ function LiquidationRow({ r }: { r: BacktestRow }) {
   );
 }
 
-/** Finds a wallet's own liquidations: a plain GET form, so it works before any script loads. */
+/** Opens a wallet's page: a plain GET form, so it works before any script loads. */
 export function WalletForm({ address = '' }: { address?: string }) {
   return (
-    <form action="/backtest/wallet" method="get" className={s.walletForm}>
+    <form action="/wallet" method="get" className={s.walletForm}>
       <div className="field">
-        <label htmlFor="wallet-address">Were you liquidated on Perpl? Check a wallet</label>
+        <label htmlFor="wallet-address">
+          Check a Perpl wallet: its positions now and its liquidations
+        </label>
         <div className={s.walletRow}>
           <input
             id="wallet-address"

@@ -248,10 +248,10 @@ test('the backtest: every liquidation replayed, each with its own page', async (
   expect((await page.goto('/backtest/0-0'))?.status()).toBe(404);
   // A wallet's own liquidations: the form, and an address that isn't one (no chain read).
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/backtest/wallet');
+  await page.goto('/wallet');
   await expect(page.getByRole('status')).toContainText('Paste a wallet');
   await checkA11y(page, 'backtest wallet');
-  await page.goto('/backtest/wallet?address=nope');
+  await page.goto('/wallet?address=nope');
   await expect(page.getByRole('status')).toContainText('That isn’t a wallet address.');
 });
 

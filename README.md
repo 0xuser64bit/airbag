@@ -25,7 +25,9 @@ own.
 2. **[The demo](https://airbag.user64bit.world/connect)**: play a wick with Airbag paused (the
    position is liquidated), reset, arm, play it again (trimmed, margin back, saved).
 3. **The landing's live radar**: how many open Perpl mainnet positions are past the line where
-   Airbag would already have trimmed them, read from Perpl's contract every few minutes.
+   Airbag would already have trimmed them, read from Perpl's contract every few minutes, and
+   **[a wallet check](https://airbag.user64bit.world/wallet)**: any Perpl wallet's positions now,
+   where Airbag would act on each, and its liquidations replayed.
 4. **[AirbagLog](contracts/README.md)**: a contract that reads Perpl's positions on Monad to check
    Airbag's own records, tested against Perpl's real mainnet Exchange on a fork.
 

@@ -208,7 +208,8 @@ export default async function Landing() {
                       Read from Perpl’s contract on Monad at{' '}
                       {new Date(radar.at).toISOString().slice(11, 16)} UTC, all{' '}
                       {radar.positions.toLocaleString('en-US')} open positions.
-                    </span>
+                    </span>{' '}
+                    <Link href="/wallet">Check a wallet</Link>.
                   </span>
                 </p>
               )}

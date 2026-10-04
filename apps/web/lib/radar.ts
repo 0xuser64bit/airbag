@@ -4,6 +4,7 @@
 // a page shows nothing rather than a stale or invented number.
 
 import {
+  type Context,
   collateralDecimals,
   fetchContext,
   fromChainPosition,
@@ -27,6 +28,20 @@ export interface Radar {
 
 const TTL_MS = 5 * 60_000;
 let cached: { at: number; value: Promise<Radar | null> } | undefined;
+let context: { at: number; value: Promise<Context> } | undefined;
+
+/** Perpl mainnet's context (markets, decimals, fees), at most five minutes old. */
+export function mainnetContext(now = Date.now()): Promise<Context> {
+  if (!context || now - context.at > TTL_MS) {
+    const value = fetchContext(mainnet().apiUrl);
+    // A failed read isn't kept: the next caller tries again.
+    value.catch(() => {
+      if (context?.value === value) context = undefined;
+    });
+    context = { at: now, value };
+  }
+  return context.value;
+}
 
 /** The latest reading, at most five minutes old. */
 export function liveRadar(now = Date.now()): Promise<Radar | null> {
@@ -56,7 +71,7 @@ export const mainnet = () =>
 
 async function scan(now: number): Promise<Radar> {
   const net = mainnet();
-  const ctx = await fetchContext(net.apiUrl);
+  const ctx = await mainnetContext(now);
   const cd = collateralDecimals(ctx);
   const chain = perplChain(net.rpcUrl, ctx.instances[0]?.address ?? '', net.chainId);
   const radar: Radar = {
