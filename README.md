@@ -126,7 +126,7 @@ liquidation (136).
 **Not done yet:** Airbag has **not traded on Perpl**. A real trim and re-add needs a disposable
 funded testnet wallet and a Trade key ([runbook](docs/DEPLOY.md#demo-day-a-real-deploy-on-perpl-testnet)).
 The demo above runs on a free VM ([ADR 0015](docs/adr/0015-free-shared-vm.md)). AirbagLog is
-deployed on Monad testnet at [`0x52259e30…76F7`](https://testnet.monadvision.com/address/0x52259e30d3687691F663033922472B43120276F7) (2026-10-04, against Perpl's
+deployed on Monad testnet at [`0x52259e30…76F7`](https://testnet.monadvision.com/address/0x52259e30d3687691F663033922472B43120276F7) ([deploy transaction](https://testnet.monadvision.com/tx/0x707007a11f7eff7d35b087726f9b42fead1d98d7e9c57c32f96fb2478a781f56), 2026-10-04, against Perpl's
 testnet Exchange); its `liquidationPrice` agreed with the risk package to the tick on 16 of 16 real
 testnet positions, and the live engine records into it once it trades. Independent review comes before anyone relies on it with real money. Audit history, backlog and launch gates: [docs/MVP-AUDIT.md](docs/MVP-AUDIT.md).
 
