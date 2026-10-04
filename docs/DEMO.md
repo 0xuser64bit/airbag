@@ -10,7 +10,8 @@ replaces step 3's simulation with real Perpl transactions ([DEPLOY.md](DEPLOY.md
   `blocks: "monad"` mean the engine is on Monad testnet's real blocks.
 - Open the landing once so its live radar has a reading (it refreshes every five minutes).
 - For the push alerts, go through the demo once beforehand in the same browser, turn on "Push to
-  this browser" in Settings, allow notifications, and reset the account.
+  this browser" in Settings, allow notifications, and reset the account. "Telegram" in Settings
+  links @airbagalertbot instead, for a browser that refuses push (Brave, by default).
 
 ## The script
 

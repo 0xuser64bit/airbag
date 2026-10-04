@@ -34,7 +34,8 @@ messaging" is on in Settings → Privacy and security; Settings says so when it 
 username ending in `bot`, and put the token and the username in `/etc/airbag/engine.env` as
 `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME`, then restart the engine. Settings then offers
 "Telegram" beside push. The engine long-polls the Bot API, so nothing on the VM has to accept
-Telegram's connections.
+Telegram's connections. The demo's bot is @airbagalertbot (2026-10-04); its token lives only
+in `/etc/airbag/engine.env`.
 
 To deploy a commit, from a clean working tree:
 
