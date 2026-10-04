@@ -47,7 +47,9 @@ disposable testnet wallet. About fifteen minutes, testnet only:
    **One-Click Trading on**, a small BTC long at about 10x, and a **Trade** key. Leave its IP
    allow-list empty for a local run.
 2. In `.env`, set `ENGINE_MODE=live`, `PERPL_NETWORK=testnet`, `DEMO_WALLETS=<that wallet>` and a
-   stable `MASTER_KEY` (`openssl rand -base64 32`; a new one means relinking the key). Then:
+   stable `MASTER_KEY` (`openssl rand -base64 32`; a new one means relinking the key). With
+   AirbagLog deployed on testnet, also `AIRBAG_LOG_ADDRESS` and `AIRBAG_LOG_PRIVATE_KEY` (the
+   writer): every deploy is then recorded with its after-state read from Perpl. Then:
    ```bash
    pnpm dev:engine    # .env overrides .env.example's simulation default
    pnpm dev:web
@@ -55,10 +57,13 @@ disposable testnet wallet. About fifteen minutes, testnet only:
 3. At http://localhost:3000/connect connect that wallet (Rabby or MetaMask on Monad testnet),
    sign in, paste the key and confirm the allow-list wording; the engine probes Trade scope
    before storing anything. In "Set your airbag", turn on **Demo mode** (deploys after a 0.3%
-   move against the position, shown only to `DEMO_WALLETS`) and arm.
-4. Wait for BTC to move 0.3% against the position. The dashboard's block log shows the
-   reduce-only close and the margin re-add with their Perpl transactions; check the new
-   liquidation price against Perpl's UI. Turn demo mode off afterwards.
+   move against the position, shown only to `DEMO_WALLETS`), **turn spare margin off**, and arm.
+   With spare margin on, a small position on a well-funded account is protected by a margin add
+   alone; off, the deploy is the trim and the re-add, the path this run has to prove.
+4. Wait for BTC to move 0.3% against the position (an ETH short beside it covers a move up). The
+   dashboard's block log shows the reduce-only close and the margin re-add with their Perpl
+   transactions; check the new liquidation price against Perpl's UI and the deposit against
+   the released margin. Turn demo mode off afterwards.
 
 ## 1. Verify on testnet first
 
