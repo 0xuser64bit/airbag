@@ -113,6 +113,7 @@ jobs:
       - run: docker build -f apps/engine/Dockerfile -t airbag-engine .
       - name: smoke test
         run: |
+          trap 'docker rm -f engine >/dev/null 2>&1 || true' EXIT
           docker run -d --name engine -p 8787:8787 -e ENGINE_MODE=simulation -e DATABASE_PATH=/data/airbag.db airbag-engine
           for i in $(seq 1 20); do curl -fsS localhost:8787/ready && exit 0; sleep 1; done
           docker logs engine
