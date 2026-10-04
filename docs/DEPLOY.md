@@ -28,6 +28,12 @@ leave them alone. To rotate, replace both keys there and restart the engine: bro
 to the old key have to turn alerts on again. Phones need an installed app for push on iOS (Add to
 Home Screen); desktop Chrome, Edge, Firefox and Safari, and Android, work in the browser.
 
+**Telegram alerts** need a bot: message @BotFather on Telegram, `/newbot`, pick a name and a
+username ending in `bot`, and put the token and the username in `/etc/airbag/engine.env` as
+`TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME`, then restart the engine. Settings then offers
+"Telegram" beside push. The engine long-polls the Bot API, so nothing on the VM has to accept
+Telegram's connections.
+
 To deploy a commit, from a clean working tree:
 
 ```bash

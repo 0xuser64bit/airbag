@@ -125,7 +125,7 @@ deployed. Independent review comes before anyone relies on it with real money. A
 |---|---|
 | `packages/risk` | The risk math, pure and dependency-free: liquidation price, the Airbag line, deploy planning, the save value. Golden vectors plus property tests. |
 | `packages/perpl` | Perpl client: trading and market-data sockets, Ed25519 sign-in, onchain reads, safe unit conversion, and the order-type allowlist (only closes, margin adds, and a link-time scope probe). |
-| `apps/engine` | The always-on engine: one guard per account, per-block checks, deploys, re-arming and saves; the HTTP API (SIWE, key linking, settings, live stream); SQLite; Web Push; the AirbagLog writer; simulation mode, and the replay of recorded mark paths the backtest runs on. |
+| `apps/engine` | The always-on engine: one guard per account, per-block checks, deploys, re-arming and saves; the HTTP API (SIWE, key linking, settings, live stream); SQLite; Web Push and Telegram alerts; the AirbagLog writer; simulation mode, and the replay of recorded mark paths the backtest runs on. |
 | `apps/web` | The site and app (Next.js): landing page with the crash-test replay, the backtest of every Perpl liquidation, onboarding, dashboard, deploy receipts, public save reports with a share image; installable for push alerts. |
 | `contracts/` | `AirbagLog`, a public append-only log of deploys and saves (Foundry). |
 | `indexer/` | Envio HyperIndex over AirbagLog and Perpl's liquidations. |
