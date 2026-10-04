@@ -25,6 +25,7 @@ import { Minus, Plus } from './icons.tsx';
 import { Annunciator } from './instruments.tsx';
 import { Spinner } from './Loader.tsx';
 import { Tape } from './Tape.tsx';
+import { TelegramAlerts } from './TelegramAlerts.tsx';
 
 const PRESETS: { id: Sensitivity; name: string; caption: string }[] = [
   { id: 'early', name: 'Early', caption: 'A third of the cushion gone' },
@@ -61,6 +62,8 @@ export interface AirbagFormProps {
   spare: number;
   demoAllowed: boolean;
   vapidPublicKey: string | null;
+  /** The engine's Telegram bot, when it has one. */
+  telegramBot?: string | null;
   slippageBps: number;
   /** Saves; throw to show a message. */
   onSubmit: (draft: SettingsDraft) => Promise<void>;
@@ -284,6 +287,7 @@ export function AirbagForm(props: AirbagFormProps) {
                   ? 'This server doesn’t send push alerts yet. Deploys and saves still show on the dashboard and in the deploy log.'
                   : 'Deploys, saves and key problems. Turn it on in each browser you want alerts in.')}
           </span>
+          {props.telegramBot && <TelegramAlerts bot={props.telegramBot} />}
         </fieldset>
 
         {props.demoAllowed && (

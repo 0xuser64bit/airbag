@@ -55,6 +55,7 @@ export default function SettingsPage() {
         spare={data.account?.spare ?? 0}
         demoAllowed={data.demoAllowed}
         vapidPublicKey={config.data.vapidPublicKey}
+        telegramBot={config.data.telegram}
         slippageBps={config.data.slippageBps}
         submitLabel="Save changes"
         busyLabel="Saving…"

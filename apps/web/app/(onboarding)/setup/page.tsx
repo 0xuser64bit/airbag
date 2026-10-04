@@ -52,6 +52,7 @@ export default function SetupPage() {
       spare={live.data?.account?.spare ?? 0}
       demoAllowed={me.data.demoAllowed}
       vapidPublicKey={config.data.vapidPublicKey}
+      telegramBot={config.data.telegram}
       slippageBps={config.data.slippageBps}
       submitLabel="Arm Airbag"
       busyLabel="Arming…"

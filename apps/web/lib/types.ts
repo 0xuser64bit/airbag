@@ -14,6 +14,8 @@ export interface EngineConfig {
   egressIps: string[];
   markets: { id: number; symbol: string }[];
   vapidPublicKey: string | null;
+  /** The bot's @username, when the engine sends Telegram alerts. */
+  telegram: string | null;
   slippageBps: number;
 }
 
@@ -55,6 +57,8 @@ export interface Me {
   link: { accountId: number; keyHint: string; linkedAt: number } | null;
   settings: Settings;
   demoAllowed: boolean;
+  /** A Telegram chat is linked for alerts. */
+  telegram: boolean;
 }
 
 export interface Linked {
