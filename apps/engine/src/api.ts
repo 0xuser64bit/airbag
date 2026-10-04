@@ -3,7 +3,7 @@
 // Browsers call it cross-origin with a bearer token; only WEB_ORIGIN origins get CORS.
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import { effectiveEntryPrice, type PerplChain, symbolOf } from '@airbag/perpl';
+import { fromChainPosition, type PerplChain, symbolOf } from '@airbag/perpl';
 import { distanceToLiquidation, liquidationPrice, type Position } from '@airbag/risk';
 import { getAddress, type Hex, isAddress, isHex } from 'viem';
 import { type Accounts, LinkError } from './accounts.ts';
@@ -518,18 +518,10 @@ export function createApi(deps: ApiDeps): Server {
     const rows = await Promise.all(
       [...engine.markets.byId.values()].map(async (m) => {
         const p = await chain.position(m.perpetual_id, account.id);
-        if (!p.side) return undefined;
-        const pd = m.config.price_decimals;
-        const risk: Position = {
-          side: p.side,
-          size: Number(p.lots) / 10 ** m.config.size_decimals,
-          entry: effectiveEntryPrice(p.side, Number(p.pricePns), Number(p.residueQ16), pd),
-          deposit: Number(p.depositCns) / 10 ** cd,
-          funding: Number(p.premiumPnlCns) / 10 ** cd,
-          maintenance: 100 / m.config.maintenance_margin,
-        };
+        const risk = fromChainPosition(p, m, cd);
+        if (!risk) return undefined;
         const markRaw = engine.feed.mark(m.id) ?? Number(p.markPns);
-        const mark = markRaw / 10 ** pd;
+        const mark = markRaw / 10 ** m.config.price_decimals;
         // Opening leverage isn't onchain; entry notional over deposit approximates it.
         const nominal = (risk.size * risk.entry) / Math.max(risk.deposit, 1e-9);
         return positionRow(m.id, risk, mark, nominal, m.config.size_decimals);

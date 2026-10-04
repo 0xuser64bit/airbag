@@ -1,4 +1,5 @@
 import { direction, type Position } from '@airbag/risk';
+import type { ChainPosition } from './chain.ts';
 import { maintenanceFraction } from './context.ts';
 import type { Market, PerplPosition } from './types.ts';
 import { effectiveEntryPrice, scaled } from './units.ts';
@@ -36,4 +37,25 @@ export function closeFeeRate(market: Market, feeTier = 0): number {
   if (typeof micros !== 'number' || !Number.isFinite(micros) || micros < 0 || micros > 100_000)
     throw new Error('Invalid Perpl taker fee');
   return micros / 1_000_000;
+}
+
+/**
+ * A position read from the contract (getPositionV2, getPositionsV2) in human units, or null if
+ * there is none. Funding comes straight from the contract's premium PnL.
+ */
+export function fromChainPosition(
+  p: ChainPosition,
+  market: Market,
+  collateralDecimals: number,
+): Position | null {
+  if (!p.side) return null;
+  const pd = market.config.price_decimals;
+  return {
+    side: p.side,
+    size: scaled(Number(p.lots), market.config.size_decimals),
+    entry: effectiveEntryPrice(p.side, Number(p.pricePns), Number(p.residueQ16), pd),
+    deposit: scaled(Number(p.depositCns), collateralDecimals),
+    funding: scaled(Number(p.premiumPnlCns), collateralDecimals),
+    maintenance: maintenanceFraction(market),
+  };
 }

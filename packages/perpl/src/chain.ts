@@ -23,6 +23,21 @@ const accountInfo = {
   ],
 } as const;
 
+const positionInfo = [
+  u256('accountId'),
+  u256('nextNodeId'),
+  u256('prevNodeId'),
+  { type: 'uint8', name: 'positionType' },
+  u256('depositCNS'),
+  u256('pricePNS'),
+  u256('lotLNS'),
+  u256('entryBlock'),
+  { type: 'int256', name: 'pnlCNS' },
+  { type: 'int256', name: 'deltaPnlCNS' },
+  { type: 'int256', name: 'premiumPnlCNS' },
+  u256('priceResiduePNSQ16'),
+] as const;
+
 const positionLiquidated = {
   type: 'event',
   name: 'PositionLiquidated',
@@ -65,24 +80,19 @@ export const exchangeAbi = [
     stateMutability: 'view',
     inputs: [u256('perpId'), u256('accountId')],
     outputs: [
-      {
-        type: 'tuple',
-        name: 'positionInfo',
-        components: [
-          u256('accountId'),
-          u256('nextNodeId'),
-          u256('prevNodeId'),
-          { type: 'uint8', name: 'positionType' },
-          u256('depositCNS'),
-          u256('pricePNS'),
-          u256('lotLNS'),
-          u256('entryBlock'),
-          { type: 'int256', name: 'pnlCNS' },
-          { type: 'int256', name: 'deltaPnlCNS' },
-          { type: 'int256', name: 'premiumPnlCNS' },
-          u256('priceResiduePNSQ16'),
-        ],
-      },
+      { type: 'tuple', name: 'positionInfo', components: positionInfo },
+      u256('markPricePNS'),
+      { type: 'bool', name: 'markPriceValid' },
+    ],
+  },
+  {
+    type: 'function',
+    name: 'getPositionsV2',
+    stateMutability: 'view',
+    inputs: [u256('perpId'), u256('pageStartPositionId'), u256('positionsPerPage')],
+    outputs: [
+      { type: 'tuple[]', name: 'positions', components: positionInfo },
+      u256('numPositions'),
       u256('markPricePNS'),
       { type: 'bool', name: 'markPriceValid' },
     ],
@@ -171,6 +181,33 @@ export interface ChainLiquidation {
 
 export type PerplChain = ReturnType<typeof perplChain>;
 
+/** The contract's position struct in Airbag's terms; its side encoding is read only here. */
+function chainPosition(
+  p: {
+    positionType: number;
+    depositCNS: bigint;
+    pricePNS: bigint;
+    priceResiduePNSQ16: bigint;
+    lotLNS: bigint;
+    entryBlock: bigint;
+    deltaPnlCNS: bigint;
+    premiumPnlCNS: bigint;
+  },
+  markPns: bigint,
+): ChainPosition {
+  return {
+    side: p.lotLNS === 0n ? null : p.positionType === 0 ? 'long' : 'short',
+    depositCns: p.depositCNS,
+    pricePns: p.pricePNS,
+    residueQ16: p.priceResiduePNSQ16,
+    lots: p.lotLNS,
+    entryBlock: p.entryBlock,
+    deltaPnlCns: p.deltaPnlCNS,
+    premiumPnlCns: p.premiumPnlCNS,
+    markPns,
+  };
+}
+
 export function perplChain(
   rpcUrl: string,
   exchange: string,
@@ -231,17 +268,34 @@ export function perplChain(
         functionName: 'getPositionV2',
         args: [BigInt(perpId), BigInt(accountId)],
       });
-      return {
-        side: p.lotLNS === 0n ? null : p.positionType === 0 ? 'long' : 'short',
-        depositCns: p.depositCNS,
-        pricePns: p.pricePNS,
-        residueQ16: p.priceResiduePNSQ16,
-        lots: p.lotLNS,
-        entryBlock: p.entryBlock,
-        deltaPnlCns: p.deltaPnlCNS,
-        premiumPnlCns: p.premiumPnlCNS,
-        markPns: mark,
-      };
+      return chainPosition(p, mark);
+    },
+    /**
+     * Every open position in a market, with the mark. Perpl keeps a market's positions as a list
+     * linked by account id and serves it in fixed-size pages, of which `numPositions` are real.
+     */
+    async openPositions(perpId: number, perPage = 200) {
+      const positions: (ChainPosition & { accountId: number })[] = [];
+      let start = 0n;
+      let markPns = 0n;
+      let markValid = false;
+      for (let page = 0; page < 1_000; page++) {
+        const [all, num, mark, valid] = await client.readContract({
+          ...read,
+          functionName: 'getPositionsV2',
+          args: [BigInt(perpId), start, BigInt(perPage)],
+        });
+        markPns = mark;
+        markValid = valid;
+        const real = all.slice(0, Number(num));
+        for (const p of real)
+          if (p.lotLNS > 0n)
+            positions.push({ ...chainPosition(p, mark), accountId: Number(p.accountId) });
+        const last = real.at(-1);
+        if (!last || real.length < perPage || last.nextNodeId === 0n) break;
+        start = last.nextNodeId;
+      }
+      return { markPns, markValid, positions };
     },
     head: (): Promise<bigint> => client.getBlockNumber(),
     /** Liquidations between two blocks, inclusive. Public RPCs may cap the range per call. */

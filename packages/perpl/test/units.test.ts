@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { closeFeeRate } from '../src/position.ts';
+import { closeFeeRate, fromChainPosition } from '../src/position.ts';
 import type { Market } from '../src/types.ts';
 import { effectiveEntryPrice, lotsToClose, worstClosePrice } from '../src/units.ts';
 
@@ -43,4 +43,31 @@ describe('safe rounding (ADR 0008)', () => {
     expect(worstClosePrice('short', 970_000, 50)).toBe(974_850);
     expect(worstClosePrice('short', 970_001, 50)).toBe(974_852);
   });
+});
+
+it("converts a contract position to human units, with the contract's funding", () => {
+  const market = {
+    config: { price_decimals: 1, size_decimals: 5, maintenance_margin: 2500 },
+  } as Parameters<typeof fromChainPosition>[1];
+  const p = {
+    side: 'long' as const,
+    depositCns: 41_612_829n,
+    pricePns: 697_422n,
+    residueQ16: 0n,
+    lots: 179n,
+    entryBlock: 55_355_560n,
+    deltaPnlCns: 26_906_385n,
+    premiumPnlCns: 6_563_572n,
+    markPns: 847_737n,
+  };
+  // A real BTC long on Perpl mainnet: 0.00179 BTC from $69,742.2.
+  expect(fromChainPosition(p, market, 6)).toEqual({
+    side: 'long',
+    size: 0.00179,
+    entry: 69_742.2,
+    deposit: 41.612829,
+    funding: 6.563572,
+    maintenance: 0.04,
+  });
+  expect(fromChainPosition({ ...p, side: null }, market, 6)).toBeNull();
 });

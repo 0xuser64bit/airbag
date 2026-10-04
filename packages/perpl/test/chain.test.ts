@@ -110,3 +110,58 @@ it("decodes Perpl's liquidations with the contract's side encoding (0 long, 1 sh
     toAccountCns: 39_834_732n,
   });
 });
+
+it("reads every open position in a market across Perpl's fixed-size pages", async () => {
+  // 450 positions linked by account id, 1 to 450; every tenth one has no lots left.
+  const all = Array.from({ length: 450 }, (_, i) => ({
+    accountId: BigInt(i + 1),
+    nextNodeId: i + 1 < 450 ? BigInt(i + 2) : 0n,
+    prevNodeId: BigInt(i),
+    positionType: i % 2,
+    depositCNS: 1_000_000n,
+    pricePNS: 1_000_000n,
+    lotLNS: i % 10 === 9 ? 0n : 100n,
+    entryBlock: 1n,
+    pnlCNS: 0n,
+    deltaPnlCNS: 0n,
+    premiumPnlCNS: 0n,
+    priceResiduePNSQ16: 0n,
+  }));
+  const empty = { ...all[0], accountId: 0n, nextNodeId: 0n, lotLNS: 0n } as (typeof all)[number];
+  const pages: bigint[] = [];
+  const fetchFn = (async (_url: unknown, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body)) as { id: number; params: [{ data: Hex }] };
+    const { args } = decodeFunctionData({ abi: multicall3Abi, data: body.params[0].data });
+    const calls = args[0] as readonly { callData: Hex }[];
+    const result = encodeFunctionResult({
+      abi: multicall3Abi,
+      functionName: 'aggregate3',
+      result: calls.map((c) => {
+        const [, start, perPage] = decodeFunctionData({ abi: exchangeAbi, data: c.callData })
+          .args as [bigint, bigint, bigint];
+        pages.push(start);
+        const from = start === 0n ? 0 : Number(start) - 1;
+        const real = all.slice(from, from + Number(perPage));
+        // Perpl answers a full-size array; only numPositions entries are real.
+        const padded = [...real, ...Array(Number(perPage) - real.length).fill(empty)];
+        return {
+          success: true,
+          returnData: encodeFunctionResult({
+            abi: exchangeAbi,
+            functionName: 'getPositionsV2',
+            result: [padded, BigInt(real.length), 994_200n, true],
+          }),
+        };
+      }),
+    });
+    return new Response(JSON.stringify({ jsonrpc: '2.0', id: body.id, result }));
+  }) as typeof fetch;
+  const chain = perplChain('http://rpc.test', EXCHANGE, 10143, fetchFn);
+  const { positions, markPns, markValid } = await chain.openPositions(16);
+  expect(pages).toEqual([0n, 201n, 401n]);
+  expect(positions).toHaveLength(405);
+  expect(positions[0]).toMatchObject({ accountId: 1, side: 'long', lots: 100n });
+  expect(positions[1]).toMatchObject({ accountId: 2, side: 'short' });
+  expect(positions.some((p) => p.accountId === 10)).toBe(false);
+  expect({ markPns, markValid }).toEqual({ markPns: 994_200n, markValid: true });
+});
