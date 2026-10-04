@@ -145,28 +145,42 @@ export interface OnchainLog {
   proveSave(d: Deploy): Promise<void>;
 }
 
-/** Fans guard events out to push and the onchain log. Neither may block or break protection. */
-export function notifier(push: Push, log: Logger, onchain?: OnchainLog): Notifier {
+/** Something that can carry an alert to a wallet: Web Push, Telegram. */
+interface Channel {
+  send(wallet: string, msg: PushMessage): Promise<unknown>;
+}
+
+/**
+ * Fans guard events out to push, Telegram and the onchain log. None of them may block or break
+ * protection: each runs on its own, and a failure is logged.
+ */
+export function notifier(
+  push: Push,
+  log: Logger,
+  onchain?: OnchainLog,
+  telegram?: Channel,
+): Notifier {
   const safely = (what: string, p: Promise<unknown>) =>
     p.catch((err: unknown) => log.warn(`${what}.error`, { err }));
+  const tell = (wallet: string, msg: PushMessage) => {
+    void safely('push', push.send(wallet, msg));
+    if (telegram) void safely('telegram', telegram.send(wallet, msg));
+  };
   return {
     deployed(d) {
-      void safely('push', push.send(d.wallet, deployMessage(d)));
+      tell(d.wallet, deployMessage(d));
       if (onchain) void safely('onchain', onchain.recordDeploy(d));
     },
     saved(d) {
-      void safely('push', push.send(d.wallet, saveMessage(d)));
+      tell(d.wallet, saveMessage(d));
       if (onchain) void safely('onchain', onchain.proveSave(d));
     },
     liquidated(wallet, l) {
-      void safely('push', push.send(wallet, liquidationMessage(l, push.armed(wallet))));
+      tell(wallet, liquidationMessage(l, push.armed(wallet)));
     },
     alert(wallet, text) {
       log.warn('alert', { wallet, text });
-      void safely(
-        'push',
-        push.send(wallet, { title: 'Airbag needs you', body: text, url: '/app', tag: 'alert' }),
-      );
+      tell(wallet, { title: 'Airbag needs you', body: text, url: '/app', tag: 'alert' });
     },
   };
 }

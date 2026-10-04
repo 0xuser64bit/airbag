@@ -32,6 +32,8 @@ export interface Config {
   /** Share of the cushion that demo mode lets go before deploying: a 0.3% adverse move. */
   demoMove: number;
   vapid?: { publicKey: string; privateKey: string; subject: string };
+  /** Telegram alerts: a bot's token and @username, from BotFather. */
+  telegram?: { token: string; username: string };
   airbagLog?: { address: `0x${string}`; privateKey: `0x${string}`; rpcUrl: string };
   logLevel: 'debug' | 'info' | 'warn' | 'error';
   /** Header with the client IP behind a proxy (rate limits), e.g. x-real-ip set by Caddy. */
@@ -113,6 +115,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       privateKey: env.VAPID_PRIVATE_KEY,
       subject: env.VAPID_SUBJECT ?? 'mailto:security@airbag.invalid',
     };
+  }
+  const tgToken = env.TELEGRAM_BOT_TOKEN;
+  const tgName = env.TELEGRAM_BOT_USERNAME?.replace(/^@/, '');
+  if (!!tgToken !== !!tgName)
+    throw new Error('Set both TELEGRAM_BOT_TOKEN and TELEGRAM_BOT_USERNAME');
+  if (tgToken && tgName) {
+    if (!/^\d+:[\w-]{30,}$/.test(tgToken)) throw new Error('TELEGRAM_BOT_TOKEN is not a bot token');
+    if (!/^\w{5,32}$/.test(tgName)) throw new Error('TELEGRAM_BOT_USERNAME is not a bot username');
+    cfg.telegram = { token: tgToken, username: tgName };
   }
   const logAddress = env.AIRBAG_LOG_ADDRESS;
   const logKey = env.AIRBAG_LOG_PRIVATE_KEY;

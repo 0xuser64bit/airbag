@@ -23,6 +23,7 @@ import { createLogger, type Logger } from './log.ts';
 import { notifier, type OnchainLog, Push } from './notify.ts';
 import { airbagLog } from './onchain.ts';
 import { SIM_CONTEXT, SimChain } from './sim.ts';
+import { Telegram } from './telegram.ts';
 
 export interface App {
   cfg: Config;
@@ -41,8 +42,10 @@ export interface App {
 export interface BuildOptions {
   log?: Logger;
   onchain?: OnchainLog;
-  /** Tests drive the simulated chain by hand. */
+  /** Tests drive the simulated chain by hand (and nothing polls Telegram). */
   manualClock?: boolean;
+  /** Tests answer the Bot API themselves. */
+  telegramFetch?: typeof fetch;
 }
 
 export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<App> {
@@ -109,6 +112,16 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
     }
   }
   const push = new Push(store, log, cfg.vapid, cfg.mode === 'simulation');
+  const telegram = cfg.telegram
+    ? new Telegram({
+        cfg: cfg.telegram,
+        store,
+        log,
+        siteUrl: cfg.webOrigins[0] ?? '',
+        simulated: cfg.mode === 'simulation',
+        ...(opts.telegramFetch ? { fetchFn: opts.telegramFetch } : {}),
+      })
+    : undefined;
   const onchain =
     opts.onchain ??
     (cfg.airbagLog
@@ -133,7 +146,7 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
     log,
     markets,
     feed,
-    notify: notifier(push, log, onchain),
+    notify: notifier(push, log, onchain, telegram),
     slippageBps: cfg.slippageBps,
     maxAttempts: cfg.maxAttempts,
     demoMove: cfg.demoMove,
@@ -186,6 +199,7 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
     ...(sim ? { sim } : {}),
     ...(cfg.vapid ? { vapidPublicKey: cfg.vapid.publicKey } : {}),
     ...(cfg.clientIpHeader ? { clientIpHeader: cfg.clientIpHeader } : {}),
+    ...(telegram ? { telegram } : {}),
   });
 
   let purge: ReturnType<typeof setInterval> | undefined;
@@ -206,17 +220,20 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
         sim.start(300, !!monadClock);
       }
       accounts.startAll();
+      if (!opts.manualClock) telegram?.start();
       purge = setInterval(() => store.purgeSessions(), 3_600_000);
       log.info('engine.start', {
         covered: [...covered],
         stale: cfg.staleBlocks,
         ...(sim ? { simClock: cfg.simClock } : {}),
         push: push.enabled,
+        telegram: telegram ? `@${telegram.username}` : null,
         onchainLog: cfg.airbagLog?.address ?? null,
       });
     },
     async stop() {
       clearInterval(purge);
+      telegram?.stop();
       sim?.stop();
       await monadClock?.close();
       engine.stop();

@@ -15,6 +15,7 @@ import { PaperExchange } from './exchange.ts';
 import type { Logger } from './log.ts';
 import { validatePush } from './notify.ts';
 import { SAMPLE_SPARE_CNS, type SimChain, samplePositions, wickPath } from './sim.ts';
+import type { Telegram } from './telegram.ts';
 
 export interface ApiDeps {
   cfg: Config;
@@ -28,6 +29,7 @@ export interface ApiDeps {
   vapidPublicKey?: string;
   /** Header that carries the client IP behind a proxy, e.g. x-real-ip set by Caddy. */
   clientIpHeader?: string;
+  telegram?: Telegram;
 }
 
 class HttpError extends Error {
@@ -194,6 +196,7 @@ export function createApi(deps: ApiDeps): Server {
       return m ? { id, symbol: symbolOf(m) } : { id, symbol: String(id) };
     }),
     vapidPublicKey: deps.vapidPublicKey ?? null,
+    telegram: deps.telegram ? deps.telegram.username : null,
     slippageBps: cfg.slippageBps,
   }));
 
@@ -245,6 +248,7 @@ export function createApi(deps: ApiDeps): Server {
         : null,
       settings: store.settings(w),
       demoAllowed: cfg.demoWallets.has(w),
+      telegram: store.telegramChat(w) !== undefined,
     };
   });
 
@@ -351,6 +355,19 @@ export function createApi(deps: ApiDeps): Server {
       throw bad('Invalid push subscription. Enable alerts using this browser.');
     }
     store.addPush(w, sub);
+    return { ok: true };
+  });
+
+  // Telegram: a one-time t.me link for this wallet, and unlinking its chat.
+  route('POST', '/v1/telegram', { auth: true, limit: 10 }, (ctx) => {
+    const w = wallet(ctx);
+    if (!deps.telegram)
+      throw new HttpError(404, 'not_found', 'This server doesn’t send Telegram alerts.');
+    return { url: deps.telegram.linkUrl(w) };
+  });
+
+  route('DELETE', '/v1/telegram', { auth: true }, (ctx) => {
+    store.deleteTelegramChat({ wallet: wallet(ctx) });
     return { ok: true };
   });
 

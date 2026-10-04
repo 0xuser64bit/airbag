@@ -75,6 +75,14 @@ const MIGRATIONS = [
   );
   `,
   `CREATE TABLE environment (id INTEGER PRIMARY KEY CHECK (id = 1), identity TEXT NOT NULL);`,
+  `
+  CREATE TABLE telegram_chats (
+    wallet TEXT PRIMARY KEY REFERENCES users(wallet) ON DELETE CASCADE,
+    chat_id TEXT NOT NULL,
+    linked_at INTEGER NOT NULL
+  );
+  CREATE INDEX telegram_chat ON telegram_chats(chat_id);
+  `,
 ];
 
 export interface Settings {
@@ -413,6 +421,26 @@ export function openStore(path: string) {
       (
         q('SELECT endpoint, keys FROM push_subscriptions WHERE wallet = ?').all(wallet) as Row[]
       ).map((r) => ({ endpoint: String(r.endpoint), keys: JSON.parse(String(r.keys)) })),
+
+    /** The Telegram chat a wallet linked for alerts, if any. */
+    telegramChat: (wallet: string): string | undefined => {
+      const r = q('SELECT chat_id FROM telegram_chats WHERE wallet = ?').get(wallet) as
+        | Row
+        | undefined;
+      return r ? String(r.chat_id) : undefined;
+    },
+    putTelegramChat(wallet: string, chatId: string, now = Date.now()) {
+      ensureUser.run(wallet, now);
+      q(
+        `INSERT INTO telegram_chats (wallet, chat_id, linked_at) VALUES (?, ?, ?)
+         ON CONFLICT (wallet) DO UPDATE SET chat_id = excluded.chat_id, linked_at = excluded.linked_at`,
+      ).run(wallet, chatId, now);
+    },
+    /** By wallet, from the app; by chat, when the trader sends /stop or blocks the bot. */
+    deleteTelegramChat: (by: { wallet: string } | { chatId: string }) =>
+      'wallet' in by
+        ? q('DELETE FROM telegram_chats WHERE wallet = ?').run(by.wallet)
+        : q('DELETE FROM telegram_chats WHERE chat_id = ?').run(by.chatId),
 
     reference(wallet: string, marketId: number) {
       const r = q('SELECT * FROM references_ WHERE wallet = ? AND market_id = ?').get(
