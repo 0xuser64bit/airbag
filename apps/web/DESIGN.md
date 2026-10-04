@@ -204,7 +204,10 @@ These are the product, not preferences.
   indexer's liquidation count is shown only when the indexer answers.
 - **Status has a fixed vocabulary.** Armed, Deploying, Deployed · re-armed, Paused, Data stale ·
   holding, Connecting, Key rejected · relink, One-Click Trading off, Perpl connection limit, Account
-  frozen. Lamps and copy both draw from this list; a new state needs a lamp state and a word here.
+  frozen; Liquidated (the liq lamp, a position the paper exchange liquidated in simulation); Past
+  the line (the alert lamp, a real position on the wallet check that Airbag would act on now);
+  Perpl now (lit, live chain data on the landing). Lamps and copy both draw from this list; a new
+  state needs a lamp state and a word here.
 - **The trader stays in control.** Pause, edit, unlink and revoke are always one step away.
 - **Voice:** plain, precise, trader-literate. Sentence case. Numbers over adjectives. No
   exclamation marks, no "seamless", no "unlock", no "leverage" as a verb.
@@ -379,6 +382,15 @@ The primary flight display's instrument. A graduated scale (labelled majors with
 
 ### Runway (signature)
 The horizontal tape for every other position: a 2px line track, a 6px red cliff beyond liquidation, a 12px hatched zone, 2px ticks (the yellow one with a downward notch), and the mark as a bone dot cut out of the track. Labels sit under the track, the mark's in a bone-bordered box; they go to two rows when they would collide.
+
+### Trace (a recorded mark)
+The backtest's chart of one real liquidation: the mark as a 2px bone line on glass, drawn at the
+well's own width so its 10px mono labels stay 10px on a phone. The Airbag line is yellow and the
+liquidation price red, both solid until Airbag's first trim and dashed ghosts after it; the
+liquidation after the trim is solid red from the trim on. Trims are yellow dots cut out of the glass,
+Perpl's liquidation a hollow red ring on a faint vertical rule. Each level's label is knocked out of
+the glass and sits at whichever end the trace leaves room. A crosshair reads the mark under the
+pointer or the arrow keys; the block log under it carries every value, so nothing is hover-only.
 
 ### Block strip and readouts
 The per-block strip is a well of 10px cells: strong-line for seen blocks, hollow for missed ones, bone for the head. It shifts left by exactly one cell per block. Readout digits that change roll in from above over 120ms.
