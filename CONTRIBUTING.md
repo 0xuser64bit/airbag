@@ -9,7 +9,8 @@ structure, and [docs/PERPL.md](docs/PERPL.md) before touching the exchange layer
 ```bash
 pnpm install
 
-pnpm check        # lint + typecheck + unit and property tests; what CI runs
+pnpm check        # lint + typecheck + unit and property tests (the fast gate; CI also runs
+                  # gitleaks over full history, pnpm audit, e2e + build, contracts, indexer, engine image)
 pnpm lint         # biome check
 pnpm format       # biome check --write
 pnpm typecheck    # tsc --noEmit: the workspace packages, the engine, apps/web, e2e
@@ -38,7 +39,8 @@ node apps/engine/src/cli.ts check-keys --env-file-if-exists=.env
 ## Conventions
 
 - **TypeScript strict, erasable syntax only.** No enums, no namespaces, no parameter properties
-  (`erasableSyntaxOnly` in `tsconfig.json`, which also runs on the packages). Import local files
+  (`erasableSyntaxOnly` in the root `tsconfig.json`, which covers the packages, the engine,
+  spike and e2e; `apps/web` keeps Next's own tsconfig). Import local files
   with the `.ts` extension. Packages export `src/*.ts`; there is no build step
   ([ADR 0001](docs/adr/0001-typescript-monorepo.md)).
 - **Stdlib first.** `node:crypto` for Ed25519, SHA-256 and AES-GCM; the global `WebSocket`;

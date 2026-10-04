@@ -1,5 +1,9 @@
 # MVP audit and implementation backlog
 
+> Historical record. The per-pass verification counts below are snapshots from each pass date;
+> current counts live in [SUBMISSION.md](SUBMISSION.md) ("How it's built") and are asserted by
+> `pnpm test`, `pnpm e2e` and `pnpm contracts:test`.
+
 Audit date: 2026-09-27. Baseline: `46d3a4b`, clean working tree, Node 24.21.0,
 pnpm 11.24.0. Baseline lint/typecheck passed; 135 tests in 13 files passed.
 
