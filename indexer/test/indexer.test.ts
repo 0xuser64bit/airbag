@@ -94,6 +94,41 @@ describe('AirbagLog', () => {
     expect(await indexer.AirbagTotals.getOrThrow('10143')).toMatchObject({ deploys: 1, saves: 1 });
   });
 
+  it('keeps what the chain showed when v2 proved a save, and who proved it', async () => {
+    const indexer = createTestIndexer();
+    const prover = '0x000000000000000000000000000000000000bEEF';
+    await indexer.process({
+      chains: {
+        10143: {
+          simulate: [
+            deployRecorded,
+            {
+              contract: 'AirbagLog',
+              event: 'SaveRecorded',
+              srcAddress: LOG,
+              block: block(107),
+              params: { deployId: 1n, oldLiqHitBlock: 107n },
+            },
+            {
+              contract: 'AirbagLog',
+              event: 'SaveProven',
+              srcAddress: LOG,
+              block: block(107),
+              params: { deployId: 1n, markPNS: 940_000n, lotsOpen: 51_094n, prover },
+            },
+          ],
+        },
+      },
+    });
+    expect(await indexer.Deploy.getOrThrow('10143-1')).toMatchObject({
+      saved: true,
+      oldLiqHitBlock: 107n,
+      prover,
+      provenMark: 940_000n,
+      provenLots: 51_094n,
+    });
+  });
+
   it('ignores a save for a deploy it never saw', async () => {
     const indexer = createTestIndexer();
     await indexer.process({

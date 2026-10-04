@@ -1,4 +1,5 @@
-// AirbagLog: one Deploy per DeployRecorded; SaveRecorded marks it saved.
+// AirbagLog: one Deploy per DeployRecorded; SaveRecorded marks it saved, and v2's SaveProven
+// (ADR 0016) adds what the chain showed when the save was proven and who proved it.
 
 import { indexer } from 'envio';
 
@@ -34,6 +35,9 @@ indexer.onEvent({ contract: 'AirbagLog', event: 'DeployRecorded' }, async ({ eve
     txHash: event.transaction.hash,
     saved: false,
     oldLiqHitBlock: undefined,
+    prover: undefined,
+    provenMark: undefined,
+    provenLots: undefined,
   });
   const t = await totals(context, event.chainId);
   context.AirbagTotals.set({ ...t, deploys: t.deploys + 1 });
@@ -46,4 +50,15 @@ indexer.onEvent({ contract: 'AirbagLog', event: 'SaveRecorded' }, async ({ event
   context.Deploy.set({ ...deploy, saved: true, oldLiqHitBlock: event.params.oldLiqHitBlock });
   const t = await totals(context, event.chainId);
   context.AirbagTotals.set({ ...t, saves: t.saves + 1 });
+});
+
+indexer.onEvent({ contract: 'AirbagLog', event: 'SaveProven' }, async ({ event, context }) => {
+  const deploy = await context.Deploy.get(`${event.chainId}-${event.params.deployId}`);
+  if (!deploy || deploy.prover) return;
+  context.Deploy.set({
+    ...deploy,
+    prover: event.params.prover,
+    provenMark: event.params.markPNS,
+    provenLots: event.params.lotsOpen,
+  });
 });
