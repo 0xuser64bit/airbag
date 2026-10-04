@@ -27,6 +27,7 @@ import { isAddress } from 'viem';
 import d from '@/components/dashboard.module.css';
 import { Runway } from '@/components/Runway.tsx';
 import { mainnet, mainnetContext } from '@/lib/radar.ts';
+import { engineMode } from '@/lib/stats.ts';
 import s from '../backtest/backtest.module.css';
 import { loadBacktest } from '../backtest/data.ts';
 import { Footer, Gauge, Header, LiquidationTable, WalletForm } from '../backtest/parts.tsx';
@@ -118,7 +119,7 @@ export default async function WalletPage({ searchParams }: Props) {
   const raw = (await searchParams).address;
   const address = (Array.isArray(raw) ? raw[0] : raw)?.trim() ?? '';
   const valid = isAddress(address);
-  const live = valid ? await read(address) : undefined;
+  const [live, mode] = await Promise.all([valid ? read(address) : undefined, engineMode()]);
   const account = live?.account;
   const bt = loadBacktest();
   const past = account ? bt.rows.filter((r) => r.accountId === account.id).reverse() : [];
@@ -190,9 +191,18 @@ export default async function WalletPage({ searchParams }: Props) {
               until liquidation is 10% away, at most half the position, spare margin first when it’s
               enough, Perpl’s taker fee included. Marks as Perpl’s contract reads them now.
             </p>
-            <Link href="/connect" className={`btn btn-primary ${s.cta}`}>
-              Protect them with Airbag
-            </Link>
+            {mode === 'live' ? (
+              <Link href="/connect" className={`btn btn-primary ${s.cta}`}>
+                Protect them with Airbag
+              </Link>
+            ) : (
+              // The public demo is a simulation: say so before anyone expects their own positions.
+              <p className={s.story}>
+                This site’s engine runs the simulation, on a paper exchange: it can’t act on these
+                positions yet. <Link href="/connect">Try it with a test wallet</Link> to watch it
+                trim a wick like the ones above.
+              </p>
+            )}
           </section>
         )}
 
