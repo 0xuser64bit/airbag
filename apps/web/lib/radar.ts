@@ -12,7 +12,13 @@ import {
   perplChain,
   scaled,
 } from '@airbag/perpl';
-import { airbagLine, crossed, distanceToLiquidation, SENSITIVITY } from '@airbag/risk';
+import {
+  airbagLine,
+  crossed,
+  distanceToLiquidation,
+  type Position,
+  SENSITIVITY,
+} from '@airbag/risk';
 
 export interface Radar {
   /** When it was read. */
@@ -88,19 +94,23 @@ async function scan(now: number): Promise<Radar> {
     const mark = scaled(Number(markPns), m.config.price_decimals);
     for (const p of positions) {
       const risk = fromChainPosition(p, m, cd);
-      if (!risk) continue;
-      const notional = risk.size * mark;
-      radar.positions += 1;
-      radar.notional += notional;
-      if (distanceToLiquidation(risk, mark) < 0.05) {
-        radar.near.count += 1;
-        radar.near.notional += notional;
-      }
-      if (crossed(risk.side, mark, airbagLine(risk, risk.entry, SENSITIVITY.balanced).price)) {
-        radar.pastLine.count += 1;
-        radar.pastLine.notional += notional;
-      }
+      if (risk) tally(radar, risk, mark);
     }
   }
   return radar;
+}
+
+/** Counts one open position into the radar at its market's mark. */
+export function tally(radar: Radar, p: Position, mark: number): void {
+  const notional = p.size * mark;
+  radar.positions += 1;
+  radar.notional += notional;
+  if (distanceToLiquidation(p, mark) < 0.05) {
+    radar.near.count += 1;
+    radar.near.notional += notional;
+  }
+  if (crossed(p.side, mark, airbagLine(p, p.entry, SENSITIVITY.balanced).price)) {
+    radar.pastLine.count += 1;
+    radar.pastLine.notional += notional;
+  }
 }
