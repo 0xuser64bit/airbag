@@ -308,3 +308,55 @@ were turned on there: VAPID keys generated on the VM, `65b8e1c` (the toggle acts
 at once) and `2e8e725` (a simulation's alerts say so). Checked on the live site in Chrome through
 Google's push service: the trim and save alerts arrive about 1.5 s after the deploy, with no push
 errors in the engine log. Not checked: delivery to phones, Firefox and Safari's push services.
+
+## Fifth pass: evidence from the chain (2026-10-04)
+
+Baseline `0e37b67`, clean tree, 181 tests passing. Method: read the whole product again and ask
+what a skeptical judge or trader would need to believe it works without a funded live run. The
+answer was evidence from Perpl's own chain data, a contract that checks Airbag instead of
+trusting it, and a demo that shows the failure Airbag prevents as well as the save. Building the
+evidence surfaced real bugs, fixed first.
+
+### Findings and fixes
+
+| Finding | Effect | Fix |
+|---|---|---|
+| If Perpl liquidated a position (or the trader closed it) while Airbag's close was in flight, the guard read the vanished lots as its own fill | A 'done' deploy with a whole-position close it never made; live code, found by the property test once the paper exchange could liquidate | `0428bc8`: only what Perpl reports the order filled is Airbag's; a position gone with nothing filled ends the deploy as failed |
+| The paper exchange never liquidated anything | A paused position rode a wick far past its liquidation price and stayed open, so the demo could only show the happy path | `76f8d08`: it liquidates at the liquidation price before settling the block's orders, returning 80% of what's left; `2b467fb`, `05370f5`: the dashboard and a push alert say so |
+| A line or liquidation price computed in float64 sits a hair off the price it prints as | A 500,000 MON short's line is $0.0366, but equity there computed as $4,700.000000000001 against a $4,700 trigger: at $0.0366 nothing fired; a property test finds it on generated positions | `f24eca8`: a billionth, relative, counts as reached |
+| The sim reset cleared references for two hard-coded market ids; deploy summaries and push alerts wrote a whole-lot market's sizes with three decimals; a short's wick note said 'down' | Found adding a third market | `6baa30e` |
+| AirbagLog stored whatever the hot wallet sent | Every onchain number was Airbag's word | `9c3a93d`, `d11a4a9`: it reads Perpl's Exchange for each deploy's after-state and lets anyone prove a save against Perpl's mark ([ADR 0016](adr/0016-airbaglog-reads-perpl.md)) |
+
+### What was added
+
+- **The backtest** (`5c29f7a`, `6c7e8ae`, `4eb781e`, `1d2cfa1`, `9b4a89a`): `apps/engine/src/replay.ts`
+  runs a recorded mark path through the production engine on a paper exchange; `spike/backtest.ts`
+  feeds it every full Perpl mainnet liquidation of 6,000,000 blocks with the marks Perpl published,
+  plus a paused control that must liquidate where Perpl did. `/backtest` shows the result and a page
+  per liquidation. Method and limits: [RISK-MODEL.md](RISK-MODEL.md#backtest-on-perpls-own-liquidations).
+- **The live radar** (`37db792`, `6164025`): the landing reads every open Perpl mainnet position
+  from the contract every few minutes and says how many are past the line where Airbag would
+  already have trimmed them.
+- **The demo's third path** (`6baa30e`): a MON short, Monad's own token, trimmed through a line
+  above the mark; MON is covered by default.
+- **The landing** (`7427cab`, `77bdb7c`) points at all of it, and 'Why Monad' says what the chain
+  makes checkable.
+
+### Verification results
+
+| Check | Result |
+|---|---|
+| `pnpm check` | Lint, typecheck, **193 tests in 19 files** (from 181), every commit of the pass passing on its own |
+| `pnpm e2e` | **8 passed** (from 6): now also the backtest pages and their share image, and the paused wick that liquidates and resets |
+| `pnpm build` | Passes; 386 static pages, 369 of them one per replayed liquidation |
+| Contracts | **14 passed** natively (Foundry 1.5.1; Docker Desktop wasn't answering). The fork test against Perpl's real mainnet Exchange: on 20 open positions in BTC, MON, ETH, SOL and ZEC, `liquidationPrice` puts equity at the maintenance margin by Perpl's own accounting, within a tick |
+| Indexer | Codegen and **3 handler tests** pass; v2 still emits the events it indexes |
+| Backtest, mainnet to block 110,298,004 | 369 of 372 full liquidations replayed: Airbag deployed first in all 369 (median 50 min ahead, 10th percentile 6 min); 363 still open at Perpl's liquidation, none liquidated in the day after; 6 single lots untrimmable within the 50% cap. $35,244 on the Airbag path at those blocks against the $19,629 the liquidations returned. The paused control liquidated all 369 at or before Perpl did, a median 3 blocks early |
+| Live radar, 2026-10-04 04:17 UTC | 705 open positions on Perpl mainnet; 40, worth $215,046, past their Balanced line from entry; 136 within 5% of liquidation |
+
+### Still open
+
+Unchanged: a funded testnet trim and re-add, independent review, the deployed engine's egress
+allow-list and alerts, real push delivery to phones. New and owner-gated: deploying AirbagLog v2
+(it needs a funded deployer and a writer key) so the live engine's deploys and saves land on
+Monad. Nothing was sent to Perpl and nothing was deployed in this pass.

@@ -16,6 +16,19 @@ instead; "Reset account" puts it back. Turn on "Push to this browser" in Setting
 notifications. The exchange is paper and the prices are scripted; the blocks are Monad testnet's
 own.
 
+**In five minutes:**
+
+1. **[The backtest](https://airbag.user64bit.world/backtest)**: every position Perpl mainnet
+   liquidated over three weeks, rebuilt from its liquidation event and replayed block by block
+   through Airbag's engine. 363 of 369 would have been trimmed in time and still open when Perpl
+   liquidated them; each has its own page with the real mark, the trim and the transaction.
+2. **[The demo](https://airbag.user64bit.world/connect)**: play a wick with Airbag paused (the
+   position is liquidated), reset, arm, play it again (trimmed, margin back, saved).
+3. **The landing's live radar**: how many open Perpl mainnet positions are past the line where
+   Airbag would already have trimmed them, read from Perpl's contract every few minutes.
+4. **[AirbagLog](contracts/README.md)**: a contract that reads Perpl's positions on Monad to check
+   Airbag's own records, tested against Perpl's real mainnet Exchange on a fork.
+
 ![The dashboard just after a deploy: the trim, the re-add and the save in the block log, on Monad testnet blocks](docs/img/dashboard-deploy.png)
 
 *A simulated deploy on Monad testnet's real blocks: the line is crossed in block 67,459,596, the
@@ -53,8 +66,13 @@ off when a wick turns. Every number in that example is a golden test vector in
   around *k + 1*, while the price is still near the line rather than near liquidation.
 - **Perpl is a fully onchain order book**, so a trim is a real fill with a Monad transaction anyone
   can look up. Trim estimates account for trading fees.
-- **An onchain log.** Every deploy and save can be written to the `AirbagLog` contract and indexed
-  by Envio, so Airbag's record is public and checkable, not a database row.
+- **A log that checks itself.** Perpl's positions live in a contract, so `AirbagLog` reads them in
+  the same transaction: a deploy's size and liquidation price after come from Perpl, not from
+  Airbag, and anyone can prove a save against Perpl's own mark
+  ([ADR 0016](docs/adr/0016-airbaglog-reads-perpl.md)). Its `liquidationPrice` view works for any
+  Perpl position. Indexed by Envio.
+- **Public data deep enough to test against.** Every liquidation and every mark update is a Monad
+  event, which is what makes the backtest of Perpl's own liquidations possible.
 
 ## Status
 
@@ -180,6 +198,7 @@ This project is built with AI coding tools, as the hackathon rules allow. What w
 | 2026-09-27 audit, security/reliability/fee corrections, browser resilience, tests and operations documentation | Codex (OpenAI, GPT-6) | Pending |
 | 2026-10-01 live checks against testnet, live-path fixes, per-wallet simulation on Monad's block clock, demo deployment and docs | Claude Code (Anthropic, Claude Opus 5.5) | Pending |
 | 2026-10-02 product pass: one page frame and side bays, the loader, the share dialog and share images, per-position demo wicks, the save-value fix for later spare-margin adds, page titles, and docs | Claude Code (Anthropic, Claude Opus 5.5), from the owner's list and its own review | Pending |
+| 2026-10-04 fifth pass: the backtest of Perpl's mainnet liquidations through the engine's replay, paper liquidation, the live radar, the MON short in the demo, AirbagLog checked against Perpl's state with a mainnet fork test, the guard's mid-trim and the risk package's float-noise fixes, and docs ([audit](docs/MVP-AUDIT.md#fifth-pass-evidence-from-the-chain-2026-10-04)) | Claude Code (Anthropic, Claude Opus 5.5), from the owner's brief and its own review | Pending |
 
 Commits carry no co-author trailer, at the owner's request, so the table above is the disclosure of
 record. It is updated as the owner reviews each part.
