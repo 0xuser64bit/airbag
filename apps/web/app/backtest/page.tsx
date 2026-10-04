@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Trace } from '@/components/Trace.tsx';
 import type { BacktestRow } from '@/lib/backtest.ts';
 import { SOURCE_URL } from '@/lib/config.ts';
+import { liveRadar } from '@/lib/radar.ts';
 import s from './backtest.module.css';
 import { loadBacktest } from './data.ts';
 import {
@@ -32,7 +33,11 @@ const SHOWN = 20;
 const COMMAND =
   'PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc1.monad.xyz \\\n  pnpm --filter @airbag/spike backtest';
 
-export default function BacktestPage() {
+// The backtest is a fixed snapshot; the 'right now' rows beside it refresh with the radar.
+export const revalidate = 300;
+
+export default async function BacktestPage() {
+  const radar = await liveRadar();
   const bt = loadBacktest();
   const sum = bt.summary;
   const rows = [...bt.rows].reverse();
@@ -129,6 +134,25 @@ export default function BacktestPage() {
               exchange liquidated every position a median {sum.control.medianBlocksEarly} blocks
               before Perpl’s own liquidator did.
             </p>
+            {radar && radar.positions > 0 && (
+              <>
+                <h2 className={`title ${s.sideTitle} ${s.sideNext}`}>
+                  And on Perpl mainnet right now
+                </h2>
+                <dl className="rows">
+                  <Row k="Open positions" v={radar.positions.toLocaleString('en-US')} />
+                  <Row k="Within 5% of liquidation" v={String(radar.near.count)} />
+                  <Row
+                    k="Past their Airbag line"
+                    v={`${radar.pastLine.count} · ${fmt.usd(radar.pastLine.notional)}`}
+                  />
+                </dl>
+                <p className={`${s.note} ${s.sideNote}`}>
+                  Read from Perpl’s contract at {new Date(radar.at).toISOString().slice(11, 16)}{' '}
+                  UTC. The line is Balanced, from each position’s entry.
+                </p>
+              </>
+            )}
           </aside>
         </section>
 

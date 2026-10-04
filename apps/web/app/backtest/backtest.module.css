@@ -383,3 +383,6 @@
   flex: 1;
   min-width: 0;
 }
+.sideNext {
+  margin-top: var(--s-6);
+}
