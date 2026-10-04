@@ -246,6 +246,13 @@ test('the backtest: every liquidation replayed, each with its own page', async (
   await page.setViewportSize({ width: 375, height: 812 });
   await checkNoOverflow(page);
   expect((await page.goto('/backtest/0-0'))?.status()).toBe(404);
+  // A wallet's own liquidations: the form, and an address that isn't one (no chain read).
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/backtest/wallet');
+  await expect(page.getByRole('status')).toContainText('Paste a wallet');
+  await checkA11y(page, 'backtest wallet');
+  await page.goto('/backtest/wallet?address=nope');
+  await expect(page.getByRole('status')).toContainText('That isn’t a wallet address.');
 });
 
 test('paused, a wick liquidates the paper position and the dashboard says so', async ({

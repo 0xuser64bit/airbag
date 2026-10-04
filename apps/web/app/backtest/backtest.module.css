@@ -371,3 +371,15 @@
 .more[open] summary {
   display: none;
 }
+.walletForm {
+  width: 100%;
+  max-width: 560px;
+}
+.walletRow {
+  display: flex;
+  gap: var(--s-2);
+}
+.walletRow :global(.input) {
+  flex: 1;
+  min-width: 0;
+}

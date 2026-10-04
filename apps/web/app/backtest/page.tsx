@@ -5,11 +5,20 @@ import { fmt } from '@airbag/risk';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Trace } from '@/components/Trace.tsx';
-import { type BacktestRow, utc, warningSeconds } from '@/lib/backtest.ts';
+import type { BacktestRow } from '@/lib/backtest.ts';
 import { SOURCE_URL } from '@/lib/config.ts';
 import s from './backtest.module.css';
 import { loadBacktest } from './data.ts';
-import { Footer, Gauge, Header, Row, story, traceProps } from './parts.tsx';
+import {
+  Footer,
+  Gauge,
+  Header,
+  LiquidationTable,
+  Row,
+  story,
+  traceProps,
+  WalletForm,
+} from './parts.tsx';
 
 export const metadata: Metadata = {
   title: 'Backtest: every Perpl liquidation, replayed',
@@ -87,6 +96,7 @@ export default function BacktestPage() {
               The Airbag path is each position’s equity at the mark plus any margin a trim released.
               The liquidation figure is what Perpl actually paid back, read from its events.
             </p>
+            <WalletForm />
           </div>
           <aside className="bay-side" aria-labelledby="numbers">
             <h2 id="numbers" className={`title ${s.sideTitle}`}>
@@ -220,73 +230,6 @@ export default function BacktestPage() {
       </main>
       <Footer />
     </div>
-  );
-}
-
-/** Fixed column widths, so the folded rows line up with the ones above them. */
-function LiquidationTable({ rows, head = true }: { rows: BacktestRow[]; head?: boolean }) {
-  return (
-    <div className={s.tableWrap}>
-      <table className={s.table}>
-        <thead className={head ? undefined : 'visually-hidden'}>
-          <tr>
-            <th scope="col">Position</th>
-            <th scope="col">Liquidated</th>
-            <th scope="col">Warning</th>
-            <th scope="col" className={s.money}>
-              Perpl returned
-            </th>
-            <th scope="col" className={s.money}>
-              Airbag path
-            </th>
-            <th scope="col" className={s.money}>
-              A day later
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <LiquidationRow key={r.id} r={r} />
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function LiquidationRow({ r }: { r: BacktestRow }) {
-  const warning = warningSeconds(r);
-  const untrimmed = r.outcome === 'untrimmed' || r.outcome === 'liquidated';
-  return (
-    <tr>
-      <th scope="row">
-        <Link href={`/backtest/${r.id}`} prefetch={false}>
-          {r.market} {r.side} · <span className="num">{Math.round(r.leverage)}x</span>
-        </Link>
-        <span className={`num ${s.sub}`}>
-          {fmt.size(r.size, r.sizeDecimals)} {r.market}
-        </span>
-      </th>
-      <td data-label="Liquidated" className="num">
-        {utc(r.at)}
-      </td>
-      <td data-label="Warning" className="num">
-        {warning === null ? '—' : fmt.duration(warning * 1000)}
-      </td>
-      <td data-label="Perpl returned" className={`num liq ${s.money}`}>
-        {fmt.usd(r.returned)}
-      </td>
-      <td data-label="Airbag path" className={`num ${untrimmed ? 'liq' : 'airbag'} ${s.money}`}>
-        {fmt.usd(r.atLiquidation)}
-        {untrimmed && <span className={s.sub}>one lot, not trimmable</span>}
-      </td>
-      <td data-label="A day later" className={`num ${s.money}`}>
-        {fmt.usd(r.end.value)}
-        {r.end.liquidated && r.outcome === 'liquidated-later' && (
-          <span className={s.sub}>liquidated at its new price</span>
-        )}
-      </td>
-    </tr>
   );
 }
 

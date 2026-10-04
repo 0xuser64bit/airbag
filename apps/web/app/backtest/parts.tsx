@@ -3,7 +3,7 @@
 import { fmt } from '@airbag/risk';
 import Link from 'next/link';
 import { Brand } from '@/components/ui.tsx';
-import { type BacktestRow, warningSeconds } from '@/lib/backtest.ts';
+import { type BacktestRow, utc, warningSeconds } from '@/lib/backtest.ts';
 import s from './backtest.module.css';
 
 export function Header() {
@@ -103,5 +103,99 @@ export function Gauge({
         />
       </div>
     </div>
+  );
+}
+
+/** Fixed column widths, so the folded rows line up with the ones above them. */
+export function LiquidationTable({ rows, head = true }: { rows: BacktestRow[]; head?: boolean }) {
+  return (
+    <div className={s.tableWrap}>
+      <table className={s.table}>
+        <thead className={head ? undefined : 'visually-hidden'}>
+          <tr>
+            <th scope="col">Position</th>
+            <th scope="col">Liquidated</th>
+            <th scope="col">Warning</th>
+            <th scope="col" className={s.money}>
+              Perpl returned
+            </th>
+            <th scope="col" className={s.money}>
+              Airbag path
+            </th>
+            <th scope="col" className={s.money}>
+              A day later
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <LiquidationRow key={r.id} r={r} />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function LiquidationRow({ r }: { r: BacktestRow }) {
+  const warning = warningSeconds(r);
+  const untrimmed = r.outcome === 'untrimmed' || r.outcome === 'liquidated';
+  return (
+    <tr>
+      <th scope="row">
+        <Link href={`/backtest/${r.id}`} prefetch={false}>
+          {r.market} {r.side} · <span className="num">{Math.round(r.leverage)}x</span>
+        </Link>
+        <span className={`num ${s.sub}`}>
+          {fmt.size(r.size, r.sizeDecimals)} {r.market}
+        </span>
+      </th>
+      <td data-label="Liquidated" className="num">
+        {utc(r.at)}
+      </td>
+      <td data-label="Warning" className="num">
+        {warning === null ? '—' : fmt.duration(warning * 1000)}
+      </td>
+      <td data-label="Perpl returned" className={`num liq ${s.money}`}>
+        {fmt.usd(r.returned)}
+      </td>
+      <td data-label="Airbag path" className={`num ${untrimmed ? 'liq' : 'airbag'} ${s.money}`}>
+        {fmt.usd(r.atLiquidation)}
+        {untrimmed && <span className={s.sub}>one lot, not trimmable</span>}
+      </td>
+      <td data-label="A day later" className={`num ${s.money}`}>
+        {fmt.usd(r.end.value)}
+        {r.end.liquidated && r.outcome === 'liquidated-later' && (
+          <span className={s.sub}>liquidated at its new price</span>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+/** Finds a wallet's own liquidations: a plain GET form, so it works before any script loads. */
+export function WalletForm({ address = '' }: { address?: string }) {
+  return (
+    <form action="/backtest/wallet" method="get" className={s.walletForm}>
+      <div className="field">
+        <label htmlFor="wallet-address">Were you liquidated on Perpl? Check a wallet</label>
+        <div className={s.walletRow}>
+          <input
+            id="wallet-address"
+            name="address"
+            className="input"
+            defaultValue={address}
+            placeholder="0x…"
+            autoComplete="off"
+            spellCheck={false}
+            pattern="^0x[0-9a-fA-F]{40}$"
+            required
+          />
+          <button type="submit" className="btn btn-secondary">
+            Check
+          </button>
+        </div>
+      </div>
+    </form>
   );
 }

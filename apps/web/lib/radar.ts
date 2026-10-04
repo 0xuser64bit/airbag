@@ -46,13 +46,16 @@ async function read(now: number): Promise<Radar | null> {
   }
 }
 
-async function scan(now: number): Promise<Radar> {
-  // Mainnet's defaults, whatever network this site's engine runs on; only the RPC can change.
-  const net = networkFromEnv({
+/** Perpl mainnet, whatever network this site's engine runs on; only the RPC can change. */
+export const mainnet = () =>
+  networkFromEnv({
     NODE_ENV: process.env.NODE_ENV,
     PERPL_NETWORK: 'mainnet',
     ...(process.env.RADAR_RPC_URL ? { MONAD_RPC_URL: process.env.RADAR_RPC_URL } : {}),
   });
+
+async function scan(now: number): Promise<Radar> {
+  const net = mainnet();
   const ctx = await fetchContext(net.apiUrl);
   const cd = collateralDecimals(ctx);
   const chain = perplChain(net.rpcUrl, ctx.instances[0]?.address ?? '', net.chainId);
