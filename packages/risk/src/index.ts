@@ -2,6 +2,7 @@
 // Formulas: docs/RISK-MODEL.md, which follows Perpl's liquidation docs
 // (https://docs.perpl.xyz/exchange/liquidation) and dex-sdk's position.rs.
 
+export * from './crash.ts';
 export * as fmt from './format.ts';
 
 export type Side = 'long' | 'short';
