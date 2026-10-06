@@ -54,6 +54,12 @@ export class Telegram {
   /** A t.me link that ties the chat that presses Start to this wallet; one use, ten minutes. */
   linkUrl(wallet: string, now = Date.now()): string {
     for (const [code, v] of this.codes) if (v.expires < now) this.codes.delete(code);
+    // Bound the pending codes: evict the oldest instead of growing without limit.
+    while (this.codes.size >= 10_000) {
+      const oldest = this.codes.keys().next().value;
+      if (oldest === undefined) break;
+      this.codes.delete(oldest);
+    }
     const code = randomBytes(12).toString('base64url');
     this.codes.set(code, { wallet, expires: now + CODE_MS });
     return `https://t.me/${this.username}?start=${code}`;

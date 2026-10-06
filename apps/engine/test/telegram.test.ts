@@ -90,6 +90,18 @@ describe('Telegram alerts', () => {
     expect(store.telegramChat(WALLET)).toBeUndefined();
   });
 
+  it('bounds pending link codes instead of growing without limit', async () => {
+    const api = bot();
+    const { tg, store } = telegram(api.fetchFn);
+    const first = new URL(tg.linkUrl(WALLET, 0)).searchParams.get('start') ?? '';
+    for (let i = 1; i < 10_000; i++) tg.linkUrl(`0x${String(i).padStart(40, '0')}`, 0);
+    tg.linkUrl(WALLET, 0);
+    // The oldest code was evicted to make room, so it reads as expired.
+    await tg.handle(start(first, 999), 1);
+    expect(store.telegramChat(WALLET)).toBeUndefined();
+    expect(api.calls.at(-1)?.body).toMatchObject({ chat_id: 999, text: /expired/ });
+  });
+
   it('sends alerts with a link to the app, labelled in simulation; a blocked bot unlinks', async () => {
     let blocked = false;
     const api = bot((method) => (method === 'sendMessage' && blocked ? new Error('403') : true));

@@ -58,7 +58,15 @@ type Handler = (ctx: Ctx) => Promise<unknown> | unknown;
 class Limiter {
   private readonly buckets = new Map<string, { tokens: number; at: number }>();
   take(key: string, perMinute: number, now = Date.now()): boolean {
-    if (this.buckets.size > 50_000) this.buckets.clear();
+    // Evict the oldest entries instead of clearing: a full clear would hand every
+    // throttled caller a fresh bucket at once.
+    if (this.buckets.size > 50_000) {
+      let n = 0;
+      for (const k of this.buckets.keys()) {
+        this.buckets.delete(k);
+        if (++n >= 5_000) break;
+      }
+    }
     const b = this.buckets.get(key) ?? { tokens: perMinute, at: now };
     b.tokens = Math.min(perMinute, b.tokens + ((now - b.at) / 60_000) * perMinute);
     b.at = now;
@@ -441,7 +449,13 @@ export function createApi(deps: ApiDeps): Server {
     const cached = lookupCache.get(address);
     if (cached && Date.now() - cached.at < 15_000) return cached.value;
     const value = deps.sim ? simLookup(address) : await liveLookup(address);
-    if (lookupCache.size > 5_000) lookupCache.clear();
+    if (lookupCache.size > 5_000) {
+      let n = 0;
+      for (const k of lookupCache.keys()) {
+        lookupCache.delete(k);
+        if (++n >= 500) break;
+      }
+    }
     lookupCache.set(address, { at: Date.now(), value });
     return value;
   }

@@ -73,7 +73,13 @@ function read(address: `0x${string}`, now = Date.now()): Promise<Reading> {
   const key = address.toLowerCase();
   const hit = recent.get(key);
   if (hit && now - hit.at < 30_000) return hit.value;
-  if (recent.size > 1_000) recent.clear();
+  if (recent.size > 1_000) {
+    let n = 0;
+    for (const k of recent.keys()) {
+      recent.delete(k);
+      if (++n >= 100) break;
+    }
+  }
   const value = readChain(address);
   recent.set(key, { at: now, value });
   // A failed read isn't kept: trying again should read again.
