@@ -65,7 +65,7 @@ TypeScript monorepo on Node 24: a pure risk-math package shared by the engine an
 (golden vectors and property tests), a Perpl client (Ed25519 sign-in, trading and market-data
 sockets, Multicall3-batched chain reads, an order-type allowlist in three layers), an always-on
 engine (one guard per account, SQLite, SIWE sessions, Web Push and Telegram alerts), a Next.js app,
-a Solidity contract (Foundry), and an Envio HyperIndex indexer. 200 unit and property tests, 8
+a Solidity contract (Foundry), and an Envio HyperIndex indexer. 204 unit and property tests, 8
 Playwright journeys with axe accessibility checks, 13 contract tests plus a mainnet fork test.
 
 ## What is and isn't done

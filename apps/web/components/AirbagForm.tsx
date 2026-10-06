@@ -279,7 +279,7 @@ export function AirbagForm(props: AirbagFormProps) {
               Push to this browser
             </button>
           </div>
-          <span className={s.help}>
+          <span className={s.help} role="status">
             {pushNote ??
               (!canPush
                 ? "This browser can't receive push alerts. On an iPhone, add Airbag to your Home Screen first."
