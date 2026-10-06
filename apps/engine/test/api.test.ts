@@ -432,7 +432,7 @@ describe('abuse', () => {
       headers: { authorization: `Bearer ${body.token}`, 'content-type': 'text/plain' },
       body: 'x',
     });
-    expect(notJson.status).toBe(400);
+    expect(notJson.status).toBe(415);
     const big = await call('PUT', '/v1/settings', {
       token: body.token,
       body: { pad: 'x'.repeat(20_000) },
@@ -440,10 +440,31 @@ describe('abuse', () => {
     expect(big.status).toBe(413);
   });
 
+  it('returns 405 with Allow for a known path under the wrong method', async () => {
+    const res = await call('POST', '/health');
+    expect(res.status).toBe(405);
+    expect(res.body.error.code).toBe('method_not_allowed');
+    expect(res.headers.get('allow')).toMatch(/GET/);
+  });
+
+  it('tags errors with a request id and tells throttled callers when to retry', async () => {
+    const missing = await call('GET', '/nope');
+    expect(missing.status).toBe(404);
+    expect(missing.body.error.requestId).toMatch(/^[0-9a-f]{16}$/);
+    expect(missing.headers.get('x-request-id')).toBe(missing.body.error.requestId);
+  });
+
   it('rate-limits sign-in attempts per address, ten times as loosely in simulation', async () => {
     const statuses: number[] = [];
-    for (let i = 0; i < 210; i++) statuses.push((await call('POST', '/v1/auth/nonce')).status);
+    let retryAfter: string | null = null;
+    for (let i = 0; i < 210; i++) {
+      const r = await fetch(`${base}/v1/auth/nonce`, { method: 'POST' });
+      statuses.push(r.status);
+      if (r.status === 429 && retryAfter === null) retryAfter = r.headers.get('retry-after');
+      await r.text();
+    }
     expect(statuses.slice(0, 150)).not.toContain(429);
     expect(statuses).toContain(429);
+    expect(retryAfter).toBe('60');
   });
 });

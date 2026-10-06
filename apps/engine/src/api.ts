@@ -2,6 +2,7 @@
 // stream, deploy receipts and public save reports. Plain node:http: a handful of routes.
 // Browsers call it cross-origin with a bearer token; only WEB_ORIGIN origins get CORS.
 
+import { randomBytes } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { fromChainPosition, type PerplChain, symbolOf } from '@airbag/perpl';
 import { distanceToLiquidation, liquidationPrice, type Position } from '@airbag/risk';
@@ -82,7 +83,8 @@ class Limiter {
 
 async function readJson(req: IncomingMessage, limit = 16_384): Promise<Record<string, unknown>> {
   const type = req.headers['content-type'] ?? '';
-  if (!type.startsWith('application/json')) throw bad('Send JSON.');
+  if (!type.startsWith('application/json'))
+    throw new HttpError(415, 'unsupported_media', 'Send JSON with content-type application/json.');
   let size = 0;
   const chunks: Buffer[] = [];
   for await (const chunk of req) {
@@ -728,7 +730,13 @@ export function createApi(deps: ApiDeps): Server {
     };
   }
 
-  function send(req: IncomingMessage, res: ServerResponse, status: number, body: unknown) {
+  function send(
+    req: IncomingMessage,
+    res: ServerResponse,
+    status: number,
+    body: unknown,
+    extra: Record<string, string> = {},
+  ) {
     if (res.headersSent) return;
     res.writeHead(status, {
       ...cors(req),
@@ -736,12 +744,14 @@ export function createApi(deps: ApiDeps): Server {
       'cache-control': 'no-store',
       'x-content-type-options': 'nosniff',
       'referrer-policy': 'no-referrer',
+      ...extra,
     });
     res.end(JSON.stringify(body));
   }
 
   return createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://engine');
+    const requestId = randomBytes(8).toString('hex');
     if (req.method === 'OPTIONS') {
       res.writeHead(204, cors(req));
       return res.end();
@@ -763,18 +773,48 @@ export function createApi(deps: ApiDeps): Server {
         const params = Object.fromEntries(r.keys.map((k, i) => [k, decode(m[i + 1] ?? '')]));
         if (r.auth && !token) throw new HttpError(401, 'unauthorized', 'Sign in first.');
         const out = await r.handler({ req, res, params, ip, ...(token ? { token } : {}) });
-        if (out !== STREAMING) send(req, res, 200, out);
+        if (out !== STREAMING) send(req, res, 200, out, { 'x-request-id': requestId });
         return;
+      }
+      // The path exists under another method: 405, not 404, so clients can tell a typo'd
+      // verb from a typo'd path.
+      const allowed = [
+        ...new Set(routes.filter((r) => r.pattern.exec(url.pathname)).map((r) => r.method)),
+      ];
+      if (allowed.length > 0) {
+        throw new HttpError(
+          405,
+          'method_not_allowed',
+          `Use ${allowed.join(' or ')} for this path.`,
+        );
       }
       throw new HttpError(404, 'not_found', 'No such route.');
     } catch (err) {
       if (err instanceof HttpError || err instanceof LinkError) {
-        send(req, res, err.status, { error: { code: err.code, message: err.message } });
+        const extra: Record<string, string> = { 'x-request-id': requestId };
+        if (err.status === 429) extra['retry-after'] = '60';
+        if (err.status === 405) {
+          const allowed = [
+            ...new Set(routes.filter((r) => r.pattern.exec(url.pathname)).map((r) => r.method)),
+          ];
+          if (allowed.length > 0) extra.allow = allowed.join(', ');
+        }
+        send(
+          req,
+          res,
+          err.status,
+          { error: { code: err.code, message: err.message, requestId } },
+          extra,
+        );
       } else {
-        log.error('api.error', { method: req.method, path: url.pathname, err });
-        send(req, res, 500, {
-          error: { code: 'internal', message: 'Something went wrong on our side.' },
-        });
+        log.error('api.error', { method: req.method, path: url.pathname, requestId, err });
+        send(
+          req,
+          res,
+          500,
+          { error: { code: 'internal', message: 'Something went wrong on our side.', requestId } },
+          { 'x-request-id': requestId },
+        );
       }
     } finally {
       if (!url.pathname.endsWith('/stream')) {
@@ -783,6 +823,7 @@ export function createApi(deps: ApiDeps): Server {
           path: url.pathname,
           status: res.statusCode,
           ms: Math.round(performance.now() - started),
+          requestId,
         });
       }
     }
