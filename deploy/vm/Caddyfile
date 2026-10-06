@@ -17,5 +17,7 @@ AIRBAG_DOMAIN {
 		encode gzip zstd
 		reverse_proxy 127.0.0.1:3089
 	}
+	# First-visit downgrade protection: the app is HTTPS-only behind Caddy.
+	header Strict-Transport-Security "max-age=63072000; includeSubDomains"
 }
 # <<< airbag
