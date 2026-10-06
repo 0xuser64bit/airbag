@@ -83,6 +83,8 @@ const MIGRATIONS = [
   );
   CREATE INDEX telegram_chat ON telegram_chats(chat_id);
   `,
+  // Session expiry purges scan expires_at: index it instead of full-scanning sessions hourly.
+  `CREATE INDEX IF NOT EXISTS sessions_expires ON sessions(expires_at);`,
 ];
 
 export interface Settings {

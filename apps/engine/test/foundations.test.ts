@@ -136,12 +136,14 @@ describe('store', () => {
       old.insertDeploy(deploy('persisted', 10));
       old.close();
       const legacy = new DatabaseSync(path);
-      // A schema-1 file: built today, so drop what migrations 2 and 3 add.
-      legacy.exec('DROP TABLE environment; DROP TABLE telegram_chats; PRAGMA user_version = 1;');
+      // A schema-1 file: built today, so drop what migrations 2, 3 and 4 add.
+      legacy.exec(
+        'DROP TABLE environment; DROP TABLE telegram_chats; DROP INDEX IF EXISTS sessions_expires; PRAGMA user_version = 1;',
+      );
       legacy.close();
       const migrated = openStore(path);
       try {
-        expect(migrated.schemaVersion()).toBe(3);
+        expect(migrated.schemaVersion()).toBe(4);
         expect(migrated.settings(WALLET).targetPct).toBe(12);
         expect(migrated.deploy('persisted')?.accountId).toBe(42);
         expect(() => migrated.bindEnvironment('simulation:10143')).toThrow(/Legacy/);
@@ -213,7 +215,7 @@ describe('store', () => {
 
   it('migrates a fresh database and is idempotent on reopen', () => {
     const s = openStore(':memory:');
-    expect(s.schemaVersion()).toBe(3);
+    expect(s.schemaVersion()).toBe(4);
     s.close();
   });
 
