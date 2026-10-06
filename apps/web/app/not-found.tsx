@@ -12,7 +12,7 @@ export default function NotFound() {
         </span>
       </header>
       <main className={s.main}>
-        <h1 className={`display ${s.title}`}>Not in database.</h1>
+        <h1 className={`display ${s.title}`}>Page not found.</h1>
         <p className={s.lede}>
           Nothing is filed at this address. If a save report link brought you here, that report
           doesn’t exist or was never made public.

@@ -6,6 +6,8 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'Airbag',
     short_name: 'Airbag',
     description: 'Liquidation protection for Perpl traders on Monad.',
+    id: '/app',
+    scope: '/',
     start_url: '/app',
     display: 'standalone',
     background_color: '#11110F',

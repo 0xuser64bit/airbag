@@ -64,9 +64,25 @@ export function TxLink({
 }) {
   if (!tx) return null;
   if (simulated) return <span className="num faint">simulated</span>;
+  // A malformed txid must never become a link: render it as text instead of navigating
+  // the trader somewhere unexpected.
+  if (!/^0x[0-9a-fA-F]{64}$/.test(tx)) {
+    return (
+      <span className="num faint" title={tx}>
+        {fmt.short(tx)}
+      </span>
+    );
+  }
   return (
-    <a className="num txlink" href={`${explorerUrl}/tx/${tx}`} target="_blank" rel="noreferrer">
+    <a
+      className="num txlink"
+      href={`${explorerUrl}/tx/${tx}`}
+      target="_blank"
+      rel="noreferrer"
+      title={tx}
+    >
       {fmt.short(tx)}
+      <span className="visually-hidden"> (opens in a new tab)</span>
     </a>
   );
 }
