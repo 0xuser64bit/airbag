@@ -249,6 +249,25 @@ legend {
   white-space: nowrap;
 }
 
+/* Keyboard only: hidden until focused, then a solid target above the masthead. */
+.skip-link {
+  position: absolute;
+  left: 16px;
+  top: -56px;
+  z-index: 100;
+  padding: 10px 16px;
+  border-radius: var(--r-control);
+  background: var(--bone);
+  color: var(--ground);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top var(--t-fast) var(--ease);
+}
+.skip-link:focus-visible {
+  top: 12px;
+}
+
 /* ---- Controls ------------------------------------------------------------------------ */
 
 .btn {

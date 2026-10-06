@@ -46,6 +46,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${display.variable} ${ui.variable} ${mono.variable}`}
     >
       <body>
+        <a href="#main" className="skip-link">
+          Skip to content
+        </a>
         <Splash />
         {children}
       </body>

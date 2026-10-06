@@ -20,7 +20,7 @@ export default async function OnboardingLayout({ children }: { children: React.R
           <Steps />
         </header>
         <Page className={s.main}>
-          <main>{children}</main>
+          <main id="main">{children}</main>
         </Page>
         <footer className={s.foot}>
           <span className="label">Safety</span>

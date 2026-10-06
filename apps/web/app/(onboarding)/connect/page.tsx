@@ -131,7 +131,9 @@ export default function ConnectPage() {
           <div className={s.connected}>
             <div className={s.connectedWho}>
               <Check size={18} />
-              <span className="num">{fmt.short(address)}</span>
+              <span className="num" title={address}>
+                {fmt.short(address)}
+              </span>
               <Annunciator state="on" size="sm">
                 {session ? 'Signed in' : 'Connected'}
               </Annunciator>

@@ -156,7 +156,7 @@ export default async function Landing() {
         </div>
       </nav>
 
-      <main>
+      <main id="main">
         <section className={s.hero}>
           <h1 className={`display ${s.h1}`}>
             Get trimmed,

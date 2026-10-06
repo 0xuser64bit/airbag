@@ -11,7 +11,7 @@ export default function NotFound() {
           Error 404
         </span>
       </header>
-      <main className={s.main}>
+      <main id="main" className={s.main}>
         <h1 className={`display ${s.title}`}>Page not found.</h1>
         <p className={s.lede}>
           Nothing is filed at this address. If a save report link brought you here, that report

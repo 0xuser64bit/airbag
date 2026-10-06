@@ -19,7 +19,7 @@ export default function ErrorPage({
           Page fault
         </span>
       </header>
-      <main className={s.main}>
+      <main id="main" className={s.main}>
         <h1 className={`display ${s.title}`}>This page didn’t load.</h1>
         <p className={s.lede}>
           Something broke while drawing it. Trying again usually clears it. The web app never sends

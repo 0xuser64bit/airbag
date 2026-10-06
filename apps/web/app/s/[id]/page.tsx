@@ -51,7 +51,7 @@ export default async function SavePage({ params }: Props) {
           </span>
         </header>
 
-        <main className={s.main}>
+        <main id="main" className={s.main}>
           <section className={s.hero}>
             <span className="ann" data-state="airbag">
               Saved

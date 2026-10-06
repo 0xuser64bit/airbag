@@ -38,7 +38,7 @@ export default async function LiquidationPage({ params }: Props) {
   return (
     <div className={s.page}>
       <Header />
-      <main className={`bays ${s.detail}`}>
+      <main id="main" className={`bays ${s.detail}`}>
         <div className="bay-main">
           <p className="label">
             Perpl {network} · liquidated {utc(r.at)} · {fmt.block(r.block)}

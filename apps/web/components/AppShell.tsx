@@ -91,7 +91,7 @@ export function AppShell({
         <header className={s.masthead}>
           <div className={s.lead}>
             <Brand href="/app" size={24} text={15} />
-            <nav aria-label="App" className={s.nav}>
+            <nav aria-label="App primary" className={s.nav}>
               {NAV.map((n) => (
                 <Link
                   key={n.href}
@@ -109,7 +109,9 @@ export function AppShell({
               <span>
                 Perpl <span className="num">#{data.account.id}</span>
               </span>
-              <span className="num faint">{fmt.short(data.wallet)}</span>
+              <span className="num faint" title={data.wallet}>
+                {fmt.short(data.wallet)}
+              </span>
             </p>
           )}
         </header>
@@ -186,22 +188,24 @@ export function AppShell({
         )}
 
         <Page className={s.body}>
-          {data ? (
-            children
-          ) : live.failed ? (
-            <Loader
-              label="Can’t reach Airbag’s engine"
-              detail="Retrying every few seconds. Your positions show up as soon as it answers."
-            />
-          ) : (
-            <Loader
-              label="Connecting to Airbag’s engine"
-              detail="Your positions show up with the next Monad block."
-            />
-          )}
+          <main id="main">
+            {data ? (
+              children
+            ) : live.failed ? (
+              <Loader
+                label="Can’t reach Airbag’s engine"
+                detail="Retrying every few seconds. Your positions show up as soon as it answers."
+              />
+            ) : (
+              <Loader
+                label="Connecting to Airbag’s engine"
+                detail="Your positions show up with the next Monad block."
+              />
+            )}
+          </main>
         </Page>
 
-        <nav aria-label="App" className={s.tabs}>
+        <nav aria-label="App sections" className={s.tabs}>
           {NAV.map((n) => (
             <Link
               key={n.href}

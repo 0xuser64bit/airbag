@@ -52,7 +52,7 @@ export default async function BacktestPage() {
   return (
     <div className={s.page}>
       <Header />
-      <main>
+      <main id="main">
         <section className={`bays ${s.hero}`} aria-labelledby="backtest-title">
           <div className={`bay-main ${s.heroMain}`}>
             <p className="label">

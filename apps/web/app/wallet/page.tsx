@@ -176,7 +176,7 @@ export default async function WalletPage({ searchParams }: Props) {
   return (
     <div className={s.page}>
       <Header />
-      <main className={s.detail}>
+      <main id="main" className={s.detail}>
         <p className="label">Perpl mainnet · read from the contract</p>
         <h1 className={`display ${s.h1} ${s.detailTitle}`}>
           Your Perpl positions, through Airbag.
