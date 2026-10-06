@@ -38,7 +38,8 @@ describe('logger', () => {
       ok: 1,
       deeper: [{ privateKey: '[redacted]' }],
     });
-    expect(rec.err).toEqual({ name: 'Error', message: 'boom' });
+    expect(rec.err).toMatchObject({ name: 'Error', message: 'boom' });
+    expect(typeof rec.err.stack).toBe('string');
     expect(lines[0]).not.toContain('deadbeef');
   });
 });
