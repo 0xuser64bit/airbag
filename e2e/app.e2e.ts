@@ -146,7 +146,7 @@ test('a phone gets the tab bar and no sideways scrolling', async ({ page, wallet
   await page.getByRole('link', { name: 'Set your airbag' }).click();
   await page.getByRole('button', { name: 'Arm Airbag' }).click();
   await expect(page).toHaveURL(/\/app$/);
-  const tabs = page.getByRole('navigation', { name: 'App' }).last();
+  const tabs = page.getByRole('navigation', { name: 'App sections' });
   await expect(tabs.getByRole('link', { name: 'Deploys' })).toBeVisible();
   await checkNoOverflow(page);
   await checkA11y(page, 'phone dashboard');

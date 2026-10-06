@@ -42,21 +42,31 @@ const EVENTS = [
 
 export function CrashTest() {
   const [t, setT] = useState(0);
+  const [playing, setPlaying] = useState(true);
   const timer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   const play = useCallback(() => {
     clearInterval(timer.current);
     setT(0);
+    setPlaying(true);
     timer.current = setInterval(() => {
       if (document.hidden) return;
       setT((cur) => (cur >= 50 ? 0 : cur + 1));
     }, 300);
   }, []);
 
+  const pause = useCallback(() => {
+    clearInterval(timer.current);
+    timer.current = undefined;
+    setPlaying(false);
+  }, []);
+
   useEffect(() => {
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduce) setT(LAST);
-    else play();
+    if (reduce) {
+      setT(LAST);
+      setPlaying(false);
+    } else play();
     return () => clearInterval(timer.current);
   }, [play]);
 
@@ -69,6 +79,16 @@ export function CrashTest() {
   const pts = PATH.slice(0, frame + 1)
     .map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`)
     .join(' ');
+  const summary =
+    frame < LINE_AT
+      ? `Armed. BTC ${fmt.usd(p)}.`
+      : frame === LINE_AT
+        ? `Airbag line hit at ${fmt.usd(97_000)}. Deploying.`
+        : frame < LIQ_AT
+          ? `Trimmed ${fmt.size(trim)} BTC. BTC ${fmt.usd(p)}.`
+          : frame < BACK_AT
+            ? `Without Airbag liquidated at ${fmt.usd(94_000)}. With Airbag still open at ${fmt.usd(withEq)}.`
+            : `Wick over. BTC back at ${fmt.usd(100_000)}. With Airbag ${fmt.usd(withEq)}.`;
 
   return (
     <figure id="crash" className={s.crash} aria-labelledby="crash-title">
@@ -87,12 +107,23 @@ export function CrashTest() {
             </span>
             <span className="num faint">Block {fmt.block(FIRST_BLOCK + frame)}</span>
           </div>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={playing ? pause : play}
+            aria-pressed={playing}
+          >
+            {playing ? 'Pause' : 'Play'}
+          </button>
           <button type="button" className="btn btn-secondary btn-sm" onClick={play}>
             <Replay />
             Replay
           </button>
         </div>
       </div>
+      <p className="visually-hidden" role="status">
+        {summary}
+      </p>
 
       <div className={`well ${s.chartWell}`}>
         <svg
