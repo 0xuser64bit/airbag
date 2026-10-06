@@ -22,7 +22,11 @@ minimumReleaseAgeExclude:
 
 # Patched transitive deps: envio 3.12.1 pins express 4.19.2 (GHSA-qwcr, GHSA-9wv6,
 # GHSA-rhx6, GHSA-37ch and friends) and viem pulls ws <8.21.0 (GHSA-96hv).
+# sharp <0.35.5 (GHSA-wq5f, librsvg UAF via next image optimization) and
+# source-map-js <1.2.2 (GHSA-68fv, event-loop DoS via postcss/vite).
 overrides:
   express@<4.22.3: 4.22.3
   body-parser@<1.20.6: 1.20.8
   ws@<8.21.3: 8.21.3
+  sharp@<0.35.5: 0.35.5
+  source-map-js@<1.2.2: 1.2.2
