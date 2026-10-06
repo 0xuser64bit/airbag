@@ -10,6 +10,7 @@ import {
   type Position,
   planDeploy,
 } from '@airbag/risk';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CrashTest } from '@/components/CrashTest.tsx';
 import { Check, Mark } from '@/components/icons.tsx';
@@ -122,6 +123,13 @@ const MOMENTS: Record<number, [long: string, short: string]> = {
 
 // The live radar is read at most every five minutes; so is this page.
 export const revalidate = 300;
+
+export const metadata: Metadata = {
+  title: 'Airbag: get trimmed, not liquidated',
+  description:
+    'Airbag checks your Perpl positions every Monad block and trims to move liquidation further away. Trading fees and slippage apply.',
+  alternates: { canonical: '/' },
+};
 
 export default async function Landing() {
   const [liquidated, mode, radar] = await Promise.all([

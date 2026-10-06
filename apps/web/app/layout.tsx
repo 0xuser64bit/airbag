@@ -20,8 +20,20 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: 'Airbag', statusBarStyle: 'black-translucent' },
   // Listed here because setting `icons` at all makes Next drop the file-based app/icon.svg.
   icons: { icon: { url: '/icon.svg', type: 'image/svg+xml' }, apple: '/pwa-icon/180' },
-  openGraph: { title: 'Airbag: get trimmed, not liquidated', description, siteName: 'Airbag' },
-  twitter: { card: 'summary_large_image' },
+  alternates: { canonical: '/' },
+  openGraph: {
+    title: 'Airbag: get trimmed, not liquidated',
+    description,
+    siteName: 'Airbag',
+    type: 'website',
+    locale: 'en_US',
+    url: '/',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Airbag: get trimmed, not liquidated',
+    description,
+  },
 };
 
 export const viewport: Viewport = { themeColor: '#11110F', colorScheme: 'dark' };

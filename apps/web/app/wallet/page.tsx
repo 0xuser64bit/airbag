@@ -37,6 +37,7 @@ export const metadata: Metadata = {
   title: 'Your Perpl positions, through Airbag',
   description:
     'Any wallet’s Perpl mainnet positions with where Airbag would act, and its past liquidations replayed.',
+  alternates: { canonical: '/wallet' },
 };
 
 type Props = { searchParams: Promise<{ address?: string | string[] }> };

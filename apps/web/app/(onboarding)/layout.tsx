@@ -1,11 +1,14 @@
 // Onboarding shell: the three steps as a preflight checklist in the masthead, the step below.
 
+import type { Metadata } from 'next';
 import { ModeBanner } from '@/components/ModeBanner.tsx';
 import { Page } from '@/components/Page.tsx';
 import { Brand } from '@/components/ui.tsx';
 import { engineMode } from '@/lib/stats.ts';
 import s from './onboarding.module.css';
 import { Steps } from './Steps.tsx';
+
+export const metadata: Metadata = { robots: { index: false } };
 
 export default async function OnboardingLayout({ children }: { children: React.ReactNode }) {
   return (
