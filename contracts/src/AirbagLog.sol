@@ -79,6 +79,14 @@ contract AirbagLog {
     error MarkInvalid();
     error PositionGone(uint256 deployId);
     error NotReached(uint256 markPNS, uint256 liqBefore);
+    /// Perpl returned a position type outside 0 (long) / 1 (short).
+    error InvalidPositionType(uint8 positionType);
+    /// Perpl returned no maintenance margin for this market/size.
+    error ZeroMaintenance(uint256 perpId);
+    /// An id that does not fit the stored uint64 (would truncate silently).
+    error IdTooLarge(uint256 perpId, uint256 accountId);
+    /// Decimals that would overflow 10**n (immutable, so a deploy-time misconfiguration).
+    error BadDecimals(uint256 collateralDecimals, uint256 priceDecimals, uint256 lotDecimals);
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -92,6 +100,7 @@ contract AirbagLog {
 
     constructor(address writer_, IPerplExchange exchange_, uint256 collateralDecimals_) {
         if (writer_ == address(0) || address(exchange_) == address(0)) revert ZeroAddress();
+        if (collateralDecimals_ > 77) revert BadDecimals(collateralDecimals_, 0, 0);
         exchange = exchange_;
         collateralDecimals = collateralDecimals_;
         owner = msg.sender;
@@ -115,9 +124,14 @@ contract AirbagLog {
         (p, markPNS, markValid) = exchange.getPositionV2(perpId, accountId);
         lots = p.lotLNS;
         if (lots == 0) return (0, false, 0, markPNS, markValid);
+        if (p.positionType > 1) revert InvalidPositionType(p.positionType);
         short = p.positionType == 1;
         (, uint256 maint,,,,) = exchange.getMarginFractions(perpId, lots);
+        if (maint == 0) revert ZeroMaintenance(perpId);
         IPerplExchange.PerpetualInfoV2 memory info = exchange.getPerpetualInfoV2(perpId);
+        if (info.priceDecimals + info.lotDecimals > 77) {
+            revert BadDecimals(collateralDecimals, info.priceDecimals, info.lotDecimals);
+        }
         uint256 scale = 10 ** (info.priceDecimals + info.lotDecimals);
         uint256 unit = 10 ** collateralDecimals;
         // Effective entry, x 2^16: Perpl rounds a long's entry up and a short's down, keeping the
@@ -146,13 +160,22 @@ contract AirbagLog {
         uint8 reason
     ) external onlyWriter returns (uint256 deployId) {
         if (reason > REASON_MARGIN) revert BadReason(reason);
+        if (perpId > type(uint64).max || accountId > type(uint64).max) {
+            revert IdTooLarge(perpId, accountId);
+        }
         (uint256 liqAfter, bool short, uint256 sizeAfter,,) = liquidationPrice(perpId, accountId);
         if (reason == REASON_TRIM ? sizeAfter >= sizeBefore : sizeAfter != sizeBefore) {
             revert SizeMismatch(reason, sizeBefore, sizeAfter);
         }
         deployId = ++deploys;
         records[deployId] = Record({
-            perpId: uint64(perpId), accountId: uint64(accountId), short: short, saved: false, liqBefore: liqBefore
+            // forge-lint: disable-next-line(unsafe-typecast)
+            perpId: uint64(perpId),
+            // forge-lint: disable-next-line(unsafe-typecast)
+            accountId: uint64(accountId),
+            short: short,
+            saved: false,
+            liqBefore: liqBefore
         });
         emit DeployRecorded(
             deployId, accountId, perpId, perplTxHash, sizeBefore, sizeAfter, liqBefore, liqAfter, reason
@@ -169,6 +192,7 @@ contract AirbagLog {
         (IPerplExchange.PositionInfoV2 memory p, uint256 mark, bool valid) =
             exchange.getPositionV2(r.perpId, r.accountId);
         if (!valid) revert MarkInvalid();
+        if (p.lotLNS != 0 && p.positionType > 1) revert InvalidPositionType(p.positionType);
         if (p.lotLNS == 0 || (p.positionType == 1) != r.short) revert PositionGone(deployId);
         if (r.short ? mark < r.liqBefore : mark > r.liqBefore) revert NotReached(mark, r.liqBefore);
         r.saved = true;

@@ -281,6 +281,44 @@ contract AirbagLogTest {
         new AirbagLog(WRITER, IPerplExchange(address(0)), 6);
     }
 
+    function test_rejectsIdsThatWouldTruncateToUint64() public {
+        _trimmed();
+        uint256 hugeAccount = uint256(type(uint64).max) + 1;
+        uint256 hugePerp = uint256(type(uint64).max) + 1;
+        vm.prank(WRITER);
+        vm.expectRevert(
+            abi.encodeWithSelector(AirbagLog.IdTooLarge.selector, BTC, hugeAccount)
+        );
+        log.recordDeploy(hugeAccount, BTC, bytes32(0), 100_000, 940_000, 0);
+        vm.prank(WRITER);
+        vm.expectRevert(
+            abi.encodeWithSelector(AirbagLog.IdTooLarge.selector, hugePerp, ACCOUNT)
+        );
+        log.recordDeploy(ACCOUNT, hugePerp, bytes32(0), 100_000, 940_000, 0);
+    }
+
+    function test_rejectsUnknownPositionTypeAndZeroMaintenance() public {
+        perpl.setPosition(BTC, ACCOUNT, 2, 10_000e6, 1_000_000, 0, 100_000, 0);
+        (bool ok,) = address(log).call(
+            abi.encodeWithSelector(log.liquidationPrice.selector, BTC, ACCOUNT)
+        );
+        require(!ok, "positionType 2 must revert");
+        perpl.setPosition(BTC, ACCOUNT, 0, 10_000e6, 1_000_000, 0, 100_000, 0);
+        perpl.setMarket(BTC, 1, 5, 0, 994_200);
+        (ok,) = address(log).call(
+            abi.encodeWithSelector(log.liquidationPrice.selector, BTC, ACCOUNT)
+        );
+        require(!ok, "zero maintenance must revert");
+        perpl.setMarket(BTC, 1, 5, 2500, 994_200);
+    }
+
+    function test_rejectsAbsurdCollateralDecimalsAtDeploy() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(AirbagLog.BadDecimals.selector, 78, 0, 0)
+        );
+        new AirbagLog(WRITER, perpl, 78);
+    }
+
     function test_holdsNoFunds() public {
         (bool ok,) = address(log).call{value: 0}("");
         require(!ok, "no receive function");
