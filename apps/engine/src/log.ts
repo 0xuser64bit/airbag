@@ -5,12 +5,15 @@ type Level = 'debug' | 'info' | 'warn' | 'error';
 const ORDER: Record<Level, number> = { debug: 10, info: 20, warn: 30, error: 40 };
 
 const SENSITIVE =
-  /secret|api_?key|apikey|signature|private|password|token|authorization|master|cookie/i;
+  /secret|api_?key|apikey|signature|private|password|token|authorization|master|cookie|auth|p256dh|endpoint|chat|sealed|mnemonic|seed|vapid/i;
 
 export function redact(value: unknown, depth = 0): unknown {
-  if (depth > 6 || value === null || typeof value !== 'object') {
+  if (value === null || typeof value !== 'object') {
     return typeof value === 'bigint' ? value.toString() : value;
   }
+  // Deep objects are truncated, never returned raw: a future caller logging a
+  // whole subscription or deploy must not leak keys through nesting depth.
+  if (depth > 6) return '[truncated]';
   if (value instanceof Error)
     return { name: value.name, message: value.message, stack: value.stack };
   if (Array.isArray(value)) return value.map((v) => redact(v, depth + 1));

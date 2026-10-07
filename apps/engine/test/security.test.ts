@@ -1,9 +1,10 @@
 import { createECDH, randomBytes } from 'node:crypto';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { createSiweMessage } from 'viem/siwe';
-import { expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { Auth } from '../src/auth.ts';
 import { openStore } from '../src/db.ts';
+import { redact } from '../src/log.ts';
 import { validatePush } from '../src/notify.ts';
 
 it('consumes a nonce before asynchronous signature verification', async () => {
@@ -75,4 +76,37 @@ it('accepts valid browser push subscriptions and blocks SSRF destinations and ma
       keys: { ...sub.keys, p256dh: Buffer.alloc(65, 4).toString('base64url') },
     }),
   ).toThrow();
+});
+
+describe('log redaction', () => {
+  it('redacts push keys, endpoints, chats and sealed envelopes at any depth', () => {
+    const out = redact({
+      sub: {
+        endpoint: 'https://fcm.googleapis.com/fcm/send/secret',
+        keys: { p256dh: 'pub', auth: 'auth-secret' },
+      },
+      telegram: { chat_id: 123, chat: 'private' },
+      link: { sealed: { ct: 'x', tag: 'y' }, wallet: '0xabc' },
+    }) as Record<string, unknown>;
+    expect(out).toMatchObject({
+      sub: {
+        endpoint: '[redacted]',
+        keys: { p256dh: '[redacted]', auth: '[redacted]' },
+      },
+      telegram: { chat_id: '[redacted]', chat: '[redacted]' },
+      link: { sealed: '[redacted]', wallet: '0xabc' },
+    });
+  });
+
+  it('truncates deep objects instead of returning them raw', () => {
+    let deep: Record<string, unknown> = { auth: 'shh' };
+    for (let i = 0; i < 10; i++) deep = { nested: deep };
+    const redacted = redact(deep) as Record<string, unknown>;
+    expect(redacted).toEqual({ nested: expect.anything() });
+    let v: unknown = redacted;
+    for (let d = 0; d < 10 && v !== null && typeof v === 'object'; d++) {
+      v = (v as Record<string, unknown>).nested;
+    }
+    expect(v).toBe('[truncated]');
+  });
 });
