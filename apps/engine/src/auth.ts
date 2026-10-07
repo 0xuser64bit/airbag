@@ -108,4 +108,9 @@ export class Auth {
   logout(token: string): void {
     this.opts.store.deleteSession(hashToken(token));
   }
+
+  /** Revokes every session for a wallet, for use after a suspected bearer theft. */
+  logoutAll(wallet: string): void {
+    this.opts.store.deleteSessionsForWallet(wallet);
+  }
 }

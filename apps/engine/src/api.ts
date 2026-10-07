@@ -4,6 +4,7 @@
 
 import { randomBytes } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { isIP } from 'node:net';
 import { fromChainPosition, type PerplChain, symbolOf } from '@airbag/perpl';
 import { distanceToLiquidation, liquidationPrice, type Position } from '@airbag/risk';
 import { getAddress, type Hex, isAddress, isHex } from 'viem';
@@ -245,6 +246,14 @@ export function createApi(deps: ApiDeps): Server {
   route('POST', '/v1/auth/logout', { auth: true }, (ctx) => {
     wallet(ctx);
     if (ctx.token) auth.logout(ctx.token);
+    return { ok: true };
+  });
+
+  // After a suspected bearer theft: revokes every session for the wallet,
+  // including the caller. The user signs in again on each device they keep.
+  route('POST', '/v1/auth/logout-all', { auth: true }, (ctx) => {
+    const w = wallet(ctx);
+    auth.logoutAll(w);
     return { ok: true };
   });
 
@@ -757,8 +766,12 @@ export function createApi(deps: ApiDeps): Server {
       return res.end();
     }
     const forwarded = deps.clientIpHeader ? req.headers[deps.clientIpHeader] : undefined;
-    const ip =
-      (Array.isArray(forwarded) ? forwarded[0] : forwarded) ?? req.socket.remoteAddress ?? '?';
+    const raw = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+    // Only ever a single IP: proxies that append lists must be configured to
+    // overwrite (Caddy `header_up`), and a non-IP value falls back to the socket
+    // so a spoofed header cannot mint fresh rate-limit buckets.
+    const first = raw?.split(',')[0]?.trim() ?? '';
+    const ip = first && isIP(first) !== 0 ? first : (req.socket.remoteAddress ?? '?');
     const authz = req.headers.authorization;
     const token = authz?.startsWith('Bearer ') ? authz.slice(7) : undefined;
     const started = performance.now();

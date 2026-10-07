@@ -176,6 +176,20 @@ describe('sign-in', () => {
     expect((await call('POST', '/v1/auth/logout', { token: body.token })).status).toBe(200);
     expect((await call('GET', '/v1/me', { token: body.token })).status).toBe(401);
   });
+
+  it('revokes every session for the wallet with logout-all', async () => {
+    const key = generatePrivateKey();
+    const first = await signIn(key);
+    const second = await signIn(key);
+    expect(first.body.wallet).toBe(second.body.wallet);
+    expect((await call('GET', '/v1/me', { token: first.body.token })).status).toBe(200);
+    expect((await call('GET', '/v1/me', { token: second.body.token })).status).toBe(200);
+    expect((await call('POST', '/v1/auth/logout-all', { token: first.body.token })).status).toBe(
+      200,
+    );
+    expect((await call('GET', '/v1/me', { token: first.body.token })).status).toBe(401);
+    expect((await call('GET', '/v1/me', { token: second.body.token })).status).toBe(401);
+  });
 });
 
 describe('onboarding to a deploy, over HTTP', () => {

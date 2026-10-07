@@ -299,6 +299,9 @@ export function openStore(path: string) {
     },
     deleteSession: (tokenHash: string) =>
       q('DELETE FROM sessions WHERE token_hash = ?').run(tokenHash),
+    /** Revokes every session for a wallet (stolen bearer response), including the caller. */
+    deleteSessionsForWallet: (wallet: string) =>
+      q('DELETE FROM sessions WHERE wallet = ?').run(wallet),
     purgeSessions: (now = Date.now()) => q('DELETE FROM sessions WHERE expires_at <= ?').run(now),
 
     putLink(link: Link) {
