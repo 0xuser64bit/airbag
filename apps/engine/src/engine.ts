@@ -16,6 +16,8 @@ export interface EngineDeps {
   slippageBps: number;
   maxAttempts: number;
   demoMove: number;
+  /** Mirrors GuardDeps.demoWallets: enforced per block, so allow-list removal takes effect. */
+  demoWallets?: ReadonlySet<string>;
   pollMs?: number;
   settleMs?: number;
   staleBlocks?: number;

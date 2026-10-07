@@ -82,6 +82,13 @@ export interface GuardDeps {
   slippageBps: number;
   maxAttempts: number;
   demoMove: number;
+  /**
+   * Wallets allowed demo mode (deploy after a 0.3% move), from DEMO_WALLETS.
+   * Enforced here — not only in PUT /settings — so removing a wallet from the
+   * allow-list disarms its stored demo flag on next restart. Undefined means
+   * no allow-list configured (tests); an empty set disables demo for everyone.
+   */
+  demoWallets?: ReadonlySet<string>;
   /** Polls for position and balance updates; tests pass a fast one. */
   pollMs?: number;
   settleMs?: number;
@@ -303,8 +310,16 @@ export class AccountGuard {
     this.deps.store.putReference(this.wallet, mkt, ref);
   }
 
+  /** Demo mode only for allow-listed wallets; a stored flag alone must not suffice. */
+  private isDemo(): boolean {
+    if (!this.settings.demo) return false;
+    const allow = this.deps.demoWallets;
+    if (allow === undefined) return true;
+    return allow.has(this.wallet.toLowerCase());
+  }
+
   private line(risk: Position, reference: number): Line {
-    if (this.settings.demo) {
+    if (this.isDemo()) {
       // Demo mode: deploy after a small adverse move from the reference.
       const price = reference * (1 - direction(risk.side) * this.deps.demoMove);
       const line = airbagLine(risk, reference, 0.5);
@@ -422,7 +437,7 @@ export class AccountGuard {
     const policy = this.policy();
     const plan = planDeploy(risk, mark, spare, policy);
     const symbol = symbolOf(m);
-    const cushion = this.settings.demo
+    const cushion = this.isDemo()
       ? `Demo mode: it moved ${fmt.pct(this.deps.demoMove, 1)} against you.`
       : {
           early: 'A third of your cushion is gone.',

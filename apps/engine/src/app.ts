@@ -150,6 +150,7 @@ export async function buildApp(cfg: Config, opts: BuildOptions = {}): Promise<Ap
     slippageBps: cfg.slippageBps,
     maxAttempts: cfg.maxAttempts,
     demoMove: cfg.demoMove,
+    demoWallets: cfg.demoWallets,
     staleBlocks: cfg.staleBlocks,
     ...(sim ? { feedFor: (wallet: string) => sim.feedFor(wallet) } : {}),
   });

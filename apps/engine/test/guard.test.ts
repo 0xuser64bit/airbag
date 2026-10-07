@@ -30,6 +30,8 @@ interface Options {
   short?: boolean;
   feeMicros?: number;
   fillSlippageBps?: number;
+  /** Allow-list for demo mode; undefined keeps the old test behavior (allowed). */
+  demoWallets?: ReadonlySet<string>;
 }
 
 function harness(opts: Options = {}) {
@@ -69,6 +71,7 @@ function harness(opts: Options = {}) {
     slippageBps: 50,
     maxAttempts: 3,
     demoMove: 0.003,
+    ...(opts.demoWallets !== undefined ? { demoWallets: opts.demoWallets } : {}),
     pollMs: 1,
     settleMs: 5,
   });
@@ -365,6 +368,12 @@ describe('deploy paths', () => {
     const d = only(h.store);
     expect(d.data.trigger.line).toBeCloseTo(99_700, 6);
     expect(d.data.timeline[0]?.text).toContain('Demo mode');
+  });
+
+  it('ignores a stored demo flag removed from the allow-list', async () => {
+    const h = harness({ settings: { demo: true }, demoWallets: new Set() });
+    await h.run([100_000, 99_800, 99_700, 99_700, 99_700]);
+    expect(h.store.deploys(WALLET)).toHaveLength(0);
   });
 });
 
