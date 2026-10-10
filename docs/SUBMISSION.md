@@ -65,8 +65,15 @@ TypeScript monorepo on Node 24: a pure risk-math package shared by the engine an
 (golden vectors and property tests), a Perpl client (Ed25519 sign-in, trading and market-data
 sockets, Multicall3-batched chain reads, an order-type allowlist in three layers), an always-on
 engine (one guard per account, SQLite, SIWE sessions, Web Push and Telegram alerts), a Next.js app,
-a Solidity contract (Foundry), and an Envio HyperIndex indexer. 204 unit and property tests, 8
-Playwright journeys with axe accessibility checks, 13 contract tests plus a mainnet fork test.
+a Solidity contract (Foundry), and an Envio HyperIndex indexer. 208 unit and property tests, 8
+Playwright journeys with axe accessibility checks, 16 contract tests plus a mainnet fork test.
+
+## How it makes money
+
+Traders pay a flat monthly fee per protected wallet, from the wallet, since Airbag's key can't
+touch the account; the bigger path is Perpl itself, which keeps the volume of every trader a wick
+no longer wipes out, as a native integration with a revenue share. (Perpl's builder codes only pay
+on size that opens or increases a position, so trims can't fund it.)
 
 ## What is and isn't done
 
