@@ -73,4 +73,5 @@ is trimmed while the engine or Perpl is down. Its orders have traded on Perpl te
 - **Has it traded on Perpl?** On testnet, yes: a 30% reduce-only close filled 3 blocks after
   sending, the liquidation price didn't move, and re-adding the released margin moved it from
   $77,196 to $73,300, all in 2.2 s ([transactions](DEPLOY.md#first-real-trim-on-perpl-testnet-2026-10-10)).
-  Not on mainnet, and the engine hasn't yet driven a funded account by itself.
+  The engine has also deployed on its own, logged in AirbagLog
+  ([its first live deploy](DEPLOY.md#the-engines-first-live-deploy-2026-10-10)). Not on mainnet.

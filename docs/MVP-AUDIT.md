@@ -375,6 +375,9 @@ to the tick on 16 of 16 real testnet positions. The live engine writes to it onc
   documented rerun commands; they use rpc2 (`59f142d`).
 - **Launch gate, partly met:** a real `t:3` close and `t:6` re-add on Perpl testnet with a Trade
   key ([DEPLOY.md](DEPLOY.md#first-real-trim-on-perpl-testnet-2026-10-10)). The close alone left
-  liquidation unchanged and the re-add moved it, so ADR 0002 holds on a real fill. Still open: the
-  engine's guard on a funded account (Trade-scope probe, a trigger on a real mark move, an
-  AirbagLog record), independent review, egress allow-list and alerts.
+  liquidation unchanged and the re-add moved it, so ADR 0002 holds on a real fill. Then the
+  engine's own live deploy: Trade-scope probe at link, a trigger on a real mark move, close and
+  re-add, an AirbagLog record ([DEPLOY.md](DEPLOY.md#the-engines-first-live-deploy-2026-10-10)).
+  It found that Perpl reports an executed `t:6` as failed with `sr: 32` (`516d1f4`) and that
+  txids lack `0x` (`029e439`); the scope probe's refusal message hid Perpl's reason (`c15d432`).
+  Still open: independent review, egress allow-list and alerts, mainnet.

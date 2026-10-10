@@ -2,9 +2,10 @@
 
 What lives here: the public simulation demo on the free VM, a real deploy on testnet for demo day,
 proving the live trading path on testnet, and operating the VM. Airbag's order path traded on
-Perpl testnet for the first time on 2026-10-10 ([the run](#first-real-trim-on-perpl-testnet-2026-10-10));
-the engine itself driving a funded account is still to come, and is the gate on shipping live. The
-steps that need an account or funds are the owner's. Hosting is one free, shared VM
+Perpl testnet for the first time on 2026-10-10 ([the run](#first-real-trim-on-perpl-testnet-2026-10-10)),
+and the engine made its first live deploy the same day
+([below](#the-engines-first-live-deploy-2026-10-10)). Mainnet is still gated on an independent
+review. The steps that need an account or funds are the owner's. Hosting is one free, shared VM
 ([ADR 0015](adr/0015-free-shared-vm.md)).
 
 Commands assume the repo root.
@@ -115,9 +116,35 @@ allowlist the engine uses:
 | `t:6` re-add the released $3.273093 | [`0x40caf0…67c0`](https://testnet.monadvision.com/tx/0x40caf0b1c7fe484e11b146442319b5bcba6b0bbcf98d5f0a40e4edb4a7a967c0) | Confirmed 4 blocks after the fill; send to re-add 2.2 s in all. Deposit 10.945959, liquidation $73,299.8: 11.75% below the mark instead of 7%. |
 
 After: the trading WS and the chain both put liquidation at $73,299.8, and the free balance was
-back to exactly what the $1 add left, so all the released margin went back in. Still not shown on a
-funded account: the engine's own guard triggering on a real mark move, the Trade-scope probe at
-key link, and an AirbagLog record of a live deploy; the demo-day run below covers them.
+back to exactly what the $1 add left, so all the released margin went back in. The engine itself
+did the same on its own the same day, below.
+
+### The engine's first live deploy (2026-10-10)
+
+The engine, live on Perpl testnet, with the owner's Trade key linked through the app (its scope
+probed at link), demo mode on and spare margin off. Perpl caps testnet MON at 3x, so a 4,000 MON
+short at $0.02490 had its liquidation price 13.1% away, already past the default 10% target; the
+target was 20% for this run.
+
+| Block | What the engine did | Transaction |
+|---|---|---|
+| 69,919,023 | The mark, $0.02498, crossed the demo line at $0.024975 (0.3% above the entry) | |
+| 69,919,026 | A reduce-only close of 693 MON filled at $0.02503, 3 blocks (1.0 s) after the trigger | [`0xa37346…3503`](https://testnet.monadvision.com/tx/0xa37346e266fa0637147a202230ed48685b6a767cef5ee4a55658ff2c8c2d3503) |
+| 69,919,030 | Put back the $5.68 the close released | [`0x43dbea…00f9`](https://testnet.monadvision.com/tx/0x43dbea7980119e8f48f8f361def87fcbf33016320bee8f61e766c4a401f200f9) |
+| 69,919,053 | Closed 24 MON more, at $0.02511, to reach the 20% target after the first fill came in above the mark | [`0x2912bc…0d40`](https://testnet.monadvision.com/tx/0x2912bc429f60659838a10f4213317fe57b7a411999828fd1bc35fa6f7caa0d40) |
+| 69,919,056 | Put back $0.24 | [`0x47f4d4…b5aa`](https://testnet.monadvision.com/tx/0x47f4d4126da03f7b9b5fbb43fc00cd7c9c855f9f612603a3636d775ebf80b5aa) |
+| 69,919,085 | AirbagLog deploy #1: 4,000 → 3,283 MON and liquidation $0.02825 → $0.03003, both read from Perpl in the same transaction | [`0x81b0d9…10f1`](https://testnet.monadvision.com/tx/0x81b0d994d50589809c2beff8914ed844c6455e956bc6f2900575d76b3c1810f1) |
+
+Liquidation went from 13.1% to 20.06% away, and the free balance ended where it started, to the
+micro-dollar: every released cent went back in, once. The run found two bugs, both fixed:
+
+- Perpl reports a `t:6` that has executed as failed (`sr: 32`) about two seconds later, in a
+  transaction of its own. The trading client resent any order once on `sr: 32`; here the guard's
+  check that the position hadn't changed refused the resend, but only through its recovery path,
+  which logged "Airbag restarted mid-deploy" twice and stretched the deploy to 16 s. A `t:6` is no
+  longer resent; adds are reconciled from the deposit (`516d1f4`).
+- Perpl's txids come without `0x`, so the dashboard showed them as text and AirbagLog's record for
+  deploy #1 has a zero Perpl tx hash (`029e439`).
 
 ### Owner checklist to unblock the run
 

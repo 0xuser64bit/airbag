@@ -88,8 +88,11 @@ key. Traded on Perpl testnet: a 30% reduce-only close that filled 3 blocks after
 re-add of the released margin, moving liquidation from $77,196 to $73,300 in 2.2 s (transactions
 [`0x820a5b…6131`](https://testnet.monadvision.com/tx/0x820a5ba9b33467647c964e04e1d021036380fb71868bec385eb280d174b06131)
 and [`0x40caf0…67c0`](https://testnet.monadvision.com/tx/0x40caf0b1c7fe484e11b146442319b5bcba6b0bbcf98d5f0a40e4edb4a7a967c0)).
-Not yet: the engine driving a funded account by itself, a deployed AirbagLog on mainnet, and an
-independent security review before anyone uses it with real money.
+The engine has also deployed live on its own: a MON short crossed its line, the close filled 3
+blocks later, the margin went back in, and AirbagLog recorded it from Perpl's own state
+([transaction](https://testnet.monadvision.com/tx/0x81b0d994d50589809c2beff8914ed844c6455e956bc6f2900575d76b3c1810f1)).
+Not yet: a deployed AirbagLog on mainnet, and an independent security review before anyone uses it
+with real money.
 
 ## Links
 

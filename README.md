@@ -135,11 +135,13 @@ liquidation (136).
 a 30% reduce-only close of a 10x BTC long filled 3 blocks after sending; as the model says, the
 close alone left the liquidation price where it was, and re-adding the released margin moved it
 from $77,196 to $73,300, 2.2 s from send to re-add, through the same order builders and allowlist
-the engine uses.
+the engine uses. The same day the engine did it on its own
+([its first live deploy](docs/DEPLOY.md#the-engines-first-live-deploy-2026-10-10)): a MON short
+crossed its demo line, the close filled 3 blocks later, the released margin went back in, and
+AirbagLog recorded the deploy with its before and after read from Perpl. The run found two bugs,
+both fixed.
 
-**Not done yet:** the engine's guard driving a funded account by itself (the
-[runbook](docs/DEPLOY.md#demo-day-a-real-deploy-on-perpl-testnet) needs the owner's wallet to sign
-in), and anything on mainnet. The demo above runs on a free VM ([ADR 0015](docs/adr/0015-free-shared-vm.md)). AirbagLog is
+**Not done yet:** anything on mainnet. The demo above runs on a free VM ([ADR 0015](docs/adr/0015-free-shared-vm.md)). AirbagLog is
 deployed on Monad testnet at [`0x52259e30…76F7`](https://testnet.monadvision.com/address/0x52259e30d3687691F663033922472B43120276F7) ([deploy transaction](https://testnet.monadvision.com/tx/0x707007a11f7eff7d35b087726f9b42fead1d98d7e9c57c32f96fb2478a781f56), 2026-10-04, against Perpl's
 testnet Exchange); its `liquidationPrice` agreed with the risk package to the tick on 16 of 16 real
 testnet positions, and the live engine records into it once it trades. Independent review comes before anyone relies on it with real money. Audit history, backlog and launch gates: [docs/MVP-AUDIT.md](docs/MVP-AUDIT.md).

@@ -60,7 +60,8 @@ Generate with `openssl rand -base64 32` and keep it only on the engine's host: o
 ## Not yet verified
 
 - The whole live path against a funded testnet account. Everything above is exercised against the
-  paper exchange and Perpl's public data. One manual trim and re-add has run on Perpl testnet
-  through the same order builders ([DEPLOY.md](DEPLOY.md#first-real-trim-on-perpl-testnet-2026-10-10));
-  the engine driving a funded account is still the gate.
+  paper exchange and Perpl's public data. On Perpl testnet, one manual trim and re-add has run
+  through the same order builders, and the engine has made one live deploy of its own
+  ([DEPLOY.md](DEPLOY.md#the-engines-first-live-deploy-2026-10-10)). A sustained live run and
+  mainnet are still the gate.
 - An independent review of the engine's key handling.
