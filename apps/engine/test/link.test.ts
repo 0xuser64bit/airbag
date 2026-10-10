@@ -71,8 +71,13 @@ describe('checkKey', () => {
   it('refuses to store a key when Perpl never proved its Trade scope', async () => {
     const { c } = client({ status: undefined, probe: { result: 'lost', rq: 10 } });
     await fails(checkKey(c, WALLET, 16), 'scope_unverified');
-    const refused = client({ status: 400, probe: { result: 'rejected', rq: 10, code: 400 } });
+    const refused = client({
+      status: 401,
+      probe: { result: 'rejected', rq: 10, code: 401, error: 'ip not allowed' },
+    });
     await fails(checkKey(refused.c, WALLET, 16), 'scope_unverified');
+    // Perpl's own reason reaches the user.
+    await expect(checkKey(refused.c, WALLET, 16)).rejects.toThrow('code 401: ip not allowed');
   });
 
   it('refuses a Read key', async () => {

@@ -92,22 +92,31 @@ export async function checkKey(
   // with 403 there, so admission (code 0) proves Trade scope. What the chain later says about
   // cancelling an order that doesn't exist is irrelevant to the question.
   const status = Promise.withResolvers<number | undefined>();
-  void client
-    .submit(
-      (ids) =>
-        scopeProbe(
-          { ...ids, mkt: probeMarketId, acc: account.id, lb: 0 },
-          new Set(client.openOrders.keys()),
-        ),
-      status.resolve,
-    )
-    .then(() => status.resolve(undefined));
+  const sent = client.submit(
+    (ids) =>
+      scopeProbe(
+        { ...ids, mkt: probeMarketId, acc: account.id, lb: 0 },
+        new Set(client.openOrders.keys()),
+      ),
+    status.resolve,
+  );
+  void sent.then(() => status.resolve(undefined));
   const code = await Promise.race([status.promise, sleep(8_000).then(() => undefined)]);
   if (code === 403) {
     throw new LinkError(
       400,
       'read_only',
       'This is a Read key. Airbag needs the Trade scope to trim. Create a Trade key on Perpl and paste that one.',
+    );
+  }
+  if (code !== undefined && code !== 0) {
+    // A refusal settles the order at once; say what Perpl said, an IP allow-list most often.
+    const refused = await Promise.race([sent, sleep(1_000).then(() => undefined)]);
+    const why = refused?.error ? `: ${refused.error}` : '';
+    throw new LinkError(
+      400,
+      'scope_unverified',
+      `Perpl refused Airbag's test order (code ${code}${why}). Check the key's IP allow-list. No key was stored.`,
     );
   }
   if (code !== 0)
@@ -279,6 +288,8 @@ export class Accounts {
       };
     } catch (err) {
       if (this.clients.get(wallet) !== client) await client.close();
+      if (err instanceof LinkError)
+        this.deps.log.warn('key.link.refused', { wallet, code: err.code, reason: err.message });
       throw err;
     }
   }
