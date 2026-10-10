@@ -31,7 +31,7 @@ export const metadata: Metadata = {
 const SHOWN = 20;
 
 const COMMAND =
-  'PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc1.monad.xyz \\\n  pnpm --filter @airbag/spike backtest';
+  'PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc2.monad.xyz \\\n  pnpm --filter @airbag/spike backtest';
 
 // The backtest is a fixed snapshot; the 'right now' rows beside it refresh with the radar.
 export const revalidate = 300;

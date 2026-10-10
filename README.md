@@ -116,7 +116,7 @@ liquidation price in the day after. The other 6 were single lots, too small to t
 cap. A control replay with Airbag paused liquidated all 369 at or before Perpl did, a median 3
 blocks early, so the replay agrees with the chain. Fills are the one assumption: two blocks after
 the line, 0.25% past the mark, with the taker fee. Rerun it with
-`PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc1.monad.xyz pnpm --filter @airbag/spike backtest`.
+`PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc2.monad.xyz pnpm --filter @airbag/spike backtest`.
 
 **Live on the landing page**: every few minutes the site reads all open positions on Perpl
 mainnet from the contract (about 700 on 2026-10-04) and says how many are past the line where

@@ -3,8 +3,8 @@
 // removed, the PnL realized at the execution price, and funding. Two questions for each: was the
 // mark at or past the liquidation price Airbag computes for that position when Perpl liquidated
 // it, and did the trader get the share of what was left that save reports assume?
-// Testnet rarely liquidates; on mainnet rpc1 serves the wide log ranges this needs:
-//   PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc1.monad.xyz \
+// Testnet rarely liquidates; on mainnet rpc2 serves the wide log ranges this needs:
+//   PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc2.monad.xyz \
 //     pnpm --filter @airbag/spike liquidations [blocks, default 3000000]
 
 import {
@@ -28,7 +28,7 @@ const byPerp = new Map(ctx.markets.map((m) => [m.perpetual_id, m]));
 const head = await chain.head();
 const span = BigInt(process.argv[2] ?? 3_000_000);
 const events: ChainLiquidation[] = [];
-let step = 100_000n;
+let step = 20_000n;
 for (let to = head; to > head - span; ) {
   const from = to - step + 1n;
   try {
@@ -37,7 +37,7 @@ for (let to = head; to > head - span; ) {
   } catch (err) {
     if (step === 100n || !/range/i.test(String(err))) throw err;
     console.error(
-      'This RPC caps log ranges at 100 blocks; on mainnet use MONAD_RPC_URL=https://rpc1.monad.xyz.',
+      'This RPC caps log ranges at 100 blocks; on mainnet use MONAD_RPC_URL=https://rpc2.monad.xyz.',
     );
     step = 100n;
   }

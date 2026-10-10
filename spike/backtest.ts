@@ -5,7 +5,7 @@
 // before it to a day after the liquidation, through Airbag's own engine on a paper exchange
 // (apps/engine/src/replay.ts). A control replay with Airbag paused has to liquidate where Perpl
 // did. Writes apps/web/lib/backtest.json, the site's /backtest page.
-//   PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc1.monad.xyz \
+//   PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc2.monad.xyz \
 //     pnpm --filter @airbag/spike backtest [blocks, default 6000000]
 
 import { writeFileSync } from 'node:fs';
@@ -76,7 +76,9 @@ const events: ChainLiquidation[] = [];
 const anchors: [number, number][] = [];
 for (let to = head; to > head - span; to -= 500_000) {
   const from = Math.max(head - span + 1, to - 499_999);
-  events.push(...(await chain.liquidations(BigInt(from), BigInt(to))));
+  // Public RPCs answer at most 20k blocks of logs at a time (rpc2.monad.xyz).
+  for (let b = from; b <= to; b += 20_000)
+    events.push(...(await chain.liquidations(BigInt(b), BigInt(Math.min(b + 19_999, to)))));
   anchors.push([to, await blockTime(to)]);
 }
 anchors.push([head - span, await blockTime(head - span)]);

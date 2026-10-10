@@ -1,7 +1,8 @@
 // Perpl's mark price history from the chain: every MarkUpdated(perpId, pricePNS) the Exchange
 // emitted, by block. Read in fixed chunks and cached under spike/out/marks, so a rerun only
-// fetches blocks it hasn't seen. Public RPCs refuse a getLogs answer above ~10k logs, and Perpl
-// emits ~4k mark updates per 10k blocks across its markets, so a chunk is 12k blocks.
+// fetches blocks it hasn't seen. rpc2.monad.xyz answers up to ~10k logs over 20k blocks, and Perpl
+// emits ~4k mark updates per 10k blocks across its markets, so a chunk is 12k blocks; an RPC with
+// tighter caps gets it in halves.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { toEventSelector } from 'viem';
@@ -31,7 +32,7 @@ async function rpc<T>(url: string, method: string, params: unknown[]): Promise<T
       if (body.error) throw new Error(body.error.message);
       return body.result as T;
     } catch (err) {
-      if (attempt >= 4 || /size|limit|exceed/i.test(String(err))) throw err;
+      if (attempt >= 4 || /size|limit|exceed|range/i.test(String(err))) throw err;
       await new Promise((r) => setTimeout(r, 1_000 * 2 ** attempt));
     }
   }
@@ -49,7 +50,7 @@ async function logs(url: string, exchange: string, from: number, to: number): Pr
       },
     ]);
   } catch (err) {
-    if (from === to || !/size|limit|exceed/i.test(String(err))) throw err;
+    if (from === to || !/size|limit|exceed|range/i.test(String(err))) throw err;
     const mid = Math.floor((from + to) / 2);
     return [...(await logs(url, exchange, from, mid)), ...(await logs(url, exchange, mid + 1, to))];
   }
