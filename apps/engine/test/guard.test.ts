@@ -292,6 +292,34 @@ describe('deploy paths', () => {
     expect(h.alerts).toHaveLength(1);
   });
 
+  it('keeps a re-add Perpl reports failed after it landed, and links the transactions', async () => {
+    // Live on Perpl testnet, 2026-10-10: a t:6 executes, then its order is reported failed
+    // with sr:32 in a transaction of its own. Perpl's txids also come without 0x.
+    const h = harness();
+    const submit = h.paper.submit.bind(h.paper);
+    h.paper.submit = async (build) => {
+      const o = await submit(build);
+      const t = h.paper.sent.at(-1)?.t;
+      if (t === 6) {
+        const p = h.paper.positions.get(BTC);
+        if (p) p.at = { ...p.at, txid: 'a'.repeat(64) };
+        const order = { ...o.order, st: 7, sr: 32, t: 6, at: { b: 0, t: 0, txid: 'b'.repeat(64) } };
+        return { result: 'failed', rq: o.rq, order } as typeof o;
+      }
+      if (t === 3 && o.order)
+        return { ...o, order: { ...o.order, at: { ...o.order.at, txid: 'c'.repeat(64) } } };
+      return o;
+    };
+    await h.run([98_000, 97_000, 97_000, 97_000, 97_000, 97_000]);
+    await h.blocks(6);
+    const d = only(h.store);
+    expect(h.paper.sent.map((f) => f.t)).toEqual([3, 6]);
+    expect(d.phase).toBe('done');
+    expect(d.data.close?.tx).toBe(`0x${'c'.repeat(64)}`);
+    expect(d.data.margin?.tx).toBe(`0x${'a'.repeat(64)}`);
+    expect(d.data.timeline.map((e) => e.text).join(' ')).not.toMatch(/restarted|changed/);
+  });
+
   it('continues a partial trim after its failed re-add succeeds', async () => {
     const h = harness({ fillShare: (_lots, attempt) => (attempt === 1 ? 0.5 : 1), failAdds: 1 });
     await h.run(Array(20).fill(97_000));

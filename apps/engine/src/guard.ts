@@ -621,13 +621,14 @@ export class AccountGuard {
       return this.finish(mkt, d, this.exchange.head, 'failed');
     }
     d.data.spareAdded += added;
-    d.data.margin = { amount: added, reason: 'spare', ...txOf(outcome) };
+    const landed = addTx(this.exchange.positions.get(mkt), outcome);
+    d.data.margin = { amount: added, reason: 'spare', ...landed };
     const after = this.after(mkt, m, mark);
     this.entry(
       d,
       this.exchange.head,
       `Added ${fmt.usd(added)} of spare margin. Liquidation now ${fmt.usd(after?.liquidation)}.`,
-      { tone: 'airbag', ...txOf(outcome) },
+      { tone: 'airbag', ...landed },
     );
     this.finish(mkt, d, this.exchange.head, 'done', mark);
   }
@@ -837,17 +838,18 @@ export class AccountGuard {
       );
       return false;
     }
+    const landed = addTx(this.exchange.positions.get(mkt), re);
     d.data.margin = {
       amount: (d.data.margin?.amount ?? 0) + added,
       reason: 'readd',
-      ...txOf(re),
+      ...landed,
     };
     const after = this.after(mkt, m, fill);
     this.entry(
       d,
       this.exchange.head,
       `Put back ${fmt.usd(added)} of released margin. Liquidation now ${fmt.usd(after?.liquidation)}.`,
-      { tone: 'airbag', ...txOf(re) },
+      { tone: 'airbag', ...landed },
     );
     return added >= fromCns(amount, this.cd) - 1e-6;
   }
@@ -1198,5 +1200,15 @@ export class AccountGuard {
   }
 }
 
-const txOf = (o: { order?: { at?: { txid?: string } } }): { tx?: string } =>
-  o.order?.at?.txid ? { tx: o.order.at.txid } : {};
+/** Perpl reports transaction ids without 0x; explorer links and AirbagLog need it. */
+const tx = (txid: string | undefined): { tx?: string } =>
+  txid ? { tx: txid.startsWith('0x') ? txid : `0x${txid}` } : {};
+const txOf = (o: { order?: { at?: { txid?: string } } }) => tx(o.order?.at?.txid);
+/**
+ * A margin add's own transaction: the position update that grew the deposit. Perpl can report
+ * the t:6 order itself failed afterwards, in a transaction of its own.
+ */
+const addTx = (
+  p: { at?: { txid?: string } } | undefined,
+  o: { order?: { at?: { txid?: string } } },
+) => tx(p?.at?.txid ?? o.order?.at?.txid);
