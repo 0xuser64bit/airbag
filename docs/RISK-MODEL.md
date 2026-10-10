@@ -157,7 +157,8 @@ one assumption; the engine's worst price is 0.5%, the replay assumes half of it)
 trades and margin moves between the line and the liquidation, and whether they would have armed
 Airbag; funding after the liquidation (the paper exchange accrues none). The totals are small
 because most liquidated positions on Perpl are. It is the engine on recorded prices, not live
-fills: Airbag has not traded on Perpl.
+fills; Airbag's orders have traded on Perpl testnet only
+([DEPLOY.md](DEPLOY.md#first-real-trim-on-perpl-testnet-2026-10-10)).
 
 ### The other side: crossings Perpl didn't liquidate
 

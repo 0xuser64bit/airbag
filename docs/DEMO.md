@@ -3,6 +3,8 @@
 For a submission video or a judge at the table. Everything below runs on the public demo,
 https://airbag.user64bit.world, with nothing to install. The live testnet run, if it has happened,
 replaces step 3's simulation with real Perpl transactions ([DEPLOY.md](DEPLOY.md#demo-day-a-real-deploy-on-perpl-testnet)).
+Either way, the real trim on Perpl testnet ([its transactions](DEPLOY.md#first-real-trim-on-perpl-testnet-2026-10-10))
+is worth ten seconds after 1:40.
 
 ## Before you start
 
@@ -50,7 +52,7 @@ account) and compare it with Perpl's UI, or run the fork test against Perpl main
 
 **2:45 — What it can't do, said plainly.** The key can't withdraw; Airbag only shrinks positions.
 A gap through the line and the liquidation price inside one block still liquidates, and nothing
-is trimmed while the engine or Perpl is down. Say whether the funded testnet run has happened.
+is trimmed while the engine or Perpl is down. Its orders have traded on Perpl testnet, not mainnet.
 
 ## Questions judges ask
 
@@ -68,5 +70,7 @@ is trimmed while the engine or Perpl is down. Say whether the funded testnet run
   crossing in four ended in liquidation. On the others the trims cost a median 2.2% of margin (the
   trimmed part misses the recovery); on the liquidated ones they kept a median 20%. Both sides are
   on `/backtest`, below the featured replay.
-- **Has it traded on Perpl?** Only if the testnet run below has happened. Everything else is
-  checked against Perpl's contract and public data, and says so.
+- **Has it traded on Perpl?** On testnet, yes: a 30% reduce-only close filled 3 blocks after
+  sending, the liquidation price didn't move, and re-adding the released margin moved it from
+  $77,196 to $73,300, all in 2.2 s ([transactions](DEPLOY.md#first-real-trim-on-perpl-testnet-2026-10-10)).
+  Not on mainnet, and the engine hasn't yet driven a funded account by itself.

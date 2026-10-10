@@ -365,3 +365,16 @@ allow-list and alerts, real push delivery to phones. Nothing was sent to Perpl i
 After it, with the owner's go-ahead and a deployer they funded, AirbagLog was deployed on
 Monad testnet at `0x52259e30d3687691F663033922472B43120276F7`; its `liquidationPrice` agreed with the risk package
 to the tick on 16 of 16 real testnet positions. The live engine writes to it once it trades.
+
+## Sixth pass: the cost side and a real trim (2026-10-10)
+
+- **The backtest's other side** (`spike/false-alarms.ts`): of 601,810 positions opened in the
+  backtest's window, 557 crossed their line first and Perpl liquidated 137. The trims cost $860 on
+  398 precautions (median −2.2% of margin) and kept $1,168 on 114 liquidations (median +20.3%).
+- **Public RPC limits moved:** rpc1.monad.xyz now caps `eth_getLogs` at 100 blocks, which broke the
+  documented rerun commands; they use rpc2 (`59f142d`).
+- **Launch gate, partly met:** a real `t:3` close and `t:6` re-add on Perpl testnet with a Trade
+  key ([DEPLOY.md](DEPLOY.md#first-real-trim-on-perpl-testnet-2026-10-10)). The close alone left
+  liquidation unchanged and the re-add moved it, so ADR 0002 holds on a real fill. Still open: the
+  engine's guard on a funded account (Trade-scope probe, a trigger on a real mark move, an
+  AirbagLog record), independent review, egress allow-list and alerts.

@@ -1,9 +1,10 @@
 # Deploying Airbag
 
 What lives here: the public simulation demo on the free VM, a real deploy on testnet for demo day,
-proving the live trading path on testnet, and operating the VM. The testnet run has not happened
-yet — Airbag has never traded on Perpl, and it is the gate on shipping live. The steps that need an
-account or funds are the owner's. Hosting is one free, shared VM
+proving the live trading path on testnet, and operating the VM. Airbag's order path traded on
+Perpl testnet for the first time on 2026-10-10 ([the run](#first-real-trim-on-perpl-testnet-2026-10-10));
+the engine itself driving a funded account is still to come, and is the gate on shipping live. The
+steps that need an account or funds are the owner's. Hosting is one free, shared VM
 ([ADR 0015](adr/0015-free-shared-vm.md)).
 
 Commands assume the repo root.
@@ -99,6 +100,24 @@ PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc2.monad.xyz pnpm --filter @airbag
 `account` prints the liquidation price derived from the trading WS beside the one derived from the
 chain; both must equal what Perpl's own UI shows. `deploy trim` prints the block-by-block timeline:
 trigger, send, fill, re-add, new liquidation.
+
+### First real trim on Perpl testnet (2026-10-10)
+
+Perpl testnet account 1061, a BTC long of 0.0012 at $83,010.3 with a $9.96 deposit (about 10x),
+One-Click Trading on, a Trade key. Before: liquidation $78,029.7 from the trading WS and from the
+chain alike. Sent with `spike/deploy.ts`, through the same `@airbag/perpl` order builders and
+allowlist the engine uses:
+
+| Step | Transaction | Result |
+|---|---|---|
+| `t:6` add $1 | [`0xf45e3f…b7c6`](https://testnet.monadvision.com/tx/0xf45e3fd5cc721d2792fb04272736d1473c40bd22b61e021db5cf8edc8b5cb7c6) | Confirmed 3 blocks (881 ms) after sending. Deposit 9.961236 → 10.961236, liquidation $78,029.7 → $77,196.3. `t:6` takes its amount as a CNS integer string. |
+| `t:3` close 30%, IOC, worst price 0.5% from the mark | [`0x820a5b…6131`](https://testnet.monadvision.com/tx/0x820a5ba9b33467647c964e04e1d021036380fb71868bec385eb280d174b06131) | Filled 3 blocks (924 ms) after sending. Size 0.0012 → 0.00084, deposit 10.961236 → 7.672866: both ×0.7000, so the liquidation price stayed at $77,196.3, as [ADR 0002](adr/0002-deploy-is-close-then-readd.md) says. $3.273093 released to the balance. |
+| `t:6` re-add the released $3.273093 | [`0x40caf0…67c0`](https://testnet.monadvision.com/tx/0x40caf0b1c7fe484e11b146442319b5bcba6b0bbcf98d5f0a40e4edb4a7a967c0) | Confirmed 4 blocks after the fill; send to re-add 2.2 s in all. Deposit 10.945959, liquidation $73,299.8: 11.75% below the mark instead of 7%. |
+
+After: the trading WS and the chain both put liquidation at $73,299.8, and the free balance was
+back to exactly what the $1 add left, so all the released margin went back in. Still not shown on a
+funded account: the engine's own guard triggering on a real mark move, the Trade-scope probe at
+key link, and an AirbagLog record of a live deploy; the demo-day run below covers them.
 
 ### Owner checklist to unblock the run
 

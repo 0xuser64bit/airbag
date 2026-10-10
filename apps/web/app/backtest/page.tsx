@@ -248,8 +248,8 @@ export default async function BacktestPage() {
                 The trader’s own trades and margin moves between the line and the liquidation, and
                 whether they would have armed Airbag at all. {bt.summary.skipped.beforeData}{' '}
                 liquidations crossed their line more than three days before the data starts and
-                aren’t replayed. Airbag has not traded on Perpl yet: this is its engine on recorded
-                prices, not live fills.
+                aren’t replayed. Airbag has traded on Perpl testnet only: this is its engine on
+                recorded prices, not live fills.
               </p>
             </div>
             <div>

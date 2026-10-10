@@ -228,5 +228,5 @@ What follows from it:
 ## Open against a live account
 
 `t:6` takes its amount in `a` as a string and the docs do not say whether that is a scaled CNS
-integer or a decimal. Airbag sends the CNS integer string, as `spike/deploy.ts` does. This is
-unverified until the testnet run in [DEPLOY.md](DEPLOY.md) executes.
+integer or a decimal. It is the CNS integer: `a: '1000000'` added exactly $1 to a testnet position
+on 2026-10-10 ([DEPLOY.md](DEPLOY.md#first-real-trim-on-perpl-testnet-2026-10-10)).

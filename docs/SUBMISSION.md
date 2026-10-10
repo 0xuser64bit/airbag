@@ -84,8 +84,12 @@ on size that opens or increases a position, so trims can't fund it.)
 
 Working end to end in simulation (paper exchange, Monad testnet blocks) in CI and on the public
 demo. Checked against Perpl mainnet's contract, its liquidations and its live positions without a
-key. Not yet: a funded trim and re-add on Perpl testnet (the runbook is one step away), a deployed
-AirbagLog on mainnet, and an independent security review before anyone uses it with real money.
+key. Traded on Perpl testnet: a 30% reduce-only close that filled 3 blocks after sending and a
+re-add of the released margin, moving liquidation from $77,196 to $73,300 in 2.2 s (transactions
+[`0x820a5b…6131`](https://testnet.monadvision.com/tx/0x820a5ba9b33467647c964e04e1d021036380fb71868bec385eb280d174b06131)
+and [`0x40caf0…67c0`](https://testnet.monadvision.com/tx/0x40caf0b1c7fe484e11b146442319b5bcba6b0bbcf98d5f0a40e4edb4a7a967c0)).
+Not yet: the engine driving a funded account by itself, a deployed AirbagLog on mainnet, and an
+independent security review before anyone uses it with real money.
 
 ## Links
 
