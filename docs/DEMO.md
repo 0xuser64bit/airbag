@@ -1,10 +1,9 @@
 # Showing Airbag in three minutes
 
 For a submission video or a judge at the table. Everything below runs on the public demo,
-https://airbag.user64bit.world, with nothing to install. The live testnet run, if it has happened,
-replaces step 3's simulation with real Perpl transactions ([DEPLOY.md](DEPLOY.md#demo-day-a-real-deploy-on-perpl-testnet)).
-Either way, the real trim on Perpl testnet ([its transactions](DEPLOY.md#first-real-trim-on-perpl-testnet-2026-10-10))
-is worth ten seconds after 1:40.
+https://airbag.user64bit.world, with nothing to install. The engine has also run live on Perpl
+testnet ([its deploys](DEPLOY.md#the-engines-first-live-deploy-2026-10-10)); the end of 1:40 shows
+them, so the simulation isn't the only evidence.
 
 ## Before you start
 
@@ -41,13 +40,18 @@ whole position gone, 20% of what's left to the insurance fund and protocol."*
 crossed in one Monad block, the reduce-only close fills in the next, the released margin goes back
 in the one after, re-armed lower; then the old liquidation price arrives and the position is
 still open: a save. Open the save report and its share card. Optional: "Play a wick on MON", a
-short, trims the other way.
+short, trims the other way. *"That was paper. Here's the engine doing it on Perpl:"* open
+[AirbagLog on MonadVision](https://testnet.monadvision.com/address/0x52259e30d3687691F663033922472B43120276F7),
+then deploy #2's [record](https://testnet.monadvision.com/tx/0x012186d0dfd2a74a12de24764d17410aaf1f5c8b1e5d9a23c3342cfec14ce575)
+and the [Perpl close](https://testnet.monadvision.com/tx/0xc0cf28b5864eab30b6730989c6d356d83291046820dacea13aa0ac6c881120bc)
+it links: a real MON short, crossed its line, trimmed four blocks later, margin back in.
 
 **2:20 — Why Monad.** Back on the landing's "Built on 300 ms blocks": per-block checks, real fills
 on Perpl's onchain book, and AirbagLog, which reads Perpl's positions in the same transaction, so
 a deploy's after-state and a save are Perpl's word, not ours. It's deployed on Monad testnet at
-`0x52259e30d3687691F663033922472B43120276F7`: call `liquidationPrice(16, 12)` on MonadVision (BTC, a real testnet
-account) and compare it with Perpl's UI, or run the fork test against Perpl mainnet
+`0x52259e30d3687691F663033922472B43120276F7`, where the landing counts the live deploys it has
+recorded: call `liquidationPrice(16, 12)` on MonadVision (BTC, a real testnet account) and compare
+it with Perpl's UI, or run the fork test against Perpl mainnet
 (`MONAD_FORK_RPC=https://rpc1.monad.xyz forge test --match-contract Fork -vvvv`).
 
 **2:45 — What it can't do, said plainly.** The key can't withdraw; Airbag only shrinks positions.
