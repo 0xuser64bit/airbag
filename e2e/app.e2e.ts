@@ -224,6 +224,7 @@ test('the backtest: every liquidation replayed, each with its own page', async (
     'Every Perpl liquidation, replayed through Airbag',
   );
   await expect(page.getByText('were still open when Perpl liquidated')).toBeVisible();
+  await expect(page.getByText(/^\d+ precautions: Perpl didn’t liquidate$/)).toBeVisible();
   await checkA11y(page, 'backtest');
   const og = await page.request.get('/backtest/opengraph-image');
   expect(og.status()).toBe(200);

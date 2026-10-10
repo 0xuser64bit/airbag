@@ -7,9 +7,10 @@ import Link from 'next/link';
 import { Trace } from '@/components/Trace.tsx';
 import type { BacktestRow } from '@/lib/backtest.ts';
 import { SOURCE_URL } from '@/lib/config.ts';
+import type { Side } from '@/lib/false-alarms.ts';
 import { liveRadar } from '@/lib/radar.ts';
 import s from './backtest.module.css';
-import { loadBacktest } from './data.ts';
+import { loadBacktest, loadFalseAlarms } from './data.ts';
 import {
   Footer,
   Gauge,
@@ -39,6 +40,7 @@ export const revalidate = 300;
 export default async function BacktestPage() {
   const radar = await liveRadar();
   const bt = loadBacktest();
+  const fa = loadFalseAlarms();
   const sum = bt.summary;
   const rows = [...bt.rows].reverse();
   const max = Math.max(sum.atLiquidation, sum.returned, sum.afterDay);
@@ -171,6 +173,44 @@ export default async function BacktestPage() {
           </section>
         )}
 
+        <section className={s.section} aria-labelledby="precautions">
+          <h2 id="precautions" className={`display ${s.h2}`}>
+            When the line is crossed and Perpl doesn’t liquidate
+          </h2>
+          <p className={s.story}>
+            Starting from liquidations, the replay above can only show what a trim saved. The other
+            side is the trims that weren’t needed. Every position opened on Perpl {fa.network} in
+            the same {Math.round(fa.days)} days is followed from its opening event to the next thing
+            that happened to it: {fa.summary.crossed} of {fa.summary.opened.toLocaleString('en-US')}{' '}
+            crossed their Airbag line first, and Perpl liquidated {fa.summary.outcomes.liquidated}{' '}
+            of those. The traders closed {fa.summary.outcomes.closed}, resized or moved margin on{' '}
+            {fa.summary.outcomes.changed}, and still held {fa.summary.outcomes.held} a day later.
+            Each is replayed to that point, with Airbag and without it.
+          </p>
+          <div className={s.method}>
+            <CrossingSide
+              title={`${fa.summary.falseAlarms.count} precautions: Perpl didn’t liquidate`}
+              side={fa.summary.falseAlarms}
+              diffLabel="What the trims cost"
+            />
+            <CrossingSide
+              title={`${fa.summary.needed.count} liquidated by Perpl`}
+              side={fa.summary.needed}
+              diffLabel="What the trims kept"
+            />
+          </div>
+          <p className={s.note}>
+            Each value is what the trader held at their next move, or a day after the line: equity
+            at the mark plus any margin a trim released. Same fills as above. Left out:{' '}
+            {fa.summary.untrimmed} one-lot positions Airbag can’t trim, and {fa.summary.disagree}{' '}
+            where the paused replay didn’t match the chain (
+            {fa.rows.filter((r) => !r.agrees && r.outcome === 'liquidated').length} of them
+            liquidations, so leaving them out understates what Airbag kept). Positions opened before
+            the window aren’t followed. The code is{' '}
+            <a href={`${SOURCE_URL}/blob/main/spike/false-alarms.ts`}>false-alarms.ts</a>.
+          </p>
+        </section>
+
         <section className={s.section} aria-labelledby="method">
           <h2 id="method" className={`display ${s.h2}`}>
             How it was run, and what it can’t show
@@ -253,6 +293,30 @@ export default async function BacktestPage() {
         </section>
       </main>
       <Footer />
+    </div>
+  );
+}
+
+/** One side of the crossings: without Airbag, with it, and the difference. */
+function CrossingSide({
+  title,
+  side,
+  diffLabel,
+}: {
+  title: string;
+  side: Side;
+  diffLabel: string;
+}) {
+  return (
+    <div>
+      <h3>{title}</h3>
+      <dl className="rows">
+        <Row k="Held without Airbag" v={fmt.usd(side.untouched)} />
+        <Row k="Held on the Airbag path" v={fmt.usd(side.airbag)} />
+        <Row k={diffLabel} v={fmt.usd(side.airbag - side.untouched)} />
+        <Row k="Median, as a share of margin" v={fmt.pct(side.medianDiffPct / 100)} />
+        <Row k="Airbag path ahead · behind" v={`${side.better} · ${side.worse}`} />
+      </dl>
     </div>
   );
 }
