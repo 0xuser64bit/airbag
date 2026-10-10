@@ -202,7 +202,9 @@ export class TradingClient {
   /**
    * Sends one allowlisted order. `build` gets the frame's `sn` and `rq`. Resolves with the
    * outcome from mt:3 and mt:24; `lost` means no final status arrived and the caller must
-   * reconcile from positions. Retries once with a new `rq` on sr:32, as Perpl's docs advise.
+   * reconcile from positions. Retries once with a new `rq` on sr:32, as Perpl's docs advise,
+   * except a t:6: Perpl reports an add that already executed as failed with sr:32 (testnet,
+   * 2026-10-10), so resending would add the margin twice. Reconcile a t:6 from the deposit.
    * `onStatus` hears the gateway's admission code (mt:3) as soon as it arrives.
    */
   async submit(
@@ -210,7 +212,8 @@ export class TradingClient {
     onStatus?: (code: number) => void,
   ): Promise<OrderOutcome> {
     const first = await this.sendOnce(build, onStatus);
-    if (first.result === 'failed' && first.order?.sr === 32) return this.sendOnce(build, onStatus);
+    if (first.result === 'failed' && first.order?.sr === 32 && first.order.t !== 6)
+      return this.sendOnce(build, onStatus);
     return first;
   }
 

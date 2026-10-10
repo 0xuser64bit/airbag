@@ -162,6 +162,21 @@ describe('TradingClient', () => {
     await expect(outcome).resolves.toMatchObject({ result: 'filled', rq: 102 });
   });
 
+  it("doesn't resend a margin add Perpl reports failed with sr:32, as it may have executed", async () => {
+    const t = setup();
+    client = t.client;
+    client.start();
+    await snapshots(t.server);
+    const outcome = client.submit((ids) =>
+      increaseCollateral({ ...ids, mkt: 16, acc: 42, lb: 0, amountCns: 5_676_615n }),
+    );
+    await flush();
+    const sent = t.server.last.sent.length;
+    t.server.last.push({ mt: 24, d: [{ rq: 101, acc: 42, st: 7, sr: 32, t: 6, fs: 0 }] });
+    await expect(outcome).resolves.toMatchObject({ result: 'failed', rq: 101 });
+    expect(t.server.last.sent.length).toBe(sent);
+  });
+
   it('ignores a failure that follows a non-failure status, and reads a partial IOC', async () => {
     const t = setup();
     client = t.client;
