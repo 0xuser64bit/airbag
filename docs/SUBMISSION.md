@@ -39,6 +39,11 @@ engine only ever sends reduce-only closes and margin adds.
   holding $35,244 at those blocks against the $19,629 the liquidations returned; none was liquidated
   in the day after. A control replay with Airbag paused liquidates every position where Perpl did.
   Each liquidation has its own page with the real mark and its MonadVision transaction.
+- **The cost side.** The backtest only sees liquidations, so a second replay follows every
+  position opened in the same 21 days: 557 of 601,810 crossed their Airbag line, and Perpl
+  liquidated 137 of them. Where it didn't, the trims cost $860 across 398 positions (median 2.2% of
+  margin); where it did, they kept $1,168 across 114 (median 20%). Protection has a premium, and
+  the site shows both sides.
 - **A live radar.** The site reads every open position on Perpl mainnet from the contract every few
   minutes: about 700, of which around 40 are past the line where Airbag would already have trimmed
   them. Any wallet can be checked for its positions now and its liquidations replayed.

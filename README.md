@@ -118,6 +118,14 @@ blocks early, so the replay agrees with the chain. Fills are the one assumption:
 the line, 0.25% past the mark, with the taker fee. Rerun it with
 `PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc2.monad.xyz pnpm --filter @airbag/spike backtest`.
 
+**And what it costs when Perpl doesn't liquidate** (same window,
+[method](docs/RISK-MODEL.md#the-other-side-crossings-perpl-didnt-liquidate)): of 601,810 positions
+opened, 557 crossed their Airbag line before anything else happened to them, and Perpl liquidated
+137. On the 398 trimmed ones Perpl didn't liquidate, the Airbag path held $860 less than the
+untouched position (median 2.2% of margin); on the 114 trimmed liquidations it held $1,168 more
+(median 20.3%). The protection has a premium, and `/backtest` shows both sides. Rerun it with
+`PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc2.monad.xyz pnpm --filter @airbag/spike false-alarms`.
+
 **Live on the landing page**: every few minutes the site reads all open positions on Perpl
 mainnet from the contract (about 700 on 2026-10-04) and says how many are past the line where
 Airbag would already have trimmed them (40, worth $215,000) and how many are within 5% of

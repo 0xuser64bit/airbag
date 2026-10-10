@@ -64,5 +64,9 @@ is trimmed while the engine or Perpl is down. Say whether the funded testnet run
 - **What if the price keeps going?** The smaller position can be liquidated at its new price and
   returns less than the first liquidation would have. In the backtest none of the 363 did within a
   day.
+- **What does it cost when the wick doesn't come?** Over the backtest's 21 days, about one line
+  crossing in four ended in liquidation. On the others the trims cost a median 2.2% of margin (the
+  trimmed part misses the recovery); on the liquidated ones they kept a median 20%. Both sides are
+  on `/backtest`, below the featured replay.
 - **Has it traded on Perpl?** Only if the testnet run below has happened. Everything else is
   checked against Perpl's contract and public data, and says so.
