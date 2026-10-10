@@ -18,6 +18,7 @@ import { Annunciator } from '@/components/instruments.tsx';
 import { Runway } from '@/components/Runway.tsx';
 import { Brand } from '@/components/ui.tsx';
 import { SOURCE_URL } from '@/lib/config.ts';
+import { TESTNET_LOG, testnetDeploys } from '@/lib/lens.ts';
 import { liveRadar } from '@/lib/radar.ts';
 import { engineMode, liquidationsLast30Days } from '@/lib/stats.ts';
 import { loadBacktest } from './backtest/data.ts';
@@ -132,10 +133,11 @@ export const metadata: Metadata = {
 };
 
 export default async function Landing() {
-  const [liquidated, mode, radar] = await Promise.all([
+  const [liquidated, mode, radar, logged] = await Promise.all([
     liquidationsLast30Days(),
     engineMode(),
     liveRadar(),
+    testnetDeploys(),
   ]);
   const demo = mode === 'simulation';
   return (
@@ -471,9 +473,12 @@ export default async function Landing() {
                   Tested against Perpl mainnet
                 </a>{' '}
                 and{' '}
-                <a href="https://testnet.monadvision.com/address/0x52259e30d3687691F663033922472B43120276F7">
+                <a href={`https://testnet.monadvision.com/address/${TESTNET_LOG}`}>
                   deployed on Monad testnet
                 </a>
+                {logged
+                  ? `, where it has recorded ${logged} live ${logged === 1 ? 'deploy' : 'deploys'} of Airbag’s engine on Perpl testnet so far`
+                  : ''}
                 .
               </p>
             </div>

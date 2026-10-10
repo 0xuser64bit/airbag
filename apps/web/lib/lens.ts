@@ -3,7 +3,10 @@
 // let anyone see they agree. Off unless AIRBAG_LENS_ADDRESS names the contract on Monad mainnet.
 
 import { createPublicClient, http, isAddress, parseAbi } from 'viem';
-import { monad } from 'viem/chains';
+import { monad, monadTestnet } from 'viem/chains';
+
+/** AirbagLog on Monad testnet, against Perpl's testnet Exchange (2026-10-04). */
+export const TESTNET_LOG = '0x52259e30d3687691F663033922472B43120276F7';
 
 const abi = parseAbi([
   'function liquidationPrice(uint256 perpId, uint256 accountId) view returns (uint256 liqPNS, bool short, uint256 lots, uint256 markPNS, bool markValid)',
@@ -39,4 +42,20 @@ export async function lensLiquidations(
         .catch(() => null),
     ),
   );
+}
+
+/** How many live deploys AirbagLog has recorded on Monad testnet, or null if the chain doesn't answer. */
+export async function testnetDeploys(): Promise<number | null> {
+  const client = createPublicClient({
+    chain: monadTestnet,
+    transport: http('https://testnet-rpc.monad.xyz', { timeout: 5_000 }),
+  });
+  return client
+    .readContract({
+      address: TESTNET_LOG,
+      abi: parseAbi(['function deploys() view returns (uint256)']),
+      functionName: 'deploys',
+    })
+    .then(Number)
+    .catch(() => null);
 }
