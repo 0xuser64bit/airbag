@@ -89,8 +89,8 @@ still goes through the allowlist.
 cp .env.example .env    # then fill in PERPL_API_KEY and PERPL_API_SECRET
 
 pnpm --filter @airbag/spike account                            # sign in, read positions, liquidation price two ways
-pnpm --filter @airbag/spike deploy add --market BTC --amount 1 --send
-pnpm --filter @airbag/spike deploy trim --market BTC --fraction 0.3 --send
+pnpm --filter @airbag/spike run deploy add --market BTC --amount 1 --send
+pnpm --filter @airbag/spike run deploy trim --market BTC --fraction 0.3 --send
 pnpm --filter @airbag/spike measure 60                         # block time and feed lag, public data only
 pnpm --filter @airbag/spike check                              # Airbag's position math vs the contract, no key
 PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc2.monad.xyz pnpm --filter @airbag/spike liquidations   # vs Perpl's liquidations

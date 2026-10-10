@@ -81,6 +81,11 @@ ws.listen((m: Message, at) => {
   if (m.mt === MT.OrdersUpdate) for (const o of m.d as Order[]) state.orders.push({ at, o });
 });
 const ping = setInterval(() => ws.send(JSON.stringify({ mt: MT.Ping, t: Date.now() })), 30_000);
+// The positions snapshot comes once, right after sign-in: wait for it before anything else.
+const ready = Promise.all([
+  ws.next((m) => m.mt === MT.PositionsSnapshot),
+  ws.next((m) => m.mt === MT.Heartbeat),
+]);
 
 // Current mark from the market-data snapshot.
 const md = await openSocket(`${cfg.wsUrl}/ws/v1/market-data`, () =>
@@ -96,8 +101,7 @@ const markState = (snapshot.d as Record<string, { mrk: number; at: { b: number }
 md.close();
 if (!markState) throw new Error(`no market-state for ${values.market}`);
 
-await ws.next((m) => m.mt === MT.PositionsSnapshot);
-await ws.next((m) => m.mt === MT.Heartbeat);
+await ready;
 const account = state.account;
 const pos0 = state.position;
 if (!account) throw new Error('no exchange account for this key');
