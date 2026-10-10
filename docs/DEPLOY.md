@@ -146,6 +146,15 @@ micro-dollar: every released cent went back in, once. The run found two bugs, bo
 - Perpl's txids come without `0x`, so the dashboard showed them as text and AirbagLog's record for
   deploy #1 has a zero Perpl tx hash (`029e439`).
 
+On the fixed engine, seven minutes later, the short crossed its re-armed line at $0.02510 and
+deploy #2 ran clean in one attempt: a close of 27 MON filled 4 blocks after the trigger
+([`0xc0cf28…20bc`](https://testnet.monadvision.com/tx/0xc0cf28b5864eab30b6730989c6d356d83291046820dacea13aa0ac6c881120bc)), the
+released $0.27 was back 4 blocks later
+([`0xf74cfc…3ab0`](https://testnet.monadvision.com/tx/0xf74cfcb20c1f41bcc09f8da6db501ec4eb69dba83861693c4b05afb610b83ab0)), and
+AirbagLog's record links that close
+([`0x012186…e575`](https://testnet.monadvision.com/tx/0x012186d0dfd2a74a12de24764d17410aaf1f5c8b1e5d9a23c3342cfec14ce575)). The
+engine logs the re-add about two seconds after it lands, once Perpl's late `sr: 32` report arrives.
+
 ### Owner checklist to unblock the run
 
 1. Create a **new testnet-only wallet**. Don't use one that holds real funds.
