@@ -6,7 +6,13 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!design", "!**/*.md", "!apps/web/lib/backtest.json"]
+    "includes": [
+      "**",
+      "!design",
+      "!**/*.md",
+      "!apps/web/lib/backtest.json",
+      "!apps/web/lib/false-alarms.json"
+    ]
   },
   "formatter": {
     "enabled": true,
