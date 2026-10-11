@@ -95,7 +95,7 @@ export function Trace({
         role="img"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: arrow keys move the crosshair
         tabIndex={0}
-        aria-label={`${symbol} mark from ${relative(first)} to ${relative(last)} around the liquidation. Airbag line ${fmt.price(line)}, liquidation ${fmt.price(liquidation)}${after === null ? '' : `, ${fmt.price(after)} after Airbag's trim`}. The block log below lists each step.`}
+        aria-label={`${symbol} mark from ${relative(first)} to ${relative(last)} around the liquidation. Airbag line ${fmt.usd(line)}, liquidation ${fmt.usd(liquidation)}${after === null ? '' : `, ${fmt.usd(after)} after Airbag's trim`}. The block log below lists each step.`}
         onPointerMove={(e) => setHover(nearest(e.clientX, e.currentTarget.getBoundingClientRect()))}
         onPointerLeave={() => setHover(undefined)}
         onBlur={() => setHover(undefined)}
@@ -130,7 +130,7 @@ export function Trace({
         )}
         <polyline className={s.trace} points={points} />
         <Flag x={flagX(line)} y={y(line)} className={s.airbagText} end={end(line)}>
-          AIRBAG {fmt.price(line)}
+          AIRBAG {fmt.usd(line)}
         </Flag>
         <Flag
           x={flagX(liquidation)}
@@ -138,12 +138,12 @@ export function Trace({
           className={s.liqText}
           end={end(liquidation)}
         >
-          LIQUIDATION {fmt.price(liquidation)}
+          LIQUIDATION {fmt.usd(liquidation)}
         </Flag>
         {after !== null && firstTrim !== undefined && (
           // The new liquidation only exists right of the trim, so its label stays at that end.
           <Flag x={right - 4} y={y(after)} className={s.liqText} end>
-            AFTER TRIM {fmt.price(after)}
+            AFTER TRIM {fmt.usd(after)}
           </Flag>
         )}
         {trims.map(([b, p]) => (
@@ -174,7 +174,7 @@ export function Trace({
       <p className={`num ${s.readout}`} aria-live="polite">
         {at ? (
           <>
-            <span className="faint">{relative(at[0])}</span> {symbol} {fmt.price(at[1])}
+            <span className="faint">{relative(at[0])}</span> {symbol} {fmt.usd(at[1])}
           </>
         ) : (
           <span className="faint">Point at the trace to read the mark.</span>

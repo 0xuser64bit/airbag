@@ -1,4 +1,4 @@
-// The save card as a 1200×675 share image (design/SaveCard.dc.html).
+// The save card as a 1200×675 share image.
 
 import { fmt } from '@airbag/risk';
 import { ImageResponse } from 'next/og';

@@ -1,5 +1,5 @@
 // The backtest: every Perpl mainnet liquidation, replayed through Airbag's engine on the marks
-// Perpl published (spike/backtest.ts). Static: the results are a dated, rerunnable snapshot.
+// Perpl published (tools/backtest.ts). Static: the results are a dated, rerunnable snapshot.
 
 import { fmt } from '@airbag/risk';
 import type { Metadata } from 'next';
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 const SHOWN = 20;
 
 const COMMAND =
-  'PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc2.monad.xyz \\\n  pnpm --filter @airbag/spike backtest';
+  'PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc2.monad.xyz \\\n  pnpm --filter @airbag/tools backtest';
 
 // The backtest is a fixed snapshot; the 'right now' rows beside it refresh with the radar.
 export const revalidate = 300;
@@ -111,7 +111,7 @@ export default async function BacktestPage() {
             </h2>
             <dl className="rows">
               <Row k="Liquidations replayed" v={`${sum.replayed} of ${sum.full}`} />
-              <Row k="Airbag deployed first" v={`${sum.actedBefore} of ${sum.replayed}`} />
+              <Row k="Airbag line crossed first" v={`${sum.actedBefore} of ${sum.replayed}`} />
               <Row
                 k="Warning before Perpl liquidated"
                 v={`median ${fmt.duration(sum.leadSeconds.p50 * 1000)}`}
@@ -205,9 +205,9 @@ export default async function BacktestPage() {
             {fa.summary.untrimmed} one-lot positions Airbag can’t trim, and {fa.summary.disagree}{' '}
             where the paused replay didn’t match the chain (
             {fa.rows.filter((r) => !r.agrees && r.outcome === 'liquidated').length} of them
-            liquidations, so leaving them out understates what Airbag kept). Positions opened before
-            the window aren’t followed. The code is{' '}
-            <a href={`${SOURCE_URL}/blob/main/spike/false-alarms.ts`}>false-alarms.ts</a>.
+            liquidations). The effect of these exclusions on aggregate benefit is unknown. Positions
+            opened before the window aren’t followed. The code is{' '}
+            <a href={`${SOURCE_URL}/blob/main/tools/false-alarms.ts`}>false-alarms.ts</a>.
           </p>
         </section>
 
@@ -267,7 +267,7 @@ export default async function BacktestPage() {
                 The replay is{' '}
                 <a href={`${SOURCE_URL}/blob/main/apps/engine/src/replay.ts`}>replay.ts</a>, the
                 production guard on a paper exchange; the data and the control are{' '}
-                <a href={`${SOURCE_URL}/blob/main/spike/backtest.ts`}>backtest.ts</a>.
+                <a href={`${SOURCE_URL}/blob/main/tools/backtest.ts`}>backtest.ts</a>.
               </p>
             </div>
           </div>

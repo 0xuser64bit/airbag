@@ -5,25 +5,25 @@ named. It is the reference for `packages/perpl` and for anyone changing the engi
 layer. **Read it before changing the protocol code**: most of it is not guessable from the types.
 
 Endpoint measurements below are historical research, not a fresh execution proof. Re-check live
-context and a funded disposable account before launch. The 2026-09-27 audit re-read the current
-official API documentation and corrected fee handling; old zero-fee assumptions are obsolete.
+context before expanding coverage. Current API, websocket and liquidation documentation was
+rechecked on 2026-10-11. Current fees come from context and account tier, not historical tables.
 
 ### Checked against testnet on 2026-10-01, without a key
 
-Everything that public data can prove was run against Perpl testnet and Monad testnet (head
-~67.2M). What still needs a funded account and a Trade key is unchanged: fills, `t:6`, the
-scope probe's admission and observed fees.
+These are dated read-only checks at testnet head ~67.2M. The funded close, `t:6` amount format,
+re-add and Trade-scope admission were subsequently exercised on 2026-10-10; see
+[Live testnet evidence](VERIFICATION.md#live-testnet-evidence).
 
 | Check | Result |
 |---|---|
 | Live engine boot: context, fee schedules, funding seed, market-data and Monad `newHeads` | Ready in under a second, 1 block behind Monad, `/ready` 200 |
 | Wallet lookup of real accounts (8 markets each) | Works; needed Multicall3 batching under the public RPC's 15 requests/s |
-| Position math vs the contract: `pnpm --filter @airbag/spike check` | Side decoding, Q16 entry residue, sizes and decimals reproduce `getPositionV2`'s own `deltaPnlCNS` on 19 testnet positions in 8 markets and, with `PERPL_NETWORK=mainnet`, 37 real mainnet traders' positions in 10 markets, longs and shorts, worst difference under $0.0001. Three of those mainnet positions were 1.75–2.65% from liquidation. Rerun with automatic discovery of the first 25 accounts holding positions: 45 testnet and 43 mainnet positions, the same agreement. The check now rebuilds each position with `toRiskPosition`, the live guard's own conversion, taking the entry funding sum at the position's `entryBlock`: its funding (from cumulative sums, sign and `funding_sum_scaling_exp` included) matches the contract's `premiumPnlCNS` within $0.000001 on 45 testnet and 42 mainnet positions |
-| Liquidation price vs Perpl's liquidations: `pnpm --filter @airbag/spike liquidations` (mainnet, `MONAD_RPC_URL=https://rpc2.monad.xyz`) | Each `PositionLiquidated` event gives back the position it closed (deposit removed as `-posAmountCNS`, PnL realized at the execution price `liqPricePNS`, funding). In 159 full mainnet liquidations over 3,000,000 blocks in 8 markets, none happened before the mark reached the liquidation price Airbag computes (median 0.03% past it), and the trader got exactly the configured 80% of what was left every time |
+| Position math vs the contract: `pnpm --filter @airbag/tools check` | Side decoding, Q16 entry residue, sizes and decimals reproduce `getPositionV2`'s own `deltaPnlCNS` on 19 testnet positions in 8 markets and, with `PERPL_NETWORK=mainnet`, 37 real mainnet traders' positions in 10 markets, longs and shorts, worst difference under $0.0001. Three of those mainnet positions were 1.75–2.65% from liquidation. Rerun with automatic discovery of the first 25 accounts holding positions: 45 testnet and 43 mainnet positions, the same agreement. The check now rebuilds each position with `toRiskPosition`, the live guard's own conversion, taking the entry funding sum at the position's `entryBlock`: its funding (from cumulative sums, sign and `funding_sum_scaling_exp` included) matches the contract's `premiumPnlCNS` within $0.000001 on 45 testnet and 42 mainnet positions |
+| Liquidation price vs Perpl's liquidations: `pnpm --filter @airbag/tools liquidations` (mainnet, `MONAD_RPC_URL=https://rpc2.monad.xyz`) | Each `PositionLiquidated` event gives back the position it closed (deposit removed as `-posAmountCNS`, PnL realized at the execution price `liqPricePNS`, funding). In 159 full mainnet liquidations over 3,000,000 blocks in 8 markets, none happened before the mark reached the liquidation price Airbag computes (median 0.03% past it), and the trader got exactly the configured 80% of what was left every time |
 | Maintenance margin vs size: `getMarginFractions(perpId, lots)` | Flat per market at every size tried, 1e-2 to 1e4 BTC: BTC 2500 (4%), ETH 2000 (5%), matching context |
 | Trading sign-in with an unknown key | Closed with 3401 `unauthorized`; the client reports "rejected" |
-| `Amount` (`a` on `t:6`, `c`, `b`) | Documented as a decimal string of the scaled integer: `min_account_open_amount` is `"100000000"`, 100 AUSD at 6 dp. Airbag sends CNS as a decimal string; execution is still unverified |
-| Key enrollment from a non-Perpl origin | `POST /api/v1/api-key/payload` answers 400; one-click enrollment needs Perpl to whitelist Airbag's origin (ADR 0006) |
+| `Amount` (`a` on `t:6`, `c`, `b`) | Documented as a decimal string of the scaled integer: `min_account_open_amount` is `"100000000"`, 100 AUSD at 6 dp. Airbag sends CNS as a decimal string; a later testnet `t:6` added exactly $1 |
+| Key enrollment from a non-Perpl origin | `POST /api/v1/api-key/payload` answers 400; one-click enrollment needs Perpl to whitelist Airbag's origin (docs/ARCHITECTURE.md) |
 
 Sources: Perpl `api-docs` (README, `authentication.md`, `websocket.md`, `rest-endpoints.md`,
 `types.md`, `integrations.md`), [docs.perpl.xyz](https://docs.perpl.xyz) (margin, liquidation,
@@ -69,7 +69,7 @@ ZEC 5.56%, LIT, VVV, PUMP and NEAR 10%. Testnet differs (MON 20%, ZEC 10%).
 
 ## The gotchas
 
-These are the ones that have cost real time. Each is enforced or tested somewhere in the code.
+These rules are required for correct integration. Each is enforced or tested somewhere in the code.
 
 - **A reduce-only close does not move the liquidation price.** Perpl releases the deposit pro-rata
   on a decrease (verified on 400 `PositionDecreased` events per network) and settles realized PnL
@@ -84,7 +84,8 @@ These are the ones that have cost real time. Each is enforced or tested somewher
 - **Every `mt:22` needs a unique non-zero `sn`.** `mt:3` echoes it as `cid`; without it acks cannot
   be matched to orders.
 - **Seed `rq` from `Account.lfr`:** `rq = max(local, lfr) + 1`, strictly increasing per account.
-  `sr: 32` means retry once with a new `rq`.
+  A failed close with `sr: 32` can retry once with a new `rq`. Never resend `t:6` on that signal:
+  live testnet reported it after the collateral add had already executed. Reconcile the deposit.
 - **Entry price carries a Q16 residue.** `Position.ep` is rounded (ceil for longs, floor for shorts)
   and `epr` holds the remainder. Effective long entry is `(ep − 1 + epr/65536) / 10^pd` when
   `epr > 0`. Without it the liquidation price is off by a few dollars.
@@ -122,7 +123,7 @@ These are the ones that have cost real time. Each is enforced or tested somewher
 | `ms` | max slippage, bps |
 | `fl` | 0 GTC, 1 PostOnly, 2 FOK, **4 IOC** |
 | `lv` | leverage in hundredths |
-| `lb` | last execution block: `head < lb ≤ head + order_ttl_blocks` (20 on every market today), or `0` for the server's maximum window |
+| `lb` | last execution block: `head < lb ≤ head + order_ttl_blocks` (20 in the recorded context; read the current market setting), or `0` for the server's maximum window |
 | `a` | amount, for collateral orders |
 | `bf` | optional builder fee |
 
@@ -132,7 +133,7 @@ exchange, so they cannot flip a position, and `mnp` (max negative-PnL collateral
 applies to reducing fills. `order_max_market_slippage_bps` is 100 (1%) on mainnet and 1000 on testnet
 BTC/ETH/SOL, so the default 0.5% worst price fits both.
 
-Airbag's allowlist is only 3, 4, 6 and 5 ([ADR 0003](adr/0003-engine-runtime.md)). Closes are IOC,
+Airbag's allowlist is only 3, 4, 6 and 5 ([Architecture](ARCHITECTURE.md)). Closes are IOC,
 so there is never a resting order to cancel; the single cancel is the link-time scope probe.
 
 ## Sockets, heartbeats and rate limits
@@ -164,7 +165,9 @@ on its own: the mark does not move every block.
 
 ## Measured cadence
 
-`spike/measure.ts`, 60 s per network, plus `MarkUpdated` logs over 6,000 blocks (~30 min):
+Historical measurements from 2026-10-01; do not treat provider limits or timing as an SLA.
+
+`tools/measure.ts`, 60 s per network, plus `MarkUpdated` logs over 6,000 blocks (~30 min):
 
 | | Testnet | Mainnet |
 |---|---|---|
@@ -202,9 +205,8 @@ What follows from it:
 - Stops are **not native contract operations**, but the API has trigger orders (`tp`/`tpc`, including
   mark-price conditions) that Perpl's forwarder executes, and the UI offers SL/TP. A stop closes a
   fixed size at a fixed price; Airbag sizes each trim to a liquidation-distance target, re-adds the
-  margin and re-arms. Parking a reduce-only Perpl trigger order just above liquidation as a backstop
-  for when the engine is down is a reasonable future move and is not built.
-- Builder codes (a later revenue path) are bound at key enrollment, are capped at 0.1%, and only
+  margin and re-arms. Airbag does not place exchange trigger-order backstops; engine downtime remains unprotected.
+- Builder codes are bound at key enrollment, are capped at 0.1%, and only
   apply to size that opens or increases a position. Trims earn nothing. Not implemented.
 
 ## Monad and Envio
@@ -223,10 +225,9 @@ What follows from it:
   `https://10143.hypersync.xyz`). The Perpl exchange ABI is not verified on explorers, but
   `dex-sdk` (MIT) ships `crates/sdk/abi/dex/Exchange.json` including `PositionLiquidated`, so
   Perpl liquidations can be indexed. Airbag's own log is always indexable
-  ([ADR 0009](adr/0009-onchain-log-and-indexer.md)).
+  ([Architecture](ARCHITECTURE.md)).
 
-## Open against a live account
+## Collateral-add settlement
 
-`t:6` takes its amount in `a` as a string and the docs do not say whether that is a scaled CNS
-integer or a decimal. It is the CNS integer: `a: '1000000'` added exactly $1 to a testnet position
-on 2026-10-10 ([DEPLOY.md](DEPLOY.md#first-real-trim-on-perpl-testnet-2026-10-10)).
+`t:6` takes its amount in `a` as a scaled CNS integer string: `a: '1000000'` added exactly $1 to a testnet position
+on 2026-10-10 ([Verification status](VERIFICATION.md#live-testnet-evidence)).

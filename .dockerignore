@@ -3,14 +3,13 @@
 **/.envio
 .git
 .github
-design
 docs
 e2e
 test-results
 playwright-report
 contracts/out
 contracts/cache
-spike/out
+tools/out
 data
 .env
 .env.*

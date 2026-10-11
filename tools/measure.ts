@@ -1,4 +1,4 @@
-// M0: Monad block time, Perpl market-state cadence, and how far Perpl's prices trail the chain.
+// Measures Monad block time, Perpl market-state cadence, and how far Perpl's prices trail the chain.
 // Public data only: no key, no funds. Usage: node measure.ts [seconds=60]
 
 import { type Message, MT, networkFromEnv, openSocket } from '@airbag/perpl';

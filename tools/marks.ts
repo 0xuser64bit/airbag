@@ -1,6 +1,6 @@
 // Perpl's Exchange history from the chain, by block: every MarkUpdated(perpId, pricePNS) it
 // emitted, and any other events a script asks for. Read in fixed chunks and cached under
-// spike/out/<name>, so a rerun only fetches blocks it hasn't seen. rpc2.monad.xyz answers up to
+// tools/out/<name>, so a rerun only fetches blocks it hasn't seen. rpc2.monad.xyz answers up to
 // ~10k logs over 20k blocks, and Perpl emits ~4k mark updates per 10k blocks across its markets,
 // so a chunk is 12k blocks; an RPC with tighter caps gets it in halves.
 
@@ -70,7 +70,7 @@ async function logs(
 }
 
 export interface History {
-  /** The cache folder under spike/out, one per set of topics. */
+  /** The cache folder under tools/out, one per set of topics. */
   name: string;
   topics: string[];
   /** A log as a row of `width` numbers; the block comes first. */

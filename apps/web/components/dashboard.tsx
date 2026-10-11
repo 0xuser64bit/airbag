@@ -486,7 +486,7 @@ export function RecentDeploys({
   );
 }
 
-export function relativeDay(ms: number): string {
+function relativeDay(ms: number): string {
   const age = Date.now() - ms;
   if (age < 60_000) return 'Just now';
   if (age < 3_600_000) return `${Math.round(age / 60_000)} min ago`;

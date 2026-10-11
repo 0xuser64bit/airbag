@@ -11,13 +11,13 @@ const read = <T>(file: string): T =>
 let cached: Backtest | undefined;
 let alarms: FalseAlarms | undefined;
 
-/** What spike/backtest.ts wrote. Read once per server process. */
+/** What tools/backtest.ts wrote. Read once per server process. */
 export function loadBacktest(): Backtest {
   cached ??= read<Backtest>('backtest.json');
   return cached;
 }
 
-/** What spike/false-alarms.ts wrote, over the same window. */
+/** What tools/false-alarms.ts wrote, over the same window. */
 export function loadFalseAlarms(): FalseAlarms {
   alarms ??= read<FalseAlarms>('false-alarms.json');
   return alarms;

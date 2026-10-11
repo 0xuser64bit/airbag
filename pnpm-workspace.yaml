@@ -2,23 +2,9 @@ packages:
   - "apps/*"
   - "indexer"
   - "packages/*"
-  - "spike"
+  - "tools"
 allowBuilds:
   esbuild: false
-
-# Security patches still inside pnpm's default 24h release-age window.
-# GHSA-vcvr-r3jv-pc5j (critical, next/og) and GHSA-cjq9-62q9-8jv4 (high, image optimization).
-minimumReleaseAgeExclude:
-  - '@next/env@16.3.8'
-  - '@next/swc-darwin-arm64@16.3.8'
-  - '@next/swc-darwin-x64@16.3.8'
-  - '@next/swc-linux-arm64-gnu@16.3.8'
-  - '@next/swc-linux-arm64-musl@16.3.8'
-  - '@next/swc-linux-x64-gnu@16.3.8'
-  - '@next/swc-linux-x64-musl@16.3.8'
-  - '@next/swc-win32-arm64-msvc@16.3.8'
-  - '@next/swc-win32-x64-msvc@16.3.8'
-  - next@16.3.8
 
 # Patched transitive deps: envio 3.12.1 pins express 4.19.2 (GHSA-qwcr, GHSA-9wv6,
 # GHSA-rhx6, GHSA-37ch and friends) and viem pulls ws <8.21.0 (GHSA-96hv).
@@ -30,3 +16,5 @@ overrides:
   ws@<8.21.3: 8.21.3
   sharp@<0.35.5: 0.35.5
   source-map-js@<1.2.2: 1.2.2
+  # Windows dev-server file read (GHSA-g7r4-m6w7-qqqr), via Vite and Envio's tsx.
+  esbuild@>=0.27.3 <0.28.1: 0.28.1

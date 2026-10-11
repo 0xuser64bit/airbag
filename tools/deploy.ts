@@ -1,11 +1,11 @@
-// M0: one real deploy on testnet, timed per step.
+// Verify one real deploy on testnet, timed per step.
 //
 //   trim: reduce-only IOC close of a fraction of a position, then IncreasePositionCollateral
-//         of the equity the close released (ADR 0002). Proves t:3/4 and t:6 work with a
+//         of the equity the close released (docs/ARCHITECTURE.md). Proves t:3/4 and t:6 work with a
 //         Trade key, and that re-adding moves the liquidation price.
 //   add:  t:6 only, moving an amount from free balance into the position.
 //
-// Usage (from spike/, with ../.env filled in):
+// Usage (from tools/, with ../.env filled in):
 //   node --env-file-if-exists=../.env deploy.ts trim --market BTC --fraction 0.2 [--send]
 //   node --env-file-if-exists=../.env deploy.ts add --market BTC --amount 1 [--send]
 // Without --send it prints what it would send and exits. It refuses to run on mainnet.
@@ -52,7 +52,7 @@ const mode = positionals[0];
 if (mode !== 'trim' && mode !== 'add') throw new Error('usage: deploy.ts trim|add [options]');
 
 const cfg = networkFromEnv();
-if (cfg.network !== 'testnet') throw new Error('the spike only runs on testnet');
+if (cfg.network !== 'testnet') throw new Error('trading verification only runs on testnet');
 
 const ctx = await fetchContext(cfg.apiUrl);
 const market = marketBySymbol(ctx, values.market);
@@ -126,7 +126,7 @@ const envelope = () => ({
   lb: state.head + market.order_ttl_blocks,
 });
 
-// Times are measured from the moment we start acting (the spike's stand-in for "detect").
+// Times are measured from the moment we start acting (the verification run's stand-in for "detect").
 const timeline: { step: string; block: number; ms: number; note?: string }[] = [];
 let t0 = performance.now();
 const mark = (step: string, block: number, note?: string) => {

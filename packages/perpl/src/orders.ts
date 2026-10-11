@@ -1,4 +1,4 @@
-// The order-type allowlist (docs/PERPL.md, ADR 0003). Airbag may only close or
+// The order-type allowlist (docs/PERPL.md, docs/ARCHITECTURE.md). Airbag may only close or
 // reduce (3, 4), add the user's own collateral (6), or cancel (5). Closes are IOC, so Airbag
 // never has a resting order to cancel: its only cancel is the link-time scope probe, aimed at
 // an order id the account doesn't have.
@@ -11,10 +11,8 @@
 import type { Side } from '@airbag/risk';
 
 export const ALLOWED_ORDER_TYPES = [3, 4, 5, 6] as const;
-export type AllowedOrderType = (typeof ALLOWED_ORDER_TYPES)[number];
-
 /** Order flags: Perpl `fl`. Closes are always immediate-or-cancel. */
-export const IOC = 4;
+const IOC = 4;
 
 /** Fields every mt:22 frame carries. `sn` is echoed as `cid` on mt:3; `rq` is the idempotency key. */
 export interface Envelope {
@@ -97,7 +95,7 @@ export function increaseCollateral(
  * A cancel sent once at link time to learn a key's scope: a Read key is refused with
  * code 403 on mt:3, a Trade key gets code 0 and then a failed mt:24. No API reports scope
  * otherwise. Use a high uint64 id outside the snapshot, avoiding the low next-created-order
- * race. The exchange only cancels orders the account owns; live verification is still required.
+ * race. The exchange only cancels orders the account owns. See docs/VERIFICATION.md for testnet evidence.
  */
 export function scopeProbe(
   envelope: Envelope,

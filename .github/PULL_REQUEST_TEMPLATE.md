@@ -9,4 +9,4 @@
 
 ## Notes for review
 
-Docs updated in the same commit (`docs/` fix, or a new ADR linked from the one it supersedes). No weakened invariants (order-type allowlist, stale-data guard, per-position lock, risk arithmetic).
+Update the affected product documentation in the same change. Explain any change to the order allowlist, stale-data guard, per-position lock or risk arithmetic.

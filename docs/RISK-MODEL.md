@@ -3,7 +3,7 @@
 The heart of the product: the arithmetic that decides where the Airbag line sits, when to act and
 how much to trim. It lives in `packages/risk` as pure functions in human units, with no I/O and no
 dependencies, so the engine and the browser compute the same numbers from the same code
-([ADR 0008](adr/0008-risk-math-numerics.md)).
+([Architecture](ARCHITECTURE.md)).
 
 Formulas follow [Perpl's liquidation docs](https://docs.perpl.xyz/exchange/liquidation) and
 `PerplFoundation/dex-sdk`'s `state/position.rs`. They are checked against the chain: Airbag's
@@ -11,8 +11,7 @@ unrealized PnL matches `getPositionV2` on real testnet and mainnet positions, an
 mainnet liquidations Perpl never liquidated before the mark reached the liquidation price this
 model computes ([PERPL.md](PERPL.md#checked-against-testnet-on-2026-10-01-without-a-key)).
 
-The old assumption that closes are free is obsolete. As checked on 2026-09-27,
-[Perpl's API documentation](https://github.com/PerplFoundation/api-docs/blob/main/README.md#fees--fee-tiers)
+Closes incur trading fees. [Perpl's API documentation](https://github.com/PerplFoundation/api-docs/blob/main/README.md#fees--fee-tiers)
 charges trading fees on size removed as well as added. Airbag reads the taker rate from
 `taker_fees[Account.ft]`, falling back to `taker_fee`, in micros. Missing live fee schedules
 are refused. Orders request no builder fee. Observed gross `Order.f` is recorded; an
@@ -53,7 +52,7 @@ reads before expanding coverage or interpreting save values as exact proceeds.
 
 ## The deploy
 
-A deploy is **two orders**, not one ([ADR 0002](adr/0002-deploy-is-close-then-readd.md)):
+A deploy is **two orders**, not one ([Architecture](ARCHITECTURE.md)):
 
 1. **Spare margin first, only if it is enough.** With the account's unallocated balance `S`, if
    adding `S` alone puts the liquidation price at least `d` away from `T`, send
@@ -83,8 +82,8 @@ A deploy is **two orders**, not one ([ADR 0002](adr/0002-deploy-is-close-then-re
 6. **Re-arm** on the smaller position with the fill price as the new reference.
 
 The `t:6` re-add is not an optimisation. Without it a trim moves nothing, which is why it is on the
-critical path and why the product has not shipped before it is proven against a funded testnet
-account.
+critical path. Live trim-and-readd cycles were verified on testnet on 2026-10-10; see
+[Verification status](VERIFICATION.md#live-testnet-evidence).
 
 ## Save vs precaution
 
@@ -93,7 +92,7 @@ account.
   save.
 - The counterfactual liquidation return is an estimate: `0.8 × equity` at the old liquidation
   price, about `0.8 × MMR`. The UI labels it as an estimate. The 80% itself is what Perpl paid in
-  each of 159 mainnet liquidations checked on 2026-10-01 (`pnpm --filter @airbag/spike
+  each of 159 mainnet liquidations checked on 2026-10-01 (`pnpm --filter @airbag/tools
   liquidations`); the estimate is the fill: a liquidation executes on the book near, not exactly
   at, the liquidation price.
 - Save value = the current value of the Airbag path − the counterfactual return. Live while the
@@ -110,7 +109,7 @@ account.
 ## Backtest on Perpl's own liquidations
 
 The model above says a trim at the line keeps a position open through a wick that would have
-liquidated it. `spike/backtest.ts` asks the chain: for every position Perpl fully liquidated on
+liquidated it. `tools/backtest.ts` asks the chain: for every position Perpl fully liquidated on
 mainnet, what would Airbag's engine have done on the prices that actually happened? The results
 are committed in `apps/web/lib/backtest.json` and shown at `/backtest`.
 
@@ -118,9 +117,9 @@ are committed in `apps/web/lib/backtest.json` and shown at `/backtest`.
 
 1. Each `PositionLiquidated` event gives back the position it closed: size, deposit, funding and
    the PnL realized at the liquidation's fill, hence the effective entry (as in
-   `spike/liquidations.ts`).
+   `tools/liquidations.ts`).
 2. Perpl's `MarkUpdated(perpId, pricePNS)` events give the mark the liquidation engine used, block
-   by block. They are read from a public Monad RPC and cached in `spike/out/marks`.
+   by block. They are read from a public Monad RPC and cached in `tools/out/marks`.
 3. The position's Airbag line is computed at Balanced, armed at entry. The replay starts at the
    last mark on the safe side of that line and runs a day past the liquidation
    (`apps/engine/src/replay.ts`): the production `Engine` and guard, default settings (10% target,
@@ -139,7 +138,7 @@ are committed in `apps/web/lib/backtest.json` and shown at `/backtest`.
 |---|---|
 | Liquidation events / full liquidations | 374 / 372 |
 | Replayed | 369 (3 crossed their line more than three days before the data read starts) |
-| Airbag deployed before Perpl liquidated | 369 of 369; lead median 50 min, 10th percentile 6 min, 90th 7.6 h |
+| Airbag line crossed before Perpl liquidated | 369 of 369; lead median 50 min, 10th percentile 6 min, 90th 7.6 h |
 | Trimmed position still open at Perpl's liquidation (a save) | 363 |
 | Of those, liquidated at the new price within a day | 0 |
 | Of those, worth more than the liquidation returned, at the liquidation / a day later | 363 / 318 |
@@ -158,12 +157,12 @@ trades and margin moves between the line and the liquidation, and whether they w
 Airbag; funding after the liquidation (the paper exchange accrues none). The totals are small
 because most liquidated positions on Perpl are. It is the engine on recorded prices, not live
 fills; Airbag's orders have traded on Perpl testnet only
-([DEPLOY.md](DEPLOY.md#first-real-trim-on-perpl-testnet-2026-10-10)).
+([Verification status](VERIFICATION.md#live-testnet-evidence)).
 
 ### The other side: crossings Perpl didn't liquidate
 
 Starting from liquidations, the backtest shows what a trim saved but never what one cost.
-`spike/false-alarms.ts` covers the rest over the same window (it reads the window from
+`tools/false-alarms.ts` covers the rest over the same window (it reads the window from
 `backtest.json`) and writes `apps/web/lib/false-alarms.json`:
 
 1. Each `PositionOpened` event gives a position: side, lots, entry and deposit. It is followed to
@@ -186,19 +185,18 @@ Starting from liquidations, the backtest shows what a trim saved but never what 
 | Not liquidated, trimmed (precautions) | 398: $22,017 untouched, $21,157 on the Airbag path (−$860); median −2.2% of margin, the worst tenth −20.6% or worse; Airbag path ahead in 117, behind in 278 |
 | Liquidated, trimmed | 114: $2,498 untouched, $3,666 on the Airbag path (+$1,168); median +20.3% of margin; ahead in all 114 |
 
-About one crossing in four ended in liquidation. A precaution costs little each time, because the
-trimmed part misses whatever recovery follows; a needed trim keeps a lot. In this population the
+About one crossing in four ended in liquidation. Precautions can cost money because the trimmed part misses a recovery; some were substantially
+worse than holding the original position, as the percentiles above show. In this population the
 trims kept $1,168 and cost $860: the protection has a premium. $527 of that premium is positions
 that recovered over the day after the line. The 22 liquidations the reconstruction couldn't
-reproduce (most likely funding, which an opening event doesn't carry) are left out, which
-understates what the trims kept. Positions opened before the window, or changed before they
+reproduce (most likely funding, which an opening event doesn't carry) are left out. Their effect on the aggregate benefit is not established by this replay. Positions opened before the window, or changed before they
 crossed, aren't followed, so these totals and the liquidation backtest's aren't directly
 comparable.
 
 ## Golden vectors
 
-From the approved design, and asserted by `packages/risk/test` at the precision the design
-displays. These are **zero-fee simulation vectors**, preserved to exercise the original design;
+Asserted by `packages/risk/test` at display precision. These are **zero-fee simulation vectors**
+used by the landing replay;
 they are not live cost estimates. Fee-bearing long/short, property and engine checks cover the
 current fee model separately. With a 345-micro taker rate, the same BTC trigger needs a slightly
 larger trim and the observed fee is deducted from released collateral.
@@ -230,13 +228,13 @@ ETH long, `n = 2`, `E = 3,000`, `M = 1,200`, `r = 5%`: liquidation $2,550, Balan
 distance 16.67% at $3,060 and 15.34% at $3,012.
 
 These vectors also drive the UI: the landing replay and the settings preview run the real package,
-so no number on screen is hand-typed.
+so the preview and replay calculations share the engine's risk code.
 
 ## Numerics
 
 `packages/risk` works in float64 in human units. Everything Perpl-scaled is converted at the edge
 in `packages/perpl`, with the rounding direction chosen for safety
-([ADR 0008](adr/0008-risk-math-numerics.md)):
+([Architecture](ARCHITECTURE.md)):
 
 | Value | Rounding |
 |---|---|

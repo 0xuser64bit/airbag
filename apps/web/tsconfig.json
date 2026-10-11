@@ -4,6 +4,8 @@
     "lib": ["dom", "dom.iterable", "es2024"],
     "skipLibCheck": true,
     "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "noUncheckedIndexedAccess": true,
     "noEmit": true,
     "module": "esnext",

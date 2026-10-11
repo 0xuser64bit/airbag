@@ -5,7 +5,7 @@
 // it, and did the trader get the share of what was left that save reports assume?
 // Testnet rarely liquidates; on mainnet rpc2 serves the wide log ranges this needs:
 //   PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc2.monad.xyz \
-//     pnpm --filter @airbag/spike liquidations [blocks, default 3000000]
+//     pnpm --filter @airbag/tools liquidations [blocks, default 3000000]
 
 import {
   type ChainLiquidation,

@@ -1,7 +1,7 @@
 'use client';
 
-// Step 2 (design/LinkKey.dc.html). The key and secret go over TLS straight to the engine, which
-// verifies them with Perpl before storing anything (ADR 0006). Perpl doesn't expose a key's IP
+// Step 2. The key and secret go over TLS straight to the engine, which
+// verifies them with Perpl before storing anything (docs/ARCHITECTURE.md). Perpl doesn't expose a key's IP
 // allow-list, so the user confirms it and the result says exactly what was checked.
 
 import Link from 'next/link';

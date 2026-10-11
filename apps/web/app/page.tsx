@@ -233,7 +233,7 @@ export default async function Landing() {
             <h2 id="math-title" className={`display ${s.h2}`}>
               A liquidation shares its proceeds. A trim pays trading fees and keeps the rest open.
             </h2>
-            {/* A dated replay anyone can rerun (spike/backtest.ts), not a live count. */}
+            {/* A dated replay anyone can rerun (tools/backtest.ts), not a live count. */}
             <p className={s.stat}>
               <span className="num liq">{backtest.replayed}</span> Perpl mainnet liquidations,
               replayed through Airbag’s engine on the marks Perpl published: its line was crossed

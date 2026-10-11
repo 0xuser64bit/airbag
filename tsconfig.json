@@ -5,6 +5,8 @@
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
     "noImplicitOverride": true,
@@ -21,7 +23,7 @@
     "apps/engine/src",
     "apps/engine/test",
     "playwright.config.ts",
-    "spike",
+    "tools",
     "vitest.config.ts"
   ]
 }

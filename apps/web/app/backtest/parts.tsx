@@ -43,15 +43,15 @@ export function story(r: BacktestRow): string {
   const lead =
     warning === null
       ? ''
-      : `Its Airbag line, ${fmt.price(r.line)}, was crossed ${fmt.duration(warning * 1000)} earlier. `;
+      : `Its Airbag line, ${fmt.usd(r.line)}, was crossed ${fmt.duration(warning * 1000)} earlier. `;
   const what = firstTrim
-    ? `Airbag’s replay trimmed ${fmt.pct(firstTrim.trimmed, 1)} at ${fmt.price(firstTrim.fill)}${trims.length > 1 ? `, then ${trims.length - 1} more time${trims.length > 2 ? 's' : ''}` : ''}, and liquidation moved to ${fmt.price(trims.at(-1)?.liquidationAfter)}. `
+    ? `Airbag’s replay trimmed ${fmt.pct(firstTrim.trimmed, 1)} at ${fmt.usd(firstTrim.fill)}${trims.length > 1 ? `, then ${trims.length - 1} more time${trims.length > 2 ? 's' : ''}` : ''}, and liquidation moved to ${fmt.usd(trims.at(-1)?.liquidationAfter)}. `
     : 'It was one lot, too small to trim within the 50% cap. ';
   const held =
     r.outcome === 'open' || r.outcome === 'liquidated-later'
       ? `When Perpl liquidated the original, the trimmed position was still open, worth ${fmt.usd(r.atLiquidation)}.`
       : '';
-  return `Perpl liquidated this ${r.market} ${r.side} at a mark of ${fmt.price(r.markAtLiquidation)} and returned ${fmt.usd(r.returned)}. ${lead}${what}${held}`;
+  return `Perpl liquidated this ${r.market} ${r.side} at a mark of ${fmt.usd(r.markAtLiquidation)} and returned ${fmt.usd(r.returned)}. ${lead}${what}${held}`;
 }
 
 export function traceProps(r: BacktestRow) {

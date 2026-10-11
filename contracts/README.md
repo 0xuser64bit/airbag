@@ -1,7 +1,7 @@
 # AirbagLog
 
 A public, append-only record of what Airbag did on Perpl, checked against Perpl's own state on
-Monad (ADR 0009, [0016](../docs/adr/0016-airbaglog-reads-perpl.md)). It holds no funds and has
+Monad. See [Architecture](../docs/ARCHITECTURE.md). It holds no funds and has
 no power over positions.
 
 - `liquidationPrice(perpId, accountId)`: any Perpl position's liquidation price, computed from
@@ -22,8 +22,8 @@ as Perpl's perpetual id. `reason` is 0 for a trim (close, then re-add), 1 for sp
 
 ```bash
 pnpm contracts:test                                             # Foundry's Docker image, pinned by digest
-forge test                                                      # or a local Foundry
-MONAD_FORK_RPC=https://rpc1.monad.xyz forge test --match-contract Fork -vv   # against Perpl mainnet
+(cd contracts && forge test)                                    # or a local Foundry
+(cd contracts && MONAD_FORK_RPC=https://rpc1.monad.xyz forge test --match-contract Fork -vv)   # against Perpl mainnet
 ```
 
 The fork test runs `liquidationPrice` on real open positions in five markets of Perpl's mainnet
@@ -35,7 +35,8 @@ is skipped without `MONAD_FORK_RPC`.
 
 The owner deploys once per network, with a separate, low-value hot wallet as the writer. The
 constructor takes the writer, Perpl's Exchange (testnet `0x1964C32f0bE608E7D29302AFF5E61268E72080cc`,
-mainnet `0x34B6552d57a35a1D042CcAe1951BD1C370112a6F`) and the collateral's decimals (AUSD: 6):
+mainnet `0x34B6552d57a35a1D042CcAe1951BD1C370112a6F`) and the collateral's decimals (AUSD: 6).
+Run the deployment command from `contracts/`:
 
 ```bash
 forge create src/AirbagLog.sol:AirbagLog --broadcast \
@@ -54,8 +55,8 @@ The testnet deployment reads Perpl's testnet Exchange. Checked after deploying: 
 `liquidationPrice` agreed with `@airbag/risk` to the tick on 16 of 16 open positions in BTC, ETH,
 SOL and MON.
 
-Then set `AIRBAG_LOG_ADDRESS` and `AIRBAG_LOG_PRIVATE_KEY` (the writer's key) on a live engine,
-and put the address and deploy transaction in the root README. Fund the writer with a little MON.
-On mainnet, give the web app `AIRBAG_LENS_ADDRESS` too: the wallet check then shows the contract's
+For a live testnet engine, set `AIRBAG_LOG_ADDRESS` and `AIRBAG_LOG_PRIVATE_KEY` (the writer's key) on a live engine,
+and record deployment evidence in [Verification status](../docs/VERIFICATION.md). Fund the writer with a little MON.
+After the real-money release gates are cleared, a mainnet web app can use `AIRBAG_LENS_ADDRESS` too: the wallet check then shows the contract's
 own `liquidationPrice` beside each position. On a fork of mainnet with AirbagLog deployed, it
 matched the risk package to the tick on all nine positions of a real account.

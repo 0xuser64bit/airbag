@@ -5,7 +5,7 @@ import {IPerplExchange} from "./IPerplExchange.sol";
 
 /// @title AirbagLog
 /// @notice A public, append-only record of what Airbag did on Perpl, checked against Perpl's own
-/// state on Monad (ADR 0016). A deploy's after-state is read from Perpl's Exchange when it is
+/// state on Monad. A deploy's after-state is read from Perpl's Exchange when it is
 /// recorded, not reported by Airbag: the position's size, and its liquidation price computed from
 /// its deposit, funding and maintenance margin. A save is proven by anyone, at any block where
 /// Perpl's mark is at or past the deploy's old liquidation price while the account still holds

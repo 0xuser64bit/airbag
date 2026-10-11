@@ -1,7 +1,7 @@
 // Defaults per network. Everything else (addresses, markets, decimals) comes from /pub/context.
 // https://docs.perpl.xyz/resources/for-developers/networks-and-configuration
 
-export type Network = 'testnet' | 'mainnet';
+type Network = 'testnet' | 'mainnet';
 
 export interface NetworkConfig {
   network: Network;

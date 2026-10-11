@@ -18,9 +18,6 @@ export function usd(v: number | null | undefined): string {
   return `${v < 0 ? MINUS : ''}$${body}`;
 }
 
-/** A price level: whole dollars from $100, then enough places for small-priced markets. */
-export const price = usd;
-
 /** Observed fee, with a distinct unknown state for interrupted/legacy receipts. */
 export const fee = (v: number | null | undefined): string =>
   v == null ? 'unconfirmed' : v === 0 ? '$0' : usd(v);

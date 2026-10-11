@@ -27,7 +27,7 @@ describe('effectiveEntryPrice (Q16 residue, vectors from dex-sdk position.rs)', 
   });
 });
 
-describe('safe rounding (ADR 0008)', () => {
+describe('safe rounding (docs/ARCHITECTURE.md)', () => {
   it('rounds trims up to the next lot, never past the position', () => {
     expect(lotsToClose(100_000, 0.48905)).toBe(48_905);
     expect(lotsToClose(100_000, 0.489051)).toBe(48_906);

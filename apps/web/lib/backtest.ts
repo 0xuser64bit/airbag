@@ -1,4 +1,4 @@
-// The backtest: every Perpl liquidation replayed through Airbag's engine. spike/backtest.ts
+// The backtest: every Perpl liquidation replayed through Airbag's engine. tools/backtest.ts
 // writes backtest.json from public chain data; the /backtest pages read it on the server
 // (app/backtest/data.ts), so the file never ships to the browser. This module is its shape and
 // the formatting both sides share.
@@ -118,7 +118,7 @@ export const warningSeconds = (r: BacktestRow): number | null =>
   r.trigger ? (r.block - r.trigger.block) * BLOCK_S : null;
 
 /** Seconds per Monad block, measured over 6M mainnet blocks. */
-export const BLOCK_S = 0.302;
+const BLOCK_S = 0.302;
 
 /** −50 min · 0 · +2 h, from blocks relative to the liquidation. */
 export function relative(blocks: number): string {

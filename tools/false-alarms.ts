@@ -8,7 +8,7 @@
 // first, beside the same position untouched (the paused replay), under the backtest's own fill
 // assumptions. Writes apps/web/lib/false-alarms.json.
 //   PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc2.monad.xyz \
-//     pnpm --filter @airbag/spike false-alarms
+//     pnpm --filter @airbag/tools false-alarms
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import {

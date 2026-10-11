@@ -1,4 +1,4 @@
-// Writes deploys and proves saves on the AirbagLog contract (ADR 0009, 0016) from the engine's
+// Writes deploys and proves saves on the AirbagLog contract (docs/ARCHITECTURE.md) from the engine's
 // hot wallet. The contract reads each deploy's after-state from Perpl itself and checks a save
 // against Perpl's mark, so the engine sends only what it saw before the deploy. Writes are
 // queued one at a time so nonces stay in order, and a failure is logged, never thrown: the

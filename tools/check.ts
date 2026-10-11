@@ -3,7 +3,7 @@
 // way the live guard does (toRiskPosition: side decoding, the Q16 entry residue, decimals, and
 // funding from cumulative sums since the entry block), and compares the unrealized PnL and the
 // funding with the contract's own deltaPnlCNS and premiumPnlCNS. No key, no funds.
-// Usage: pnpm --filter @airbag/spike check [accountId ...]
+// Usage: pnpm --filter @airbag/tools check [accountId ...]
 // Without ids it checks the first 25 accounts that hold a position. PERPL_NETWORK picks the chain.
 
 import {

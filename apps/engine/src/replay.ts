@@ -1,6 +1,6 @@
 // Replays a recorded mark path through the real engine: one position on a paper exchange, the
 // production guard, and the marks Perpl published, block by block. The backtest
-// (spike/backtest.ts) runs every Perpl liquidation through it. Nothing is sent anywhere.
+// (tools/backtest.ts) runs every Perpl liquidation through it. Nothing is sent anywhere.
 
 import type { Market, PerplPosition } from '@airbag/perpl';
 import { scaled, toRiskPosition } from '@airbag/perpl';

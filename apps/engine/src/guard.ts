@@ -1,5 +1,5 @@
 // One guard per linked account. Every block it values each covered position at the mark,
-// decides whether the Airbag line is crossed, and runs a deploy (brief §4, ADR 0002):
+// decides whether the Airbag line is crossed, and runs a deploy (docs/ARCHITECTURE.md):
 //   spare margin, when that alone reaches the target; otherwise
 //   a reduce-only IOC close, then IncreasePositionCollateral of the released equity,
 //   retrying the remainder of a partial fill next block, up to maxAttempts; then re-arm with
@@ -95,13 +95,7 @@ export interface GuardDeps {
   staleBlocks?: number;
 }
 
-export type PositionStatus =
-  | 'armed'
-  | 'deploying'
-  | 're-armed'
-  | 'paused'
-  | 'blocked'
-  | 'not-covered';
+type PositionStatus = 'armed' | 'deploying' | 're-armed' | 'paused' | 'blocked' | 'not-covered';
 
 export interface PositionView {
   marketId: number;
@@ -754,7 +748,7 @@ export class AccountGuard {
       return this.finish(mkt, d, this.exchange.head, 'done', fill);
     }
 
-    // Re-add what the close released (ADR 0002), from the balance change, capped by the model.
+    // Re-add what the close released (docs/ARCHITECTURE.md), from the balance change, capped by the model.
     d.phase = 'readding';
     this.save(d);
     await this.until(() => BigInt(this.exchange.account?.b ?? '0') !== balanceBefore);
@@ -957,7 +951,7 @@ export class AccountGuard {
   }
 
   /**
-   * Save or precaution for finished deploys (brief §4). The value kept stays live while the
+   * Save or precaution for finished deploys (see docs/RISK-MODEL.md). The value kept stays live while the
    * position is open and freezes when it closes; it's persisted every ~30 s meanwhile.
    */
   private watchSaves(head: number) {

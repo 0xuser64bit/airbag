@@ -14,8 +14,8 @@ coverage/
 *.pem
 *.key
 
-# spike output (may contain account ids)
-spike/out/
+# Verification output (may contain account ids)
+tools/out/
 
 .DS_Store
 

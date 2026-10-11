@@ -1,7 +1,7 @@
 'use client';
 
-// The engine session: a bearer token from Sign-In with Ethereum (ADR 0011). It lives in this
-// browser's localStorage and can only change settings; it can never read the API secret.
+// The engine session: a bearer token from Sign-In with Ethereum (docs/ARCHITECTURE.md). It lives in this
+// browser's localStorage and authorizes this wallet's operations; it can never read the API secret.
 
 import { useEffect, useState } from 'react';
 

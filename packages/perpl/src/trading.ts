@@ -65,7 +65,7 @@ export interface TradingOptions {
   WebSocket?: WebSocketCtor;
 }
 
-export type OrderResult =
+type OrderResult =
   | 'filled'
   | 'partial'
   | 'unfilled'

@@ -7,7 +7,7 @@ export * as fmt from './format.ts';
 
 export type Side = 'long' | 'short';
 
-/** An isolated-margin Perpl position, converted from scaled integers at the edge (ADR 0008). */
+/** An isolated-margin Perpl position, converted from scaled integers at the edge (docs/ARCHITECTURE.md). */
 export interface Position {
   side: Side;
   /** n: size in base units. */
@@ -116,18 +116,18 @@ export type Plan =
     };
 
 /** The liquidation price a deploy at `price` aims for: d away from the price. */
-export const targetLiquidation = (side: Side, price: number, d: number): number =>
+const targetLiquidation = (side: Side, price: number, d: number): number =>
   price * (1 - direction(side) * d);
 
 /** Collateral that must be added for liquidation to reach `target`. */
-export const marginNeeded = (p: Position, target: number): number =>
+const marginNeeded = (p: Position, target: number): number =>
   direction(p.side) * p.size * (p.entry - target) -
   (p.deposit + p.funding - maintenanceRequirement(p));
 
 /**
  * Liquidation after keeping `remaining` of the position at `price` and re-adding the equity the
  * close released: L'(s) = P + σ·m − σ·eq(P)/(s·n), with σ the direction and m = r·E
- * (brief §4, step 2).
+ * (see docs/RISK-MODEL.md).
  */
 export function liquidationAfterTrim(p: Position, price: number, remaining: number): number {
   const d = direction(p.side);
@@ -171,7 +171,7 @@ export const applyMargin = (p: Position, amount: number): Position => ({
 
 /**
  * The position after closing `fraction` of it at `fill` and re-adding the released equity
- * (ADR 0002). Perpl shrinks deposit and funding pro-rata and settles the closed part's equity,
+ * (docs/ARCHITECTURE.md). Perpl shrinks deposit and funding pro-rata and settles the closed part's equity,
  * (1 − s)·equity(fill), to the balance; Airbag puts it back into the position.
  */
 export function applyTrim(

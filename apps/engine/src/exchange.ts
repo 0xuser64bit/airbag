@@ -1,4 +1,4 @@
-// The exchange port the guard trades through (ADR 0012). TradingClient is the live adapter;
+// The exchange port the guard trades through (docs/ARCHITECTURE.md). TradingClient is the live adapter;
 // PaperExchange is the simulated one used by simulation mode and the tests. Both enforce the
 // order-type allowlist, and the paper one mimics what matters on Perpl: IOC closes fill at the
 // mark within the limit on a later block, the deposit shrinks pro-rata, the closed part's

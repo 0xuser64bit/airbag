@@ -6,7 +6,7 @@
 // (apps/engine/src/replay.ts). A control replay with Airbag paused has to liquidate where Perpl
 // did. Writes apps/web/lib/backtest.json, the site's /backtest page.
 //   PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc2.monad.xyz \
-//     pnpm --filter @airbag/spike backtest [blocks, default 6000000]
+//     pnpm --filter @airbag/tools backtest [blocks, default 6000000]
 
 import { writeFileSync } from 'node:fs';
 import {

@@ -1,92 +1,87 @@
 # Contributing
 
-Airbag is a small TypeScript monorepo with one hard rule that outranks most style opinions: **it
-moves a trader's money.** Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing
-structure, and [docs/PERPL.md](docs/PERPL.md) before touching the exchange layer.
+Read [Architecture](docs/ARCHITECTURE.md) before changing package boundaries,
+[Risk model](docs/RISK-MODEL.md) before changing calculations, and
+[Perpl integration](docs/PERPL.md) before changing exchange behavior. UI changes also follow
+[apps/web/DESIGN.md](apps/web/DESIGN.md).
 
-## Commands
+## Setup and checks
 
-```bash
-pnpm install
-
-pnpm check        # lint + typecheck + unit and property tests (the fast gate; CI also runs
-                  # gitleaks over full history, pnpm audit, e2e + build, contracts, indexer, engine image)
-pnpm lint         # biome check
-pnpm format       # biome check --write
-pnpm typecheck    # tsc --noEmit: the workspace packages, the engine, apps/web, e2e
-pnpm test         # vitest run (excludes indexer/ and e2e/)
-
-pnpm dev:engine   # engine on :8787: .env.example's defaults (simulation), then your .env
-pnpm dev:web      # web app on :3000
-
-pnpm e2e          # Playwright + axe; starts the engine (simulation) and web if not running
-pnpm contracts:test   # Foundry via its Docker image
-(cd contracts && MONAD_FORK_RPC=https://rpc1.monad.xyz forge test --match-contract Fork)   # vs Perpl's Exchange
-
-pnpm --filter @airbag/indexer codegen && pnpm --filter @airbag/indexer test
-
-pnpm --filter @airbag/spike check   # position math vs Perpl's contract on testnet, no key
-PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc2.monad.xyz pnpm --filter @airbag/spike liquidations
-PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc2.monad.xyz pnpm --filter @airbag/spike backtest   # rewrites apps/web/lib/backtest.json
-PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc2.monad.xyz pnpm --filter @airbag/spike false-alarms   # rewrites apps/web/lib/false-alarms.json, over backtest.json's window
-```
-
-Operator commands, on the machine that has the engine's environment:
+Node 24 and the pnpm version in `package.json` are required. Run commands from the repository root
+unless a command explicitly changes directories.
 
 ```bash
-node apps/engine/src/cli.ts check-keys --env-file-if-exists=.env
+pnpm install --frozen-lockfile
+pnpm dev:engine
+pnpm dev:web
+
+pnpm check       # lint, engine/web/browser-test types, unit and property tests
+pnpm format
+pnpm build
+pnpm e2e        # isolated simulation engine and web app, local Chrome
+pnpm contracts:test
+pnpm --filter @airbag/indexer codegen
+pnpm --filter @airbag/indexer exec tsc -p .
+pnpm --filter @airbag/indexer test
 ```
 
-## Conventions
+CI's browser profile uses the production web build and Playwright Chromium:
 
-- **TypeScript strict, erasable syntax only.** No enums, no namespaces, no parameter properties
-  (`erasableSyntaxOnly` in the root `tsconfig.json`, which covers the packages, the engine,
-  spike and e2e; `apps/web` keeps Next's own tsconfig). Import local files
-  with the `.ts` extension. Packages export `src/*.ts`; there is no build step
-  ([ADR 0001](docs/adr/0001-typescript-monorepo.md)).
-- **Stdlib first.** `node:crypto` for Ed25519, SHA-256 and AES-GCM; the global `WebSocket`;
-  `node:http`; `node:sqlite`. Add a dependency only when the standard library genuinely can't.
-- **`packages/risk` stays pure.** No I/O, no dependencies, human units in float64. All conversion to
-  Perpl's scaled integers happens in `packages/perpl`, rounding always in the safe direction
-  ([ADR 0008](docs/adr/0008-risk-math-numerics.md)). The engine and the browser must compute the
-  same numbers from the same code, so the golden vectors in
-  [docs/RISK-MODEL.md](docs/RISK-MODEL.md) are asserted in tests at the precision the design
-  displays.
-- **The engine is the only process with state or secrets**
-  ([ADR 0010](docs/adr/0010-engine-owns-state-in-sqlite.md)). The web app talks to it over HTTP.
-- **Anything that should work without a funded key is exercised in simulation mode**
-  ([ADR 0012](docs/adr/0012-exchange-port-and-simulation.md)): unit tests on `PaperExchange`,
-  end-to-end against `ENGINE_MODE=simulation`. Label anything simulated in the UI.
-- **Logs are JSON lines.** Never log secrets, API keys, signatures or private keys.
-- **Node does not strip types from `.ts` under `node_modules`**, so the production image must keep
-  workspace packages under `packages/` (see `apps/engine/Dockerfile`).
-- Next.js 16 ships its own documentation in `apps/web/node_modules/next/dist/docs/`. Read it before
-  using an API; conventions changed.
+```bash
+AIRBAG_E2E=1 NEXT_PUBLIC_ENGINE_URL=http://localhost:8877 \
+  NEXT_PUBLIC_SITE_URL=http://localhost:3100 pnpm build
+CI=1 pnpm e2e
+```
 
-## Working on a change
+`AIRBAG_E2E` writes a separate `.next-e2e` build. Install Chromium with
+`pnpm exec playwright install chromium` if this profile needs it. Local browser tests use Chrome.
+Custom test ports must match the URLs baked into the build. Tests refuse to reuse existing servers.
 
-- **Tests first for risk math.** For everything else, a test that fails without your change.
-- **Work in simulation mode.** It is the real engine on a paper exchange, and it is the only mode
-  CI can run.
-- **Never claim something is verified that isn't.** If a control is untested, the copy says so. This
-  is a product where a trader is trusting it with a position.
-- **Don't weaken an invariant to make a test pass.** The order-type allowlist, the stale-data guard,
-  the per-position lock and the arithmetic in `packages/risk` are the product.
+## Protocol and replay checks
 
-## Commits and secrets
+These commands read public data. The replay commands replace the committed web datasets; review
+both datasets and their window together before committing a refresh.
 
-- Small commits with conventional prefixes: `feat(risk):`, `fix(engine):`, `docs(adr):`, `ci:`.
-  No co-author trailers.
-- **Run `gitleaks git . --redact` before every push.** Public test vectors that look like keys
-  (for example the RFC 8032 vector in `packages/perpl/test/auth.test.ts`) carry an inline
-  `gitleaks:allow` with a comment saying what they are.
-- No secrets, keys or private notes in the repository, ever. `.env` is gitignored; `.env.example` is
-  the template.
-- If a document in `docs/` turns out to be wrong, fix it in the same commit. Decisions that change
-  the design get a new record in `docs/adr/`, linked from the one they supersede — records are not
-  rewritten.
+```bash
+pnpm --filter @airbag/tools check
+pnpm --filter @airbag/tools measure 60
+PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc2.monad.xyz pnpm --filter @airbag/tools liquidations
+PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc2.monad.xyz pnpm --filter @airbag/tools backtest
+PERPL_NETWORK=mainnet MONAD_RPC_URL=https://rpc2.monad.xyz pnpm --filter @airbag/tools false-alarms
+(cd contracts && MONAD_FORK_RPC=https://rpc1.monad.xyz forge test --match-contract Fork)
+```
 
-## Reporting a vulnerability
+Funded testnet checks are in [Operations](docs/DEPLOY.md#testnet-verification).
+`tools/deploy.ts` is dry-run by default and refuses mainnet. Never run its `--send` path without
+authorized disposable testnet funds. Simulation is the default environment for development.
 
-Privately to the maintainer, not in a public issue. [docs/SECURITY.md](docs/SECURITY.md) has the
-threat model and the key-rotation procedures.
+## Code conventions
+
+- TypeScript is strict, with unused locals and parameters rejected. Engine and package code uses
+  erasable syntax and explicit `.ts` local imports. Workspace packages export their source;
+  Node 24 runs them without a compilation step.
+- Prefer existing helpers and Node/platform APIs. The engine uses `node:http`, `node:sqlite` and
+  `node:crypto`; it owns the only database and master key.
+- Keep `packages/risk` pure. Calculations use human units; Perpl integer conversion and safe
+  rounding belong in `packages/perpl`. Shared tests pin the browser and engine calculations.
+- Never weaken the order allowlist, dispatch safety checks, position locks or persisted recovery
+  state to satisfy a test. Preserve validation, error handling and environment binding.
+- Add focused regression tests for changed behavior. Risk changes need golden and property tests;
+  reversible wording and export changes use the existing checks.
+- Keep logs structured and redact secrets. Never log keys, signatures or tokens.
+- Use the installed Next.js docs in `apps/web/node_modules/next/dist/docs/` before changing framework
+  behavior. Node does not strip types under `node_modules`; preserve the source layout in the engine image.
+
+## Documentation and commits
+
+Update the relevant current guide in the same commit as its behavior. Put durable design rationale
+in Architecture; use Git history for superseded proposals and completed work logs. Historical replay
+results need their original date and assumptions. Do not present simulation or a dated snapshot as a
+live trading result.
+
+Use small, coherent commits with conventional prefixes. No co-author trailers. CI runs the full
+checks listed above, dependency auditing, a full-history secret scan and an engine-image smoke test.
+Before pushing, run `gitleaks git . --redact` (or the CI scanner). Public test-vector exceptions must
+identify the published source. `.env` files, databases, private notes and tool caches stay untracked.
+
+Report vulnerabilities privately to the maintainer; see [Security](docs/SECURITY.md).

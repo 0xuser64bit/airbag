@@ -28,7 +28,7 @@ export interface MarketFeedOptions {
   url: string;
   chainId: number;
   markets: Market[];
-  /** Never act when data trails the head by more than this many blocks (brief §5). */
+  /** Never act when data trails the head by more than this many blocks (see docs/ARCHITECTURE.md). */
   staleBlocks: number;
   /**
    * Markets whose funding must be known before data counts as fresh: the covered ones. A market

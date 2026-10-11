@@ -1,4 +1,4 @@
-// The engine's HTTP API (ADR 0003, 0011): health, onboarding, settings, the live dashboard
+// The engine's HTTP API (docs/ARCHITECTURE.md): health, onboarding, settings, the live dashboard
 // stream, deploy receipts and public save reports. Plain node:http: a handful of routes.
 // Browsers call it cross-origin with a bearer token; only WEB_ORIGIN origins get CORS.
 
@@ -854,7 +854,7 @@ const decode = (s: string) => {
 };
 
 /** Merges a partial settings update onto the current settings, validating every field. */
-export function parseSettings(
+function parseSettings(
   current: Settings,
   body: Record<string, unknown>,
 ): Omit<Settings, 'updatedAt'> {

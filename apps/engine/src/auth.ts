@@ -1,4 +1,4 @@
-// Sign-In with Ethereum (EIP-4361) and bearer sessions (ADR 0011). Nonces are single-use and
+// Sign-In with Ethereum (EIP-4361) and bearer sessions (docs/ARCHITECTURE.md). Nonces are single-use and
 // short-lived; sessions are random tokens stored only as SHA-256 hashes.
 
 import { createHash, randomBytes } from 'node:crypto';
@@ -9,8 +9,7 @@ import type { Store } from './db.ts';
 const NONCE_TTL_MS = 10 * 60_000;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60_000;
 
-export const hashToken = (token: string): string =>
-  createHash('sha256').update(token).digest('hex');
+const hashToken = (token: string): string => createHash('sha256').update(token).digest('hex');
 
 export interface AuthOptions {
   store: Store;

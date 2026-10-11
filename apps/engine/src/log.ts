@@ -1,5 +1,5 @@
 // JSON-lines logger. Never logs secrets: any field whose name looks sensitive is redacted,
-// however deep it sits (ADR 0003).
+// however deep it sits (docs/ARCHITECTURE.md).
 
 type Level = 'debug' | 'info' | 'warn' | 'error';
 const ORDER: Record<Level, number> = { debug: 10, info: 20, warn: 30, error: 40 };

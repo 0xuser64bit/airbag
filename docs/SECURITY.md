@@ -3,7 +3,7 @@
 What Airbag protects, how, and what it doesn't claim. Report a vulnerability privately to the owner,
 not in a public issue.
 
-Design decisions behind these controls are in [adr/](adr/); the risk model they protect is in
+Design decisions behind these controls are in [Architecture](ARCHITECTURE.md); the risk model they protect is in
 [RISK-MODEL.md](RISK-MODEL.md).
 
 ## What an attacker would want
@@ -14,14 +14,14 @@ A user's Perpl API key. It can't withdraw or transfer (Perpl refuses that for ev
 
 | Threat | Control | Where |
 |---|---|---|
-| Airbag itself opens, grows or flips a position | Only order types 3, 4 (reduce-only closes, clamped by Perpl), 6 (add the user's own margin) and 5 leave the engine. The runtime allowlist checks immediately before send. The one cancel is a link-time scope probe with a high safe uint64 id outside the open-order snapshot. Its live acceptance remains a testnet gate. | `packages/perpl/src/orders.ts`, [ADR 0003](adr/0003-engine-runtime.md) |
-| A stored secret leaks from the database | Envelope encryption: a random AES-256-GCM data key per secret, wrapped by a versioned master key from the host's secret store; the wallet and account are associated data, so a ciphertext can't be moved to another row. The web tier has no database access at all. | `apps/engine/src/vault.ts`, [ADR 0006](adr/0006-api-key-custody.md), [0010](adr/0010-engine-owns-state-in-sqlite.md) |
+| Airbag itself opens, grows or flips a position | Only order types 3, 4 (reduce-only closes, clamped by Perpl), 6 (add the user's own margin) and 5 leave the engine. The runtime allowlist checks immediately before send. The one cancel is a link-time scope probe with a high safe uint64 id outside the open-order snapshot. Trade-scope admission was exercised in the recorded testnet runs. | `packages/perpl/src/orders.ts`, [Architecture](ARCHITECTURE.md) |
+| A stored secret leaks from the database | Envelope encryption: a random AES-256-GCM data key per secret, wrapped by a versioned master key from the host's secret store; the wallet and account are associated data, so a ciphertext can't be moved to another row. The web tier has no database access at all. | `apps/engine/src/vault.ts`, [Architecture](ARCHITECTURE.md) |
 | A secret leaks through logs | JSON logs redact any field whose name looks like a secret, at any depth. The secret is never returned by any endpoint. | `apps/engine/src/log.ts` |
 | A key works from somewhere else | The user sets the key's IP allow-list to the engine's static egress IPs. Perpl doesn't let anyone read an allow-list back, so Airbag can't verify it; the UI says exactly that and asks the user to confirm. | `/link-key` |
 | Someone links a key to a wallet that isn't theirs | Linking needs a SIWE session, and the engine checks that Perpl's wallet snapshot for the key is that same wallet. | `apps/engine/src/accounts.ts` |
 | A Read key is linked and silently can't act | The scope probe at link time: Perpl refuses a Read key's order frame with 403. Lost, timed-out or otherwise unproved scope is refused; no key is stored. Key changes serialize per wallet and independently check pending deploy locks before and after verification. | `checkKey`, `Accounts` |
 | Phishing or replaying a sign-in | SIWE version, URI host, issued date, validity window, domain and chain are checked. Nonces expire in 10 minutes and are consumed synchronously before asynchronous signature recovery, including concurrent requests. | `apps/engine/src/auth.ts` |
-| Session theft | Random 32-byte bearer tokens, stored as SHA-256 hashes, 7-day expiry, logout deletes them. A session can change its own wallet's settings and link or unlink its key; it can never read a secret. Demo mode (deploys after a 0.3% move) is refused for wallets not on `DEMO_WALLETS`, so a stolen session can't turn Airbag into a position closer. | [ADR 0011](adr/0011-bearer-sessions.md) |
+| Session theft | Random 32-byte bearer tokens, stored as SHA-256 hashes, 7-day expiry, logout deletes them. A session can change its own wallet's settings and link or unlink its key; it can never read a secret. Demo mode (deploys after a 0.3% move) is refused for wallets not on `DEMO_WALLETS`, so a stolen session can't turn Airbag into a position closer. | [Architecture](ARCHITECTURE.md) |
 | A script injected into the web app steals a pasted key or the session | Content-Security-Policy: the page can only connect to itself and the engine, can't be framed, loads no third-party scripts; no `dangerouslySetInnerHTML` anywhere. The key is sent once over TLS and never stored in the browser. | `apps/web/next.config.ts` |
 | API abuse | CORS only for `WEB_ORIGIN`, JSON bodies capped at 16 KB, per-IP token buckets per route (tighter on sign-in, lookup and key linking; ten times looser in simulation, which calls nothing upstream, so a demo audience sharing one Wi-Fi IP isn't refused), wallet lookups cached for 15 s. | `apps/engine/src/api.ts` |
 | Acting on bad data | Every order rechecks pause, feed/account freshness, frozen/forwarding state, account and position identity after the request-budget wait. Explicit execution deadlines are persisted before send. Recovery waits beyond a lost order's deadline and holds while unsafe; the original policy and lot cap survive restart. Live funding and fee schedules must be known. | `packages/perpl/src/market.ts`, `apps/engine/src/guard.ts` |
@@ -42,26 +42,25 @@ A user's Perpl API key. It can't withdraw or transfer (Perpl refuses that for ev
 
 ### Master key
 
-Generate with `openssl rand -base64 32` and keep it only on the engine's host: on the VM, in `/etc/airbag/engine.env` (root:airbag, 0640), where deploys only ever touch `WEB_ORIGIN`. Losing it means every user must link their key again; leaking it together with the database file exposes every stored key. The VM is shared with other projects that have root on it ([ADR 0015](adr/0015-free-shared-vm.md)): acceptable for testnet keys, not for real funds.
+Generate with `openssl rand -base64 32` and keep it only on the engine's host: on the VM, in `/etc/airbag/engine.env` (root:airbag, 0640), where deploys only ever touch `WEB_ORIGIN`. Losing it means every user must link their key again; leaking it together with the database file exposes every stored key. The VM is shared with other projects that have root on it: acceptable for testnet keys, not for real funds.
 
 ### Rotating the master key
 
 1. Generate a new key. Set `MASTER_KEY` to it, `MASTER_KEY_VERSION` to the next version, and keep the old one as `MASTER_KEY_<old version>`. Restart the engine.
-2. Take a SQLite backup (see DEPLOY), then run `node --env-file-if-exists=.env apps/engine/src/cli.ts rotate-master-key`. It re-wraps each stored key's data key under the new master key, proving each new envelope opens before replacing the old one. The ciphertexts don't change.
+2. Take a SQLite backup (see [Operations](DEPLOY.md#database-binding-backup-and-restore)), then run `node --env-file-if-exists=.env apps/engine/src/cli.ts rotate-master-key`. It re-wraps each stored key's data key under the new master key, proving each new envelope opens before replacing the old one. The ciphertexts don't change.
 3. Run `node --env-file-if-exists=.env apps/engine/src/cli.ts check-keys`: every key should report the new version. Set `DATABASE_PATH` to the existing target file for both commands.
-4. Remove `MASTER_KEY_<old version>` and restart the engine.
+4. Remove `MASTER_KEY_<old version>` from the running service and restart. Retain it separately for backups that still use that version.
 
 ### If the database or a key may have leaked
 
 1. Tell affected users to revoke their keys on Perpl's API keys page (this stops the key everywhere, at once) and link new ones.
 2. Rotate the master key as above.
-3. Rotate `AIRBAG_LOG_PRIVATE_KEY` (deploy a new writer with `setWriter` from the owner wallet) and the VAPID keys if they may be exposed.
+3. Rotate `AIRBAG_LOG_PRIVATE_KEY` (create a fresh writer wallet, then call `setWriter` from the owner wallet) and the VAPID keys if they may be exposed.
 
-## Not yet verified
+## Verification limits
 
-- The whole live path against a funded testnet account. Everything above is exercised against the
-  paper exchange and Perpl's public data. On Perpl testnet, one manual trim and re-add has run
-  through the same order builders, and the engine has made one live deploy of its own
-  ([DEPLOY.md](DEPLOY.md#the-engines-first-live-deploy-2026-10-10)). A sustained live run and
-  mainnet are still the gate.
-- An independent review of the engine's key handling.
+A manual close/re-add and two engine-triggered testnet deploys were recorded on 2026-10-10
+([evidence](VERIFICATION.md#live-testnet-evidence)). These establish the exercised protocol path,
+not sustained safety under failures. Independent review of key custody and money movement,
+restart/fault testing, dedicated hosting, backup restore and real alert delivery remain
+[real-money release gates](VERIFICATION.md#real-money-release-gates). No mainnet trading is released.

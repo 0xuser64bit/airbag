@@ -1,4 +1,4 @@
-// Envelope encryption for Perpl API keys (ADR 0006). Each secret gets its own random data key
+// Envelope encryption for Perpl API keys (docs/ARCHITECTURE.md). Each secret gets its own random data key
 // (AES-256-GCM, 96-bit nonce); the data key is wrapped with the master key from the host's
 // secret store. Associated data binds a ciphertext to its row, so rows can't be swapped.
 

@@ -1,5 +1,5 @@
 // Thin wrapper over Node's global WebSocket: parse every frame once, fan out to listeners,
-// and let callers await the next matching message. Listeners must stay cheap (ADR 0003).
+// and let callers await the next matching message. Listeners must stay cheap (docs/ARCHITECTURE.md).
 // Long-lived clients (trading.ts, market.ts) reconnect by opening a new socket in a loop.
 
 import type { Message } from './types.ts';
@@ -149,7 +149,7 @@ export const sleep = (ms: number, signal?: AbortSignal): Promise<void> =>
   });
 
 /** Reconnect delays from Perpl's docs, then 60 s. */
-export const BACKOFF_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 32_000, 60_000];
+const BACKOFF_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 32_000, 60_000];
 export const backoff = (attempt: number): number =>
   BACKOFF_MS[Math.min(attempt, BACKOFF_MS.length - 1)] ?? 60_000;
 

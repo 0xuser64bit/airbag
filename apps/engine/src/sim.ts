@@ -1,4 +1,4 @@
-// Simulation mode (ADR 0012): the real engine, guard and API against a paper exchange and a
+// Simulation mode (docs/ARCHITECTURE.md): the real engine, guard and API against a paper exchange and a
 // scripted price feed. Used for development, CI and demos without funds. Everything it shows
 // is labelled as simulated; no transaction hashes are invented.
 //

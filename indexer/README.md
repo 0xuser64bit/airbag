@@ -1,6 +1,7 @@
 # Indexer
 
-An [Envio HyperIndex](https://docs.envio.dev) project over Monad (ADR 0009):
+An [Envio HyperIndex](https://docs.envio.dev) project over Monad. See
+[Architecture](../docs/ARCHITECTURE.md) for its role:
 
 - **AirbagLog**: every deploy Airbag recorded (`Deploy`), marked `saved` when the old liquidation
   price was reached, plus running totals (`AirbagTotals`).

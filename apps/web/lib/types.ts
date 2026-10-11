@@ -3,8 +3,6 @@
 
 import type { Position, Side } from '@airbag/risk';
 
-export type { Position, Side };
-
 export interface EngineConfig {
   mode: 'live' | 'simulation';
   network: 'testnet' | 'mainnet';
@@ -19,7 +17,7 @@ export interface EngineConfig {
   slippageBps: number;
 }
 
-export interface LookupPosition {
+interface LookupPosition {
   marketId: number;
   symbol: string;
   side: Side;
@@ -120,8 +118,8 @@ export interface PositionView {
   };
 }
 
-export type DeployPhase = 'closing' | 'readding' | 'done' | 'failed';
-export type DeployOutcome = 'pending' | 'save' | 'precaution';
+type DeployPhase = 'closing' | 'readding' | 'done' | 'failed';
+type DeployOutcome = 'pending' | 'save' | 'precaution';
 
 export interface DeploySummary {
   id: string;
@@ -151,7 +149,7 @@ export interface TimelineEntry {
   tone?: 'airbag' | 'liquidation';
 }
 
-export interface DeployData {
+interface DeployData {
   trigger: { block: number; at: number; mark: number; line: number; reference: number };
   before: {
     size: number;

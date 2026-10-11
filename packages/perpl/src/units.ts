@@ -1,4 +1,4 @@
-// Scaled-integer <-> human conversion with the rounding direction chosen for safety (ADR 0008).
+// Scaled-integer <-> human conversion with the rounding direction chosen for safety (docs/ARCHITECTURE.md).
 
 import { direction, type Side } from '@airbag/risk';
 

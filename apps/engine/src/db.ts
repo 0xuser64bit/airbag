@@ -1,4 +1,4 @@
-// The engine owns all state in one SQLite file (ADR 0010). node:sqlite is synchronous, which
+// The engine owns all state in one SQLite file (docs/ARCHITECTURE.md). node:sqlite is synchronous, which
 // suits a single process that writes on deploys and settings changes only, never per block.
 // Migrations are an append-only list tracked by PRAGMA user_version.
 
@@ -119,9 +119,9 @@ export interface Link {
   linkedAt: number;
 }
 
-export type DeployKind = 'trim' | 'margin';
-export type DeployPhase = 'closing' | 'readding' | 'done' | 'failed';
-export type DeployOutcome = 'pending' | 'save' | 'precaution';
+type DeployKind = 'trim' | 'margin';
+type DeployPhase = 'closing' | 'readding' | 'done' | 'failed';
+type DeployOutcome = 'pending' | 'save' | 'precaution';
 
 export interface TimelineEntry {
   block: number;
@@ -131,8 +131,8 @@ export interface TimelineEntry {
   tone?: 'airbag' | 'liquidation';
 }
 
-/** Numbers are human units (dollars, base units): receipts, not balances (ADR 0010). */
-export interface DeployData {
+/** Numbers are human units (dollars, base units): receipts, not balances (docs/ARCHITECTURE.md). */
+interface DeployData {
   trigger: { block: number; at: number; mark: number; line: number; reference: number };
   before: {
     size: number;

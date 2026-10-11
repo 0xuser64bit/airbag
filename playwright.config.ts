@@ -1,4 +1,4 @@
-// End-to-end: the real web app against the real engine in simulation mode (ADR 0012).
+// End-to-end: the real web app against the real engine in simulation mode (docs/ARCHITECTURE.md).
 // `pnpm e2e` starts fresh, isolated servers and refuses to reuse existing processes.
 
 import { defineConfig, devices } from '@playwright/test';

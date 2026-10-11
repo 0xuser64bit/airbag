@@ -148,15 +148,15 @@ function whatAirbagDoes(x: Live): string {
   const p = x.plan;
   if (p.kind === 'none')
     return x.past
-      ? `${x.symbol} is past its Airbag line, ${fmt.price(x.line)}, but liquidation is still more than 10% away, so Airbag would hold.`
-      : `If ${x.symbol} reaches ${fmt.price(x.line)}, Airbag has nothing to do: liquidation is already 10% away.`;
+      ? `${x.symbol} is past its Airbag line, ${fmt.usd(x.line)}, but liquidation is still more than 10% away, so Airbag would hold.`
+      : `If ${x.symbol} reaches ${fmt.usd(x.line)}, Airbag has nothing to do: liquidation is already 10% away.`;
   const at = x.past
-    ? `${x.symbol} is past its Airbag line, ${fmt.price(x.line)}, so Airbag would act now: it`
-    : `If ${x.symbol} reaches ${fmt.price(x.line)}, Airbag`;
+    ? `${x.symbol} is past its Airbag line, ${fmt.usd(x.line)}, so Airbag would act now: it`
+    : `If ${x.symbol} reaches ${fmt.usd(x.line)}, Airbag`;
   if (p.kind === 'margin')
-    return `${at} adds ${fmt.usd(p.amount)} of spare margin, moving liquidation to ${fmt.price(p.liquidation)}.`;
+    return `${at} adds ${fmt.usd(p.amount)} of spare margin, moving liquidation to ${fmt.usd(p.liquidation)}.`;
   const size = `${fmt.size(p.fraction * x.position.size, x.sizeDecimals)} ${x.symbol}`;
-  return `${at} trims ${size}${p.capped ? ', the most it allows,' : ''} and puts the margin back: liquidation ${p.liquidation === null ? 'gone with the position' : `moves to ${fmt.price(p.liquidation)}`}.`;
+  return `${at} trims ${size}${p.capped ? ', the most it allows,' : ''} and puts the margin back: liquidation ${p.liquidation === null ? 'gone with the position' : `moves to ${fmt.usd(p.liquidation)}`}.`;
 }
 
 export default async function WalletPage({ searchParams }: Props) {
@@ -230,7 +230,7 @@ export default async function WalletPage({ searchParams }: Props) {
                   {x.onchain !== undefined && (
                     <p className="faint">
                       AirbagLog on Monad computes its liquidation price from Perpl’s contract:{' '}
-                      <span className="num">{fmt.price(x.onchain)}</span>
+                      <span className="num">{fmt.usd(x.onchain)}</span>
                       {Math.abs(x.onchain - x.liquidation) <= 1.5 * 10 ** -x.priceDecimals
                         ? ', the same to the tick.'
                         : '.'}

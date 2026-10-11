@@ -22,7 +22,7 @@ const LiveContext = createContext<Live>({ connected: false, failed: false, unaut
 export const useLive = () => useContext(LiveContext);
 
 /** Re-renders every `ms` so "checked 0.3 s ago" counts up between blocks. */
-export function useNow(ms = 100) {
+function useNow(ms = 100) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), ms);
@@ -38,7 +38,7 @@ const NAV = [
 ] as const;
 
 /** "Balanced · 10% · max 50%": the mode Airbag is flying in. Short drops the cap, for phones. */
-export function modeText(st: Settings, short = false): string {
+function modeText(st: Settings, short = false): string {
   if (!st.armed) return 'Paused';
   if (st.demo) return short ? 'Demo' : 'Demo · 0.3% move';
   return `${st.sensitivity} · ${st.targetPct}%${short ? '' : ` · max ${st.maxTrimPct}%`}`;

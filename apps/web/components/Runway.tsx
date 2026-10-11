@@ -50,7 +50,7 @@ const GAP = 12;
  * and a backward sweep push neighbours apart and inside the track. What can't fit goes to the
  * second row; the lowest priority is dropped last.
  */
-export function placeLabels(labels: Label[], width: number, w: (id: string) => number) {
+function placeLabels(labels: Label[], width: number, w: (id: string) => number) {
   const rows: Label[][] = [[], []];
   for (const l of [...labels].sort((a, b) => b.pri - a.pri)) {
     const row = rows.find((r) => sweep([...r, l], width, w) !== null);

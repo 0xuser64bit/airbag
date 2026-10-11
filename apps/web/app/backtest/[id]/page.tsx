@@ -90,10 +90,10 @@ export default async function LiquidationPage({ params }: Props) {
           </p>
           <dl className={`rows ${s.sideRows}`}>
             <Row k="Size" v={`${fmt.size(r.size, r.sizeDecimals)} ${r.market}`} />
-            <Row k="Entry" v={fmt.price(r.entry)} />
-            <Row k="Airbag line" v={fmt.price(r.line)} />
-            <Row k="Liquidation price" v={fmt.price(r.liquidation)} />
-            <Row k="Perpl’s liquidation filled at" v={fmt.price(r.liquidatedAt)} />
+            <Row k="Entry" v={fmt.usd(r.entry)} />
+            <Row k="Airbag line" v={fmt.usd(r.line)} />
+            <Row k="Liquidation price" v={fmt.usd(r.liquidation)} />
+            <Row k="Perpl’s liquidation filled at" v={fmt.usd(r.liquidatedAt)} />
             <Row
               k="Paused replay liquidated"
               v={
@@ -139,14 +139,14 @@ function steps(r: BacktestRow): Step[] {
   if (r.trigger)
     out.push({
       block: r.trigger.block,
-      text: `Mark crossed the Airbag line, at ${fmt.price(r.trigger.mark)}.`,
+      text: `Mark crossed the Airbag line, at ${fmt.usd(r.trigger.mark)}.`,
     });
   for (const d of r.deploys) {
     if (d.trimmed > 0 && d.fill !== null)
       out.push({
         block: d.filled ?? d.block,
         tone: 'airbag',
-        text: `Airbag trimmed ${fmt.pct(d.trimmed, 1)} at ${fmt.price(d.fill)}, fee ${fmt.fee(d.fee)}, and put the released margin back. Liquidation now ${fmt.price(d.liquidationAfter)}.`,
+        text: `Airbag trimmed ${fmt.pct(d.trimmed, 1)} at ${fmt.usd(d.fill)}, fee ${fmt.fee(d.fee)}, and put the released margin back. Liquidation now ${fmt.usd(d.liquidationAfter)}.`,
       });
     else if (d.block !== r.trigger?.block)
       out.push({
@@ -157,13 +157,13 @@ function steps(r: BacktestRow): Step[] {
   out.push({
     block: r.block,
     tone: 'liq',
-    text: `Perpl liquidated the original at a mark of ${fmt.price(r.markAtLiquidation)}. It filled at ${fmt.price(r.liquidatedAt)} and returned ${fmt.usd(r.returned)}.`,
+    text: `Perpl liquidated the original at a mark of ${fmt.usd(r.markAtLiquidation)}. It filled at ${fmt.usd(r.liquidatedAt)} and returned ${fmt.usd(r.returned)}.`,
   });
   if (r.end.liquidated && r.end.liquidated.block > r.block)
     out.push({
       block: r.end.liquidated.block,
       tone: 'liq',
-      text: `The trimmed position was liquidated too, at ${fmt.price(r.end.liquidated.price)}, returning ${fmt.usd(r.end.value)}.`,
+      text: `The trimmed position was liquidated too, at ${fmt.usd(r.end.liquidated.price)}, returning ${fmt.usd(r.end.value)}.`,
     });
   else if (!r.end.liquidated)
     out.push({

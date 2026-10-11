@@ -1,5 +1,5 @@
 // The backtest's other side: positions whose mark crossed their Airbag line, liquidated or not.
-// spike/false-alarms.ts writes false-alarms.json over the backtest's own window; /backtest reads
+// tools/false-alarms.ts writes false-alarms.json over the backtest's own window; /backtest reads
 // it on the server. This module is its shape.
 
 /**
@@ -8,7 +8,7 @@
  */
 export type Outcome = 'liquidated' | 'closed' | 'changed' | 'held';
 
-export interface FalseAlarmRow {
+interface FalseAlarmRow {
   market: string;
   side: 'long' | 'short';
   notional: number;

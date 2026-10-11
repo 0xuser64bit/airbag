@@ -1,12 +1,12 @@
 // Subset of Perpl's API types that Airbag reads. Field comments follow the docs.
 // https://github.com/PerplFoundation/api-docs/blob/main/types.md
 
-export interface BlockTimestamp {
+interface BlockTimestamp {
   b?: number;
   t?: number;
 }
 
-export interface TxTimestamp extends BlockTimestamp {
+interface TxTimestamp extends BlockTimestamp {
   txid?: string;
 }
 

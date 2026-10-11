@@ -1,6 +1,6 @@
 'use client';
 
-// Step 1 (design/Connect.dc.html). Connecting only reads an address; the Perpl account is
+// Step 1. Connecting only reads an address; the Perpl account is
 // looked up onchain. The SIWE signature comes when the user moves on to link a key.
 
 import { fmt } from '@airbag/risk';

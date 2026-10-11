@@ -1,6 +1,6 @@
-// M0: sign in to the trading WS, read the account and its positions, and compute each
+// Sign in to the trading WS, read the account and its positions, and compute each
 // liquidation price two ways: from the WS data (what the engine will use) and from the chain.
-// Compare both with Perpl's UI. Usage: pnpm --filter @airbag/spike account
+// Compare both with Perpl's UI. Usage: pnpm --filter @airbag/tools account
 
 import {
   type Account,
