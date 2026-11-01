@@ -1,5 +1,7 @@
 # Architecture
 
+[Documentation](README.md) · [Risk model](RISK-MODEL.md) · [HTTP API](API.md)
+
 Airbag is a position guard: a web client configures an always-on engine, and the engine acts on
 Perpl through a verified Trade key. The shared [risk model](RISK-MODEL.md) decides when to act and
 how much collateral or size to move. [Perpl integration](PERPL.md) describes the protocol.
@@ -23,10 +25,14 @@ flowchart LR
   W -->|Optional GraphQL statistics| I
 ```
 
-The engine owns the only database, master key and path to decrypted Perpl credentials. The web
-server reads public reports through the engine and public market data through RPC; it has no
-access to sealed keys. The current public deployment runs both services behind Caddy on a shared
-VM. That host is suitable for the simulation and disposable testnet keys, not real-money custody.
+At the application level, the engine owns the database, master key and path to decrypted Perpl
+credentials. Web code reads public reports through the engine and public market data through RPC;
+it does not intentionally load credentials. **This is not an OS-enforced isolation boundary:**
+the checked-in VM units run both processes as `airbag`, which can read the database and engine
+environment. A web-process compromise can therefore expose both encrypted secrets and their
+master key. Separate service identities and restricted filesystem permissions are required
+hardening, alongside a dedicated host, before real-money operation. The current shared VM is
+suitable only for simulation and disposable testnet keys. See [Security](SECURITY.md).
 
 | Module | Responsibility |
 |---|---|
@@ -67,8 +73,9 @@ sequenceDiagram
   Note over G: Later old liquidation-price crossing while same position is open = save
 ```
 
-Perpl reduces a position's deposit pro rata when size is reduced. Closing alone therefore does
-not move the liquidation price; adding the net release back is part of the protection operation.
+Perpl reduces a position's deposit pro rata when size is reduced. In the zero-fee model, closing
+alone leaves the liquidation price unchanged; fees can worsen it. Adding the net release back
+is part of the protection operation, not an optional improvement to an already-protected close.
 Partial or missing fills retry within the original episode's size cap and attempt budget. A
 failure alerts the trader rather than claiming the target was reached.
 
@@ -106,7 +113,8 @@ fees remain estimates or unconfirmed values.
 | Simulation | Same guard/API, paper accounts, per-wallet scripted marks; shared Monad testnet clock with local fallback | Public demonstration and browser checks |
 | Replay | Same guard on a paper exchange driven by recorded marks, no HTTP server | Historical liquidation and cost-side datasets |
 
-`SIM_CLOCK=local` runs simulation offline. Simulation controls return 404 in live mode and a
+`SIM_CLOCK=local` removes the simulation's upstream block-clock dependency; leave external alert
+providers unconfigured for offline engine operation. Simulation controls return 404 in live mode and a
 simulation cannot write to a real AirbagLog. Replay jumps between mark updates while idle and
 steps each block during orders. The paper exchange liquidates positions before settling that
 block's orders; the paused replay is the control.
@@ -119,7 +127,8 @@ the deployment and monitoring check. Individual account/key failures belong to d
 
 Next.js App Router renders public pages on the server and live views in client components. The
 browser keeps a bearer token in localStorage and reads SSE with streaming `fetch` so it can send
-an Authorization header. Public share images render at 1200×675. The web app never stores a pasted key.
+an Authorization header. Save-report share images render at 1200×675; landing and backtest cards
+render at 1200×630. The web app never persists a pasted key.
 
 The mainnet radar reads open positions at most every five minutes. Wallet lookup is read-only.
 Replay pages use committed, dated JSON datasets. Optional indexer and chain reads disappear when

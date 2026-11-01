@@ -1,5 +1,7 @@
 # AirbagLog
 
+[Documentation](../docs/README.md) · [Architecture](../docs/ARCHITECTURE.md) · [Verification status](../docs/VERIFICATION.md)
+
 A public, append-only record of what Airbag did on Perpl, checked against Perpl's own state on
 Monad. See [Architecture](../docs/ARCHITECTURE.md). It holds no funds and has
 no power over positions.
@@ -17,6 +19,19 @@ no power over positions.
 
 Units are Perpl's own: sizes in lots (LNS), prices in the market's price units (PNS), the market
 as Perpl's perpetual id. `reason` is 0 for a trim (close, then re-add), 1 for spare margin.
+
+## What a record proves—and does not
+
+The contract checks **after-state** against Perpl. The writer attests the supplied before-size,
+before-liquidation price and association with `perplTxHash`; the contract does not establish that
+the referenced transaction caused the change. `proveSave` checks the current mark, side and open
+size, not uninterrupted position identity. A position closed and reopened on the same side cannot
+be distinguished from the original one. A proven record is therefore not an independent proof of
+causality, avoided loss or realized profit.
+
+The optional writer cannot trade through this contract. Failed writes do not block protection,
+but the engine queue is in memory and has no automatic durable backfill. See
+[operating limits](../docs/ARCHITECTURE.md#operating-limits).
 
 ## Test
 

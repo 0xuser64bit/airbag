@@ -1,5 +1,7 @@
 # Perpl integration reference
 
+[Documentation](README.md) · [Architecture](ARCHITECTURE.md) · [Risk model](RISK-MODEL.md)
+
 Everything here was read from Perpl's own docs or measured against live endpoints, with the source
 named. It is the reference for `packages/perpl` and for anyone changing the engine's exchange
 layer. **Read it before changing the protocol code**: most of it is not guessable from the types.
@@ -8,7 +10,7 @@ Endpoint measurements below are historical research, not a fresh execution proof
 context before expanding coverage. Current API, websocket and liquidation documentation was
 rechecked on 2026-10-11. Current fees come from context and account tier, not historical tables.
 
-### Checked against testnet on 2026-10-01, without a key
+## Checked against testnet on 2026-10-01, without a key
 
 These are dated read-only checks at testnet head ~67.2M. The funded close, `t:6` amount format,
 re-add and Trade-scope admission were subsequently exercised on 2026-10-10; see

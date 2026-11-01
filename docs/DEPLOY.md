@@ -1,27 +1,30 @@
 # Operations
 
+[Documentation](README.md) · [Security](SECURITY.md) · [Verification status](VERIFICATION.md)
+
 Commands run from the repository root unless labeled as host commands. The public deployment is
 simulation; live testnet evidence and real-money release gates are in [Verification status](VERIFICATION.md).
 Do not change the public demo to live mode as part of a routine deploy.
 
 ## Configuration
 
-The root `.env.example` lists engine and tool settings. Local engine commands load that template,
-then the root `.env`. The default standalone engine mode is live and requires a master key;
-`pnpm dev:engine` supplies simulation defaults explicitly.
+The root `.env.example` lists engine and tool settings. The root **`pnpm dev:engine`** command loads
+that template, then the root `.env`, supplying simulation defaults. Workspace `start`/`dev`
+commands load only the root `.env`; running the entrypoint directly loads only the environment
+you explicitly provide. Standalone engine mode defaults to live and requires a master key.
 
 | Setting | Purpose |
 |---|---|
 | `ENGINE_MODE`, `PERPL_NETWORK` | Select live/simulation and testnet/mainnet |
 | `MASTER_KEY`, `MASTER_KEY_VERSION`, `MASTER_KEY_<n>` | Versioned envelope-encryption keys; required for live mode |
 | `DATABASE_PATH` | Persistent state file, bound to mode and chain; live mode refuses `:memory:` |
-| `WEB_ORIGIN` | Browser CORS origins; first origin supplies the sign-in domain |
+| `WEB_ORIGIN` | Comma-separated browser CORS origins; each configured origin's host is accepted for sign-in |
 | `ENGINE_EGRESS_IPS` | Addresses the trader must allow-list in Perpl |
 | `MARKETS`, `STALE_BLOCKS`, `SLIPPAGE_BPS`, `MAX_DEPLOY_ATTEMPTS` | Coverage and execution safety limits |
 | `HOST`, `PORT`, `CLIENT_IP_HEADER` | Listening address and trusted reverse-proxy client IP |
 | `VAPID_*`, `TELEGRAM_BOT_*` | Optional alert providers |
 | `AIRBAG_LOG_ADDRESS`, `AIRBAG_LOG_PRIVATE_KEY` | Optional live onchain writer; forbidden in simulation |
-| `SIM_CLOCK` | `monad` with fallback, or `local` for offline simulation |
+| `SIM_CLOCK` | `monad` with fallback, or `local` to remove the upstream simulation clock dependency |
 
 Keep web-only environment settings in `apps/web/.env.local` or the build/service environment.
 `NEXT_PUBLIC_ENGINE_URL`, `NEXT_PUBLIC_SITE_URL` and `NEXT_PUBLIC_SOURCE_URL` are fixed at build
@@ -30,9 +33,27 @@ and `AIRBAG_LENS_ADDRESS` configure optional public data reads. Never place engi
 
 ## VM deployment
 
+This is a release script for an **already provisioned Linux/systemd host**, not a fresh-host
+installer. Before using it, verify:
+
+- SSH access with non-interactive `sudo`, and the expected Linux architecture/runtime support.
+- An installed, working Caddy binary and systemd service, with an existing `/etc/caddy/Caddyfile`.
+  The provisioner validates and edits this configuration; it does not install Caddy.
+- DNS for the intended hostname pointing to the host, with ports 80/443 reachable for public TLS.
+- Outbound access to download Node/pnpm dependencies and reach the intended data/alert providers.
+- A reviewed engine environment and backups. For live keys, publish fixed `ENGINE_EGRESS_IPS` and
+  confirm the key's Perpl allow-list. An empty list is explicitly unlocked, not verified protection.
+
 `deploy/vm/deploy.sh` ships committed HEAD; a dirty tree is refused. Configure SSH access with
 `AIRBAG_VM` and `AIRBAG_VM_KEY`, and the hostname with `AIRBAG_DOMAIN` if changing it.
 The checked-in defaults target the existing public demo.
+
+**Do not redeploy the active SHA.** The script deletes `/opt/airbag/releases/<sha>` before
+extracting it. Compare `git rev-parse --short=12 HEAD` locally with
+`readlink /opt/airbag/app` on the host before invoking it. If that directory is the active target,
+a retry deletes the running release before the build succeeds. Use a distinct reviewed commit
+for a new release; use the rollback procedure to select an existing compatible release. The
+script does not yet enforce immutable/staged release directories.
 
 ```bash
 pnpm check
@@ -42,7 +63,9 @@ deploy/vm/deploy.sh
 
 The provisioner installs a private Node 24 runtime, verifies its download checksum, installs and
 builds as the unprivileged `airbag` user, then switches the application symlink and restarts the
-services. A failed install/build leaves the running release in place. Caddy configuration is
+services. For a **new, non-active release directory**, a failed install/build leaves the current
+application symlink untouched; that guarantee does not cover retrying the active SHA or later
+provisioning failures. Caddy configuration is
 validated and backed up before reload. Readiness is checked internally and through public TLS.
 
 | Resource | Host location |
@@ -57,8 +80,10 @@ validated and backed up before reload. Readiness is checked internally and throu
 
 A deploy preserves engine configuration except `WEB_ORIGIN`, which follows the hostname. Caddy
 overwrites `X-Real-IP`; the engine must remain unreachable directly when trusting that header.
-The host is shared with other root-administered projects. Use a dedicated host before storing
-real-money Trade keys; [Security](SECURITY.md) explains the trust boundary.
+The host is shared with other root-administered projects, and both services use the same OS
+identity. A web-process compromise can read engine data and its environment. Use a dedicated
+host **and separate service identities with restricted permissions** before storing real-money
+Trade keys; [Security](SECURITY.md) explains the trust boundary.
 
 ### Monitoring and rollback
 
@@ -96,6 +121,8 @@ For Telegram, create a bot through BotFather, set `TELEGRAM_BOT_TOKEN` and
 Link the wallet's chat through Settings and the one-use Start link. `/stop`, unlinking or blocking
 the bot removes linkage. Provider credentials belong only in the engine environment.
 
+The `push` preference gates Web Push, not Telegram. Turning it off does not silence a linked chat.
+
 ## Database binding, backup and restore
 
 Default local files are `data/airbag-<mode>-<network>.db`. Each file records mode and chain id;
@@ -105,11 +132,15 @@ a rejection.
 Operator commands require an existing database. Backups use SQLite's online backup API and refuse
 an existing destination; copying a live `.db` alone can omit committed WAL rows.
 
+For the default local simulation file:
+
 ```bash
 DATABASE_PATH=./data/airbag-simulation-testnet.db \
   node --env-file-if-exists=.env apps/engine/src/cli.ts backup ./backups/airbag.db
-node --env-file-if-exists=.env apps/engine/src/cli.ts check-keys
 ```
+
+For a live database, also load the master-key environment before `check-keys`; see the explicit
+[local and VM rotation commands](SECURITY.md#rotating-the-master-key).
 
 Set `DATABASE_PATH` to the actual file for every command. Keep encrypted backups off-host and
 retain the matching master-key versions separately. On the VM, run commands as `airbag`, with the
@@ -178,5 +209,5 @@ require the indexer; absent statistics stay hidden.
 [Verification status](VERIFICATION.md#real-money-release-gates) lists the open gates. Before opening
 access, independently review key custody and money movement, isolate the host, prove sustained
 fault/restart behavior on disposable testnet funds, verify egress restrictions and alert delivery,
-and exercise monitoring and backup restore. Historical replays and short testnet runs do not clear
+separate web/engine service identities, and exercise monitoring and backup restore. Historical replays and short testnet runs do not clear
 those gates.

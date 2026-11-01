@@ -1,5 +1,7 @@
 # Risk model
 
+[Documentation](README.md) · [Architecture](ARCHITECTURE.md) · [Verification status](VERIFICATION.md)
+
 The heart of the product: the arithmetic that decides where the Airbag line sits, when to act and
 how much to trim. It lives in `packages/risk` as pure functions in human units, with no I/O and no
 dependencies, so the engine and the browser compute the same numbers from the same code
@@ -52,7 +54,8 @@ reads before expanding coverage or interpreting save values as exact proceeds.
 
 ## The deploy
 
-A deploy is **two orders**, not one ([Architecture](ARCHITECTURE.md)):
+A trim is **a close plus a collateral re-add**, not a close alone. Spare-margin-only protection
+uses a single collateral add. Neither path guarantees execution ([Architecture](ARCHITECTURE.md)):
 
 1. **Spare margin first, only if it is enough.** With the account's unallocated balance `S`, if
    adding `S` alone puts the liquidation price at least `d` away from `T`, send
@@ -72,9 +75,13 @@ A deploy is **two orders**, not one ([Architecture](ARCHITECTURE.md)):
 3. Send `CloseLong`/`CloseShort` (`t:3`/`t:4`), `fl:4` (IOC), with a worst price 0.5% from mark
    (configurable), and a valid `lb`.
 4. **Re-add the released equity.** Perpl shrinks the deposit pro-rata on a decrease, so the close
-   alone leaves the liquidation price exactly where it was. As soon as the fill lands, send
+   alone leaves the liquidation price unchanged in the zero-fee model; fees can worsen it.
+   As soon as the fill lands, send
    `IncreasePositionCollateral` for the collateral the close released, net of realized PnL
-   and closing fees, read from the balance change and capped by the net model estimate. The
+   and closing fees. The guard prefers a positive observed balance change, otherwise falls back
+   to the net model estimate; it caps the amount at 105% of that estimate and at free balance.
+   Concurrent account activity can therefore affect attribution: this is not exact isolation of
+   the close's proceeds. The chosen integer amount is persisted before the re-add. The
    position then carries `Q` minus the closing fee on the smaller size. Entry fees reported on
    a live snapshot are historical charges, not another deduction from its current deposit.
 5. On a partial fill, re-add what was released, recompute and retry on the next block, up to
@@ -113,6 +120,10 @@ liquidated it. `tools/backtest.ts` asks the chain: for every position Perpl full
 mainnet, what would Airbag's engine have done on the prices that actually happened? The results
 are committed in `apps/web/lib/backtest.json` and shown at `/backtest`.
 
+To reproduce the datasets, follow the commands in
+[Protocol and replay checks](../CONTRIBUTING.md#protocol-and-replay-checks). Rerunning the generators
+replaces the committed web datasets; review both files and their shared block window together.
+
 **Method.**
 
 1. Each `PositionLiquidated` event gives back the position it closed: size, deposit, funding and
@@ -124,7 +135,10 @@ are committed in `apps/web/lib/backtest.json` and shown at `/backtest`.
    last mark on the safe side of that line and runs a day past the liquidation
    (`apps/engine/src/replay.ts`): the production `Engine` and guard, default settings (10% target,
    50% cap), on a paper exchange with no spare margin (the event doesn't say what the account
-   held). Closes fill two blocks after sending, 0.25% past the mark, with Perpl's taker fee.
+   held). Closes fill two blocks after sending, 0.25% past the mark. Fee rates and market
+   configuration come from Perpl context fetched when the generator runs, not historical
+   per-block context. The fee helper uses the default tier (tier zero), not the liquidated
+   account's historical fee tier.
 4. The Airbag path's value is the open position's equity at the mark plus any released margin not
    re-added. The liquidation's value is what Perpl actually returned to the account, from the
    event, not the 80% estimate.
@@ -132,7 +146,9 @@ are committed in `apps/web/lib/backtest.json` and shown at `/backtest`.
    once the mark reaches the liquidation price this model computes, so the control has to
    liquidate where Perpl did. If it didn't, the reconstruction or the model would be wrong.
 
-**Results** (mainnet, 6,000,000 blocks to 110,298,004, 2026-09-13 to 2026-10-04):
+**Results** (mainnet blocks **104,301,446–110,301,445**, a 6,000,000-block window). The committed
+backtest was generated at **2026-10-03T22:39:17.022Z** (2026-10-04 in the original local reporting);
+the scan covers approximately 21 days. The JSON metadata is the source of truth for provenance.
 
 | | |
 |---|---|
@@ -151,10 +167,13 @@ The gap between the paths is more than the 20% liquidation share: the trimmed pa
 line instead of at liquidation, and a liquidation fills on the book, sometimes well past the mark
 (one ZEC short filled 3.7% past it and returned $218 of the $1,280 maintenance margin).
 
+![Historical replay page showing the committed mainnet liquidation dataset, its recorded-price simulation results and individual cases.](img/backtest.png)
+
 **What it doesn't show.** Whether Perpl's book had the depth for each trim at that price (the
-one assumption; the engine's worst price is 0.5%, the replay assumes half of it); the trader's own
-trades and margin moves between the line and the liquidation, and whether they would have armed
-Airbag; funding after the liquidation (the paper exchange accrues none). The totals are small
+engine's worst price is 0.5%, the replay assumes half of it); historical account-specific fee tiers
+or market configuration; the trader's own trades and margin moves between the line and liquidation,
+and whether they would have armed Airbag; funding after the liquidation (the paper exchange
+accrues none). These are separate assumptions and omissions, not one fill assumption. The totals are small
 because most liquidated positions on Perpl are. It is the engine on recorded prices, not live
 fills; Airbag's orders have traded on Perpl testnet only
 ([Verification status](VERIFICATION.md#live-testnet-evidence)).
@@ -174,7 +193,8 @@ Starting from liquidations, the backtest shows what a trim saved but never what 
 3. The paused replay has to agree with the chain: liquidated by the event if that was a
    liquidation, and not before it otherwise.
 
-**Results** (the same 6,000,000 blocks to 110,298,004):
+**Results** (the same blocks **104,301,446–110,301,445**; cost dataset generated at
+**2026-10-10T17:46:09.171Z**):
 
 | | |
 |---|---|
@@ -240,7 +260,7 @@ in `packages/perpl`, with the rounding direction chosen for safety
 |---|---|
 | trim size | **up** to the lot size, then clamped to the position size and `maxTrim` |
 | worst close price | **away from** the mark (a long's close limit rounds down) |
-| collateral re-add | exact integer from the account's balance change |
+| collateral re-add | integer CNS amount: prefer a positive observed balance delta, otherwise floor the net model estimate; cap at 105% of that estimate and at free balance |
 | trigger comparison | in the risk package, on the same float values the UI shows; a mark exactly on the line or a liquidation price counts as reaching it (a billionth, relative, absorbs float noise) |
 
 Property tests assert the invariants the model has to hold: trims never increase size, never flip

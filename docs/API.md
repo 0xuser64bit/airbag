@@ -1,9 +1,31 @@
 # HTTP API
 
+[Documentation](README.md) · [Architecture](ARCHITECTURE.md) · [Operations](DEPLOY.md)
+
 The engine serves JSON over HTTP, plus one authenticated server-sent event stream. Local default:
 `http://localhost:8787`. The public simulation is proxied at
 `https://airbag.user64bit.world/engine`. Source: `apps/engine/src/api.ts`; browser response types:
 `apps/web/lib/types.ts`.
+
+## First requests
+
+Start the local simulation with `pnpm dev:engine`, then inspect its environment and readiness:
+
+```bash
+curl -fsS http://localhost:8787/v1/config
+curl -fsS http://localhost:8787/ready
+```
+
+Use the web app's sign-in flow to obtain a wallet-scoped session. With its token available as
+`AIRBAG_TOKEN` in your shell, read a snapshot or stream updates:
+
+```bash
+curl -fsS -H "Authorization: Bearer $AIRBAG_TOKEN" http://localhost:8787/v1/state
+curl -N -H "Authorization: Bearer $AIRBAG_TOKEN" http://localhost:8787/v1/stream
+```
+
+Treat a bearer token as a secret: do not include it in URLs, screenshots, issues or committed files.
+An unlinked wallet can sign in, but needs a linked key before arming protection.
 
 ## Authentication and transport
 
@@ -49,7 +71,7 @@ All require a bearer session.
 | `GET /v1/me` | Wallet, link metadata, settings, demo eligibility and Telegram linkage | 120 |
 | `POST /v1/auth/logout` | Revokes this session | 120 |
 | `POST /v1/auth/logout-all` | Revokes every session for this wallet, including the caller | 120 |
-| `POST /v1/key` | `{apiKey, apiSecret, ipLocked: true}`; verifies ownership and Trade-scope admission before storing the encrypted secret | 6 |
+| `POST /v1/key` | `{apiKey, apiSecret, ipLocked: true}`; live mode verifies ownership and Trade-scope admission before encrypted storage; see mode distinctions below | 6 |
 | `DELETE /v1/key` | Unlinks the key; refused while a deploy needs reconciliation | 120 |
 | `PUT /v1/settings` | Partial settings update → complete stored settings | 60 |
 | `GET /v1/state` | Complete dashboard state | 240 |
@@ -61,11 +83,24 @@ All require a bearer session.
 | `POST /v1/telegram` | No body; returns `{url}` with a one-use Start link, or 404 if the bot is disabled | 10 |
 | `DELETE /v1/telegram` | Removes this wallet's linked chat | 120 |
 
+`apiSecret` is an Ed25519 secret encoded as **64 hexadecimal characters**, optionally prefixed
+by `0x`. Live key verification checks Perpl ownership and proves gateway Trade-scope admission,
+not a successful fill. `ipLocked: true` is a required user acknowledgement, not a verified IP list.
+When `ENGINE_EGRESS_IPS` is empty, the UI instead acknowledges that the key is **not** IP-locked;
+the API accepts the same Boolean. Fixed published egress IPs and a configured Perpl allow-list
+are prerequisites for real-money operation.
+
+**Simulation is different:** syntactically valid test credentials create a synthetic account;
+no Perpl ownership or scope check occurs. The link response includes `simulated: true` alongside
+`tradeScope: true`; the latter is not proof of live scope. Use the UI's test key and never submit
+real exchange credentials to a simulation engine.
+
 Settings fields: `sensitivity` (`early`, `balanced`, `late`), `targetPct` (integer 6–20),
 `maxTrimPct` (25, 50, 75, 100), `useSpare`, `push`, `armed`, `demo` (booleans).
 Arming requires a linked key; demo mode requires `DEMO_WALLETS` eligibility. An episode already
-in progress retains its original policy. The `push` setting controls notification delivery to
-both configured channels; subscription and chat links are managed separately.
+in progress retains its original policy. The `push` setting controls **Web Push only**. Telegram
+delivery depends on chat linkage, independently of that setting; stop it with
+`DELETE /v1/telegram` or `/stop` in the bot. Subscription and chat links are managed separately.
 
 Read SSE using streaming `fetch` so the bearer header is sent. Reconnect after connection loss;
 the engine ends expired sessions and drops clients with over 64 KiB of buffered output. Public

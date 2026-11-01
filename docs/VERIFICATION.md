@@ -1,10 +1,38 @@
 # Verification and release status
 
-Last reviewed: **2026-10-11**. This is dated evidence, not a guarantee of protection or an
-independent security audit. The public app runs in simulation. Live trading has been exercised
-on disposable Perpl testnet funds; mainnet trading is not released.
+[Documentation](README.md) · [Risk model](RISK-MODEL.md) · [Security](SECURITY.md)
 
-## Current validation
+Historical validation was recorded on **2026-10-11**; documentation workflows were checked again
+on **2026-11-01**, as distinguished below. Neither is a guarantee of protection or an independent
+security audit. The public app runs in simulation. Live trading has been exercised on disposable
+Perpl testnet funds; mainnet trading is not released.
+
+## Documentation validation on 2026-11-01
+
+The documentation overhaul used Node **24.21.0** and pnpm **11.24.0**. These are fresh local
+results, not a repeat of the funded testnet runs:
+
+| Check | Result |
+|---|---|
+| `pnpm check` | Passed: lint, TypeScript and 210 tests across 23 files |
+| `pnpm build` | Passed; the separate production browser-profile build also passed |
+| Indexer fixture codegen, TypeScript and tests | Passed: 4 handler tests using explicit testnet fixture defaults |
+| Local documentation links, heading anchors, image references and shell snippet syntax | Passed |
+| Public `/`, `/connect`, `/backtest`, `/wallet`, `/engine/ready` and `/engine/v1/config` | HTTP 200; config reported simulation on testnet |
+| `CI=1 pnpm e2e` | **7 of 8 passed**; the onboarding/save journey failed at its dynamic share-image request, including its retry |
+
+The failing request was `GET /s/:id/opengraph-image` at `e2e/app.e2e.ts:111`, which ended with
+`socket hang up`. The same failure appears in the saved session before the documentation edits.
+Onboarding, the protected wick, save figures and save-page accessibility assertions completed
+before that request; the full journey is still a failed test, not a pass. Its root cause was not
+established or fixed by this documentation-only change.
+
+Docker, local Foundry and Gitleaks were unavailable, so container/contract checks and a fresh
+secret scan were not repeated. No funded trades, deployments, historical transaction verification,
+alert-device checks or restore drills were performed. The older evidence below retains its
+original dates and must not be read as newly reproduced.
+
+## Recorded validation
 
 | Check | Result on 2026-10-11 |
 |---|---|
@@ -74,8 +102,11 @@ has no authority to trade. See [contracts/README.md](../contracts/README.md) for
 
 ## Historical replay evidence
 
-The committed datasets cover **2026-09-13 through 2026-10-04**, ending at Perpl mainnet block
-110,298,004. They have not been refreshed during this cleanup.
+The committed datasets share Perpl mainnet blocks **104,301,446–110,301,445**, approximately
+21 days. The liquidation replay's `generatedAt` is **2026-10-03T22:39:17.022Z**, which is
+2026-10-04 in the original local reporting. The cost replay was generated at
+**2026-10-10T17:46:09.171Z** over that same block window. The datasets have not been regenerated
+during the documentation overhaul; the corrected block head comes from their committed metadata.
 
 - Of 372 fully liquidated positions, 369 were replayable. In the simulation, 363 remained open
   at the original liquidation block; six one-lot positions could not be trimmed within the 50%
@@ -88,10 +119,13 @@ The committed datasets cover **2026-09-13 through 2026-10-04**, ending at Perpl 
 - The cost comparison excludes 19 untrimmable positions and 26 control mismatches. Those
   exclusions limit comparability; their effect on aggregate benefit is not established.
 
-Fills are simulated with a two-block delay, 25 bps of adverse execution and taker fees. The replay
+Fills are simulated with a two-block delay, 25 bps of adverse execution and default-tier taker
+fees from the context available when the generator runs, not reconstructed historical account tiers.
+Market configuration is also context-derived rather than historical per-block state. The replay
 does not reconstruct later discretionary trading or continuing funding. It cannot prove live
 execution, future performance or that protection always costs less than liquidation.
-[Risk model](RISK-MODEL.md#backtest-on-perpls-own-liquidations) describes the inputs and rerun commands.
+[Risk model](RISK-MODEL.md#backtest-on-perpls-own-liquidations) describes the inputs and assumptions;
+[Protocol and replay checks](../CONTRIBUTING.md#protocol-and-replay-checks) gives the rerun commands.
 
 ## Real-money release gates
 
@@ -99,7 +133,9 @@ The following remain open before offering mainnet protection:
 
 - Independent review of key custody, API authorization, recovery and money movement.
 - A dedicated host for Trade keys, plus verified network egress restrictions. The current
-  public simulation host is shared with other root-administered applications.
+  public simulation host is shared with other root-administered applications. Separate web and
+  engine service identities and filesystem permissions are also required: the supplied units
+  currently share an identity with access to the database and engine environment.
 - Sustained disposable testnet runs covering disconnects, partial fills, failed collateral
   adds, restart recovery and adversarial price paths. Two short live runs do not clear this gate.
 - External readiness/account monitoring and verified alert delivery on supported devices.
