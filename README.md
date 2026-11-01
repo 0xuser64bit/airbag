@@ -1,4 +1,15 @@
-# Airbag
+<p align="center">
+  <img src="apps/web/app/icon.svg" alt="Airbag logo" width="96" height="96" />
+</p>
+
+<h1 align="center">Airbag</h1>
+
+<p align="center">
+  <strong>Get trimmed, not liquidated.</strong><br />
+  Position protection for Perpl traders on Monad.
+</p>
+
+<hr />
 
 <a href="https://airbag.user64bit.world/connect">
   <img src="docs/img/og.png" alt="Airbag — get trimmed, not liquidated. A zero-fee illustration of trimming a BTC long before its original liquidation price." width="1200" />
