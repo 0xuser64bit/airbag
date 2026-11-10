@@ -16,6 +16,19 @@ identified in the dashboard. Simulated transactions are not real exchange fills.
 Live trading has been verified on Perpl testnet. Mainnet trading is not released. Read
 [Verification status](VERIFICATION.md) before using a live deployment.
 
+## App routes
+
+| Route | Purpose |
+|---|---|
+| `/` | Landing page and worked example |
+| `/connect` | Connect a wallet or simulation test wallet |
+| `/link-key` | Link a Perpl Trade key (test key available in simulation) |
+| `/setup` | Policy preview and arming |
+| `/app` | Dashboard, runway, deploy log, settings, alerts |
+| `/s/<id>` | Public save report |
+| `/backtest` | Perpl liquidations replayed through Airbag |
+| `/wallet` | Read-only position lookup |
+
 ## Try the simulation first
 
 No funds, wallet extension or real API key are needed.

@@ -173,9 +173,9 @@ line instead of at liquidation, and a liquidation fills on the book, sometimes w
 engine's worst price is 0.5%, the replay assumes half of it); historical account-specific fee tiers
 or market configuration; the trader's own trades and margin moves between the line and liquidation,
 and whether they would have armed Airbag; funding after the liquidation (the paper exchange
-accrues none). These are separate assumptions and omissions, not one fill assumption. The totals are small
-because most liquidated positions on Perpl are. It is the engine on recorded prices, not live
-fills; Airbag's orders have traded on Perpl testnet only
+accrues none). These are separate assumptions and omissions, not one fill assumption. The totals are
+small because most liquidated positions on Perpl are small. It is the engine on recorded prices,
+not live fills; Airbag's orders have traded on Perpl testnet only
 ([Verification status](VERIFICATION.md#live-testnet-evidence)).
 
 ### The other side: crossings Perpl didn't liquidate
@@ -205,13 +205,14 @@ Starting from liquidations, the backtest shows what a trim saved but never what 
 | Not liquidated, trimmed (precautions) | 398: $22,017 untouched, $21,157 on the Airbag path (−$860); median −2.2% of margin, the worst tenth −20.6% or worse; Airbag path ahead in 117, behind in 278 |
 | Liquidated, trimmed | 114: $2,498 untouched, $3,666 on the Airbag path (+$1,168); median +20.3% of margin; ahead in all 114 |
 
-About one crossing in four ended in liquidation. Precautions can cost money because the trimmed part misses a recovery; some were substantially
-worse than holding the original position, as the percentiles above show. In this population the
-trims kept $1,168 and cost $860: the protection has a premium. $527 of that premium is positions
-that recovered over the day after the line. The 22 liquidations the reconstruction couldn't
-reproduce (most likely funding, which an opening event doesn't carry) are left out. Their effect on the aggregate benefit is not established by this replay. Positions opened before the window, or changed before they
-crossed, aren't followed, so these totals and the liquidation backtest's aren't directly
-comparable.
+About one crossing in four ended in liquidation. Precautions can cost money because the trimmed
+part misses a recovery; some were substantially worse than holding the original position, as the
+percentiles above show. In this population the trims kept $1,168 and cost $860: the protection has
+a premium. $527 of that premium is positions that recovered over the day after the line. The 22
+liquidations the reconstruction couldn't reproduce (most likely funding, which an opening event
+doesn't carry) are left out. Their effect on the aggregate benefit is not established by this
+replay. Positions opened before the window, or changed before they crossed, aren't followed, so
+these totals and the liquidation backtest's aren't directly comparable.
 
 ## Golden vectors
 

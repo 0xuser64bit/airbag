@@ -32,7 +32,7 @@ alone can reach your target, it adds that instead.
 
 ## Keep the position, not all the exposure
 
-A liquidation closes the position. Airbag aims to reduce it before that happens, leaving a
+A full liquidation closes the position. Airbag aims to reduce it before that happens, leaving a
 smaller position with more room to survive. This is not a stop-loss that simply exits at a price.
 
 - **A line you can understand.** Early, Balanced and Late policies act after one-third, one-half
