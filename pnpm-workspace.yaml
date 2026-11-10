@@ -12,9 +12,11 @@ allowBuilds:
 # source-map-js <1.2.2 (GHSA-68fv, event-loop DoS via postcss/vite).
 overrides:
   express@<4.22.3: 4.22.3
-  body-parser@<1.20.6: 1.20.8
+  body-parser@<1.20.9: 1.20.9
   ws@<8.21.3: 8.21.3
   sharp@<0.35.5: 0.35.5
   source-map-js@<1.2.2: 1.2.2
   # Windows dev-server file read (GHSA-g7r4-m6w7-qqqr), via Vite and Envio's tsx.
   esbuild@>=0.27.3 <0.28.1: 0.28.1
+  # launch-editor existence-check bypass on Windows (GHSA-587h-7wmj-h5pm), via Vitest.
+  vite@>=8.3.0 <8.3.3: 8.3.3
